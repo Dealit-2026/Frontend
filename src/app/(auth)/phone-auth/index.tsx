@@ -1,46 +1,24 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  Check, 
-  ChevronRight, 
-  User, 
-  Camera, 
-  Search, 
-  Home, 
-  PlusCircle, 
-  MessageCircle, 
-  Heart, 
-  Bell, 
-  Filter, 
-  Settings,
-  MoreVertical, 
-  Send, 
-  Star,
-  Clock,
-  ArrowUpRight,
-  X,
-  Trash2,
-  Eye,
-  Image as ImageIcon,
-  ArrowLeft,
-  TrendingUp,
-  Sparkles,
-  Menu,
-  ShoppingBag,
-  Store,
-  Receipt
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { useState } from 'react';
+import { Check, ChevronLeft } from 'lucide-react';
+import { motion } from 'motion/react';
 
-import { Screen, Tab } from '../../../types/index';
-import { ExploreIcon } from '../../../components/common/ExploreIcon';
-
-export default function PhoneAuthScreen({ showToast, onBack, onComplete }: { showToast: (msg: string) => void; onBack: () => void; onComplete: () => void; key?: string }) {
+export default function PhoneAuthScreen({
+  showToast,
+  onBack,
+  onComplete,
+}: {
+  showToast: (msg: string) => void;
+  onBack: () => void;
+  onComplete: () => void;
+  key?: string;
+}) {
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [isSent, setIsSent] = useState(false);
 
+  const isNameValid = name.trim() !== '';
   const isPhoneValid = phone.length >= 10;
   const isCodeValid = code.length === 6;
 
@@ -51,17 +29,16 @@ export default function PhoneAuthScreen({ showToast, onBack, onComplete }: { sho
       exit={{ opacity: 0, x: -20 }}
       className="flex-1 flex flex-col"
     >
-      {/* Header */}
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <ChevronLeft size={24} />
         </button>
-        <h1 className="flex-1 text-center font-bold text-lg">휴대폰 인증</h1>
+        <h1 className="flex-1 text-center font-bold text-lg">본인인증</h1>
         <button onClick={onComplete} className="text-sm font-medium text-gray-400 px-2">건너뛰기</button>
       </div>
 
       <div className="flex-1 px-8 py-10 flex flex-col items-center">
-        <motion.div 
+        <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: "spring", stiffness: 260, damping: 20 }}
@@ -73,12 +50,24 @@ export default function PhoneAuthScreen({ showToast, onBack, onComplete }: { sho
         <div className="text-center space-y-2 mb-10">
           <h2 className="text-xl font-bold">본인 인증이 필요해요</h2>
           <p className="text-sm text-gray-400">
-            안전한 거래를 위해<br />
+            안전한 거래를 위해
+            <br />
             본인 인증을 진행합니다
           </p>
         </div>
 
         <div className="w-full space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold">이름</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="이름 입력"
+              className="w-full h-12 bg-gray-100 rounded-lg px-4 outline-none focus:ring-2 focus:ring-[#98E446]"
+            />
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-bold">휴대폰 번호</label>
             <input
@@ -89,15 +78,15 @@ export default function PhoneAuthScreen({ showToast, onBack, onComplete }: { sho
               className="w-full h-12 bg-gray-100 rounded-lg px-4 outline-none focus:ring-2 focus:ring-[#98E446]"
               maxLength={11}
             />
-            <button 
+            <button
               onClick={() => {
                 setIsSent(true);
                 showToast('인증번호 발송');
-              }} 
+              }}
               disabled={!isPhoneValid}
               className={`w-full h-12 border rounded-lg text-sm font-medium transition-colors ${
-                isPhoneValid 
-                  ? 'border-[#98E446] text-[#98E446] hover:bg-[#98E446]/5' 
+                isPhoneValid
+                  ? 'border-[#98E446] text-[#98E446] hover:bg-[#98E446]/5'
                   : 'border-gray-200 text-gray-300'
               } mt-2`}
             >
@@ -125,12 +114,12 @@ export default function PhoneAuthScreen({ showToast, onBack, onComplete }: { sho
       </div>
 
       <div className="p-6">
-        <button 
+        <button
           onClick={onComplete}
-          disabled={!isCodeValid}
+          disabled={!isNameValid || !isCodeValid}
           className={`w-full h-14 font-bold rounded-xl transition-colors ${
-            isCodeValid 
-              ? 'bg-[#98E446] hover:bg-[#87d335] text-black' 
+            isNameValid && isCodeValid
+              ? 'bg-[#98E446] hover:bg-[#87d335] text-black'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
