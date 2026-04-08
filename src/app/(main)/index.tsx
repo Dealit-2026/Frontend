@@ -37,7 +37,7 @@ import { Screen, Tab } from '../../types/index';
 import { ExploreIcon } from '../../components/common/ExploreIcon';
 import HomeScreen from './home';
 import SearchScreen from './search';
-import RegisterScreen from '../products/register';
+import RegisterScreen from '../products/register/page';
 import ChatListScreen from '../chats';
 import MyPageScreen from './mypage';
 import TabButton from '../../components/common/bottom-navigation/TabButton';

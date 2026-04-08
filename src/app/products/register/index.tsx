@@ -1,112 +1,108 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import {
-  ChevronLeft,
-  Check,
-  ChevronRight,
-  User,
-  Camera,
-  Search,
-  Home,
-  PlusCircle,
-  MessageCircle,
-  Heart,
-  Bell,
-  Filter,
-  Settings,
-  MoreVertical,
-  Send,
-  Star,
-  Clock,
-  ArrowUpRight,
-  X,
-  Trash2,
-  Eye,
-  Image as ImageIcon,
-  ArrowLeft,
-  TrendingUp,
-  Sparkles,
-  Menu,
-  ShoppingBag,
-  Store,
-  Receipt,
-} from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 
-import { Screen, Tab } from "../../../types/index";
-import { ExploreIcon } from "../../../components/common/ExploreIcon";
+import React from "react";
+import { Camera, ChevronLeft, Sparkles, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
-export default function RegisterScreen({
-  onBack,
-  onComplete,
-  mode,
-  initialData,
-}: {
-  onBack: () => void;
-  onComplete: () => void;
+import type {
+  AuctionFormValues,
+  ProductImagePayload,
+  SaleType,
+} from "@/services/auction/register/types";
+
+export interface RegisterScreenViewProps {
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  showDraftModal: boolean;
+  showLoadDraftModal: boolean;
+  saleType: SaleType;
+  name: string;
+  categoryName: string;
+  price: string;
+  description: string;
+  images: ProductImagePayload[];
+  auction: AuctionFormValues;
+  isEditMode: boolean;
   themeColor: string;
-  mode: "regular" | "auction";
-  initialData?: any;
-}) {
-  const [showDraftModal, setShowDraftModal] = useState(false);
-  const [showLoadDraftModal, setShowLoadDraftModal] = useState(false);
-  const [saleType, setSaleType] = useState<"regular" | "auction">(
-    initialData?.type || mode,
-  );
-  const [title, setTitle] = useState(initialData?.name || "");
-  const [price, setPrice] = useState(
-    initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
-  );
-  const [description, setDescription] = useState(
-    initialData?.description || "",
-  );
-  const [images, setImages] = useState<string[]>(
-    initialData?.img ? [initialData.img] : [],
-  );
-
-  const themeColor = saleType === "regular" ? "#98E446" : "#F64257";
-  const isEditMode = !!initialData;
-
-  useEffect(() => {
-    if (!isEditMode) {
-      const savedDraft = localStorage.getItem("product_draft");
-      if (savedDraft) {
-        setShowLoadDraftModal(true);
-      }
-    }
-  }, [isEditMode]);
-
-  const handleSaveDraft = () => {
-    const draft = { saleType, title, price, description, images };
-    localStorage.setItem("product_draft", JSON.stringify(draft));
-    setShowDraftModal(false);
-    onBack();
+  auctionFieldContent: {
+    sectionTitle: string;
+    priceLabel: string;
+    helperText: string;
   };
+  isUploadingImage: boolean;
+  isSavingDraft: boolean;
+  isSubmitting: boolean;
+  onBack: () => void;
+  onOpenDraftModal: () => void;
+  onCloseDraftModal: () => void;
+  onCloseLoadDraftModal: () => void;
+  onNameChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
+  onSaleTypeChange: (value: SaleType) => void;
+  onPriceChange: (value: string) => void;
+  onAuctionStartChange: (value: string) => void;
+  onAuctionDurationChange: (value: string) => void;
+  onImageButtonClick: () => void;
+  onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveImage: (sortOrder: number) => void;
+  onRecommendCategory: () => void;
+  onRecommendPrice: () => void;
+  onSaveDraft: () => void;
+  onDiscardDraft: () => void;
+  onLoadDraft: () => void;
+  onRegister: () => void;
+  formatDisplayPrice: (value: string) => string;
+  formatAuctionSchedule: (auction: AuctionFormValues) => string;
+}
 
-  const handleLoadDraft = () => {
-    try {
-      const savedDraft = localStorage.getItem("product_draft");
-      if (savedDraft) {
-        const draft = JSON.parse(savedDraft);
-        setSaleType(draft.saleType || mode);
-        setTitle(draft.title || "");
-        setPrice(draft.price || "");
-        setDescription(draft.description || "");
-        setImages(draft.images || []);
-      }
-    } catch (e) {
-      console.error("Failed to load draft", e);
-    }
-    setShowLoadDraftModal(false);
-  };
-
-  const handleDiscardDraft = () => {
-    localStorage.removeItem("product_draft");
-    setShowLoadDraftModal(false);
-  };
-
+export default function RegisterScreenView({
+  fileInputRef,
+  showDraftModal,
+  showLoadDraftModal,
+  saleType,
+  name,
+  categoryName,
+  price,
+  description,
+  images,
+  auction,
+  isEditMode,
+  themeColor,
+  auctionFieldContent,
+  isUploadingImage,
+  isSavingDraft,
+  isSubmitting,
+  onBack,
+  onOpenDraftModal,
+  onCloseDraftModal,
+  onCloseLoadDraftModal,
+  onNameChange,
+  onDescriptionChange,
+  onSaleTypeChange,
+  onPriceChange,
+  onAuctionStartChange,
+  onAuctionDurationChange,
+  onImageButtonClick,
+  onImageUpload,
+  onRemoveImage,
+  onRecommendCategory,
+  onRecommendPrice,
+  onSaveDraft,
+  onDiscardDraft,
+  onLoadDraft,
+  onRegister,
+  formatDisplayPrice,
+  formatAuctionSchedule,
+}: RegisterScreenViewProps) {
   return (
-    <div className="flex flex-col min-h-full relative bg-white">
+    <div className="flex h-full min-h-0 flex-col bg-white">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onImageUpload}
+      />
+
       <div className="h-16 flex items-center px-4 border-b border-gray-50">
         <button onClick={onBack} className="p-2">
           <ChevronLeft size={24} />
@@ -120,7 +116,7 @@ export default function RegisterScreen({
         </h1>
         {!isEditMode && (
           <button
-            onClick={() => setShowDraftModal(true)}
+            onClick={onOpenDraftModal}
             className="text-sm font-medium text-gray-400 px-2"
           >
             임시저장
@@ -128,29 +124,33 @@ export default function RegisterScreen({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-8 no-scrollbar pb-32">
-        {/* Photo Upload */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 space-y-8 no-scrollbar pb-6">
         <div className="space-y-3">
           <h3 className="font-bold text-base">상품정보</h3>
           <div className="flex space-x-3 overflow-x-auto no-scrollbar">
-            <button className="w-20 h-20 bg-gray-50 rounded-2xl flex flex-col items-center justify-center space-y-1 shrink-0">
+            <button
+              type="button"
+              onClick={onImageButtonClick}
+              disabled={isUploadingImage || images.length >= 10}
+              className="w-20 h-20 bg-gray-50 rounded-2xl flex flex-col items-center justify-center space-y-1 shrink-0"
+            >
               <Camera size={24} className="text-gray-400" />
               <span className="text-xs font-bold text-gray-300">
-                {images.length}/10
+                {isUploadingImage ? "..." : `${images.length}/10`}
               </span>
             </button>
-            {images.map((img, idx) => (
+            {images.map((image) => (
               <div
-                key={idx}
+                key={`${image.imageId}-${image.sortOrder}`}
                 className="w-20 h-20 rounded-2xl overflow-hidden shrink-0 relative"
               >
                 <img
-                  src={img}
+                  src={image.imageUrl}
                   alt="product"
                   className="w-full h-full object-cover"
                 />
                 <button
-                  onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                  onClick={() => onRemoveImage(image.sortOrder)}
                   className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white"
                 >
                   <X size={12} />
@@ -161,39 +161,37 @@ export default function RegisterScreen({
         </div>
 
         <div className="space-y-8">
-          {/* Title Input */}
           <div className="space-y-2">
             <input
               type="text"
               placeholder="상품명"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
               className="w-full h-10 border-b border-gray-200 outline-none text-base placeholder:text-gray-400"
             />
           </div>
 
-          {/* Category Selection */}
           <div className="space-y-2">
             <div className="relative border-b border-gray-200">
               <input
                 type="text"
                 placeholder="카테고리"
                 readOnly
-                value={initialData?.category || ""}
+                value={categoryName}
                 className="w-full py-2 text-base font-medium outline-none placeholder-gray-400 cursor-pointer"
               />
-              {/* AI 추천 빤짝이 아이콘 부분 */}
-              <span
+              <button
+                type="button"
+                onClick={onRecommendCategory}
                 className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] flex items-center"
                 style={{ color: themeColor }}
               >
                 <Sparkles size={10} className="mr-1" fill="currentColor" /> AI
                 추천
-              </span>
+              </button>
             </div>
           </div>
 
-          {/* Description Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-base">설명</h3>
@@ -206,27 +204,26 @@ export default function RegisterScreen({
                 placeholder="· 브랜드, 모델명, 구매 시기, 하자 유무 등&#10;상품 설명을 최대한 자세히 적어주세요.&#10;· 전화번호, SNS 계정 등 개인정보 입력은&#10;제한될 수 있어요."
                 className="w-full h-48 bg-gray-50 rounded-2xl p-4 outline-none resize-none text-sm leading-relaxed placeholder:text-gray-300"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(event) => onDescriptionChange(event.target.value)}
                 maxLength={2500}
-              ></textarea>
+              />
               <span className="absolute bottom-4 right-4 text-[10px] text-gray-300 font-bold">
                 {description.length}/2500
               </span>
             </div>
           </div>
 
-          {/* Sale Type Toggle */}
           <div className="space-y-3">
             <h3 className="font-bold text-base">판매 유형</h3>
             <div className="flex bg-gray-50 p-1 rounded-2xl">
               <button
-                onClick={() => !isEditMode && setSaleType("regular")}
+                onClick={() => onSaleTypeChange("regular")}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "regular" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 일반 판매
               </button>
               <button
-                onClick={() => !isEditMode && setSaleType("auction")}
+                onClick={() => onSaleTypeChange("auction")}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "auction" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 Dealit
@@ -234,46 +231,94 @@ export default function RegisterScreen({
             </div>
           </div>
 
-          {/* Price Setting */}
           <div className="space-y-5">
             <div className="space-y-1">
-              <h3 className="font-bold text-base">
-                {saleType === "auction" ? "경매 설정" : "가격 설정"}
-              </h3>
-              <span className="text-xs text-gray-600 block pb-1">
-                {saleType === "auction" ? "시작가" : "판매가"}
-              </span>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h3 className="font-bold text-base">
+                    {auctionFieldContent.sectionTitle}
+                  </h3>
+                  <span className="text-xs text-gray-600 block pb-1">
+                    {auctionFieldContent.priceLabel}
+                  </span>
+                </div>
+                <span className="text-[11px] text-gray-400 text-right">
+                  {auctionFieldContent.helperText}
+                </span>
+              </div>
               <div className="relative border-b border-gray-200">
                 <input
                   type="text"
                   placeholder="₩ 가격"
-                  value={price ? Number(price).toLocaleString() : ""}
-                  onChange={(e) =>
-                    setPrice(e.target.value.replace(/[^0-9]/g, ""))
-                  }
+                  value={formatDisplayPrice(price)}
+                  onChange={(event) => onPriceChange(event.target.value)}
                   className="w-full py-2 text-base font-medium outline-none placeholder-gray-400"
                 />
-                {/* AI 추천 빤짝이 아이콘 부분 */}
-                <span
+                <button
+                  type="button"
+                  onClick={onRecommendPrice}
                   className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] flex items-center"
                   style={{ color: themeColor }}
                 >
                   <Sparkles size={10} className="mr-1" fill="currentColor" /> AI
                   추천
-                </span>
+                </button>
               </div>
             </div>
 
             {saleType === "auction" && (
-              <div className="space-y-2">
-                <span className="text-xs text-gray-300 font-bold">
-                  경매 기간 / 날짜 설정
-                </span>
-                <div className="w-full h-12 bg-gray-50 rounded-2xl flex items-center justify-between px-4 cursor-pointer">
-                  <span className="text-base text-gray-400 font-medium">
-                    2026.06.11
+              <div className="space-y-4 rounded-3xl bg-rose-50/60 p-4">
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-rose-500">
+                    경매 기간 설정
                   </span>
-                  <ChevronRight size={18} className="text-gray-300" />
+                  <p className="text-sm text-gray-600">
+                    {formatAuctionSchedule({
+                      ...auction,
+                      startPrice: price,
+                    })}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="space-y-2">
+                    <span className="text-xs text-gray-500 font-medium">
+                      시작 일시
+                    </span>
+                    <input
+                      type="datetime-local"
+                      value={auction.startsAt}
+                      onChange={(event) => onAuctionStartChange(event.target.value)}
+                      className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
+                    />
+                  </label>
+                  <label className="space-y-2">
+                    <span className="text-xs text-gray-500 font-medium">
+                      진행 기간
+                    </span>
+                    <select
+                      value={auction.durationDays}
+                      onChange={(event) => onAuctionDurationChange(event.target.value)}
+                      className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
+                    >
+                      {[1, 3, 5, 7].map((day) => (
+                        <option key={day} value={day}>
+                          {day}일
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-xs text-gray-500 font-medium">
+                    입찰 단위
+                  </span>
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-11 rounded-2xl border border-rose-500 bg-white text-rose-500 text-sm font-semibold flex items-center justify-center">
+                      {formatDisplayPrice(auction.bidUnit)}원
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -281,17 +326,17 @@ export default function RegisterScreen({
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-white via-white to-transparent">
+      <div className="shrink-0 p-4 bg-gradient-to-t from-white via-white to-transparent border-t border-gray-100/80">
         <button
-          onClick={onComplete}
+          onClick={onRegister}
+          disabled={isSubmitting}
           className="w-full h-12 text-white font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.98]"
           style={{ backgroundColor: themeColor }}
         >
-          {isEditMode ? "수정 완료" : "등록 완료"}
+          {isSubmitting ? "등록 중..." : isEditMode ? "수정 완료" : "등록 완료"}
         </button>
       </div>
 
-      {/* Draft Modal */}
       <AnimatePresence>
         {showDraftModal && (
           <>
@@ -300,7 +345,7 @@ export default function RegisterScreen({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/50 z-40"
-              onClick={() => setShowDraftModal(false)}
+              onClick={onCloseDraftModal}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -316,20 +361,18 @@ export default function RegisterScreen({
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => {
-                    setShowDraftModal(false);
-                    onBack();
-                  }}
+                  onClick={onBack}
                   className="flex-1 h-12 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   아니오
                 </button>
                 <button
-                  onClick={handleSaveDraft}
+                  onClick={onSaveDraft}
+                  disabled={isSavingDraft}
                   className="flex-1 h-12 text-white font-bold rounded-xl transition-colors"
                   style={{ backgroundColor: themeColor }}
                 >
-                  예
+                  {isSavingDraft ? "저장 중..." : "예"}
                 </button>
               </div>
             </motion.div>
@@ -337,7 +380,6 @@ export default function RegisterScreen({
         )}
       </AnimatePresence>
 
-      {/* Load Draft Modal */}
       <AnimatePresence>
         {showLoadDraftModal && (
           <>
@@ -346,6 +388,7 @@ export default function RegisterScreen({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/50 z-40"
+              onClick={onCloseLoadDraftModal}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -361,13 +404,13 @@ export default function RegisterScreen({
               </div>
               <div className="flex space-x-3">
                 <button
-                  onClick={handleDiscardDraft}
+                  onClick={onDiscardDraft}
                   className="flex-1 h-12 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-colors"
                 >
                   아니오
                 </button>
                 <button
-                  onClick={handleLoadDraft}
+                  onClick={onLoadDraft}
                   className="flex-1 h-12 text-white font-bold rounded-xl transition-colors"
                   style={{ backgroundColor: themeColor }}
                 >
