@@ -35,7 +35,7 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
-import RegisterScreen from '../../../products/register/page';
+import RegisterScreen from '../../../products/register/RegisterScreen';
 
 export default function SalesManagementScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
   const [products, setProducts] = useState([

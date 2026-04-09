@@ -1,7 +1,20 @@
 "use client";
-import React from 'react';
-import ProductListScreen from '../products/page';
 
-export default function AuctionListScreen(props: any) {
-  return <ProductListScreen {...props} mode="auction" />;
+import { useRouter } from "next/navigation";
+
+import AuctionListScreen from "./index";
+
+export default function AuctionsPage() {
+  const router = useRouter();
+
+  return (
+    <AuctionListScreen
+      listType="all"
+      categoryName={null}
+      onBack={() => router.back()}
+      onProductClick={(id: number) => router.push(`/auctions/${id}`)}
+      onSearchClick={() => router.push("/search")}
+      themeColor="#F64257"
+    />
+  );
 }
