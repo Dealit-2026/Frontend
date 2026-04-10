@@ -1,42 +1,87 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  Check, 
-  ChevronRight, 
-  User, 
-  Camera, 
-  Search, 
-  Home, 
-  PlusCircle, 
-  MessageCircle, 
-  Heart, 
-  Bell, 
-  Filter, 
-  Settings,
-  MoreVertical, 
-  Send, 
-  Star,
-  Clock,
-  ArrowUpRight,
-  X,
-  Trash2,
-  Eye,
-  Image as ImageIcon,
-  ArrowLeft,
-  TrendingUp,
-  Sparkles,
-  Menu,
-  ShoppingBag,
-  Store,
-  Receipt
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
-import { Screen, Tab } from '../../../types/index';
-import { ExploreIcon } from '../../../components/common/ExploreIcon';
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, PlusCircle, Send } from "lucide-react";
+import { motion } from "motion/react";
 
-export default function ChatRoomScreen({ chatId, onBack, onProductClick, themeColor }: { chatId: number | null; onBack: () => void; onProductClick: (id: number) => void; themeColor: string; key?: string }) {
+import {
+  fetchChatRoomDetail,
+  markChatRoomAsRead,
+} from "@/services/chats/service";
+import type { ChatMessageResponse } from "@/services/chats/types";
+
+interface ChatRoomScreenProps {
+  chatId: number | null;
+  onBack: () => void;
+  onProductClick: (id: number) => void;
+  themeColor: string;
+}
+
+export default function ChatRoomScreen({
+  chatId,
+  onBack,
+  onProductClick,
+  themeColor,
+}: ChatRoomScreenProps) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+
+  const [roomName, setRoomName] = useState("");
+  const [productId, setProductId] = useState<number>(0);
+  const [productName, setProductName] = useState("");
+  const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
+
+  const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
+
+  useEffect(() => {
+    const roomId = chatId;
+    if (roomId == null) return;
+
+    let mounted = true;
+
+    async function loadDetail() {
+      try {
+        setIsLoading(true);
+        setIsError(false);
+
+        const detail = await fetchChatRoomDetail({
+          roomId: roomId as number,
+          size: 30,
+        });
+
+        if (!mounted) return;
+
+        setRoomName(detail.room.opponentName);
+        setProductId(detail.room.productId);
+        setProductName(detail.room.productName);
+        setProductImageUrl(detail.room.productImageUrl);
+        setMessages(detail.messages);
+
+        // 읽음 처리 (실패해도 상세 렌더링은 유지)
+        markChatRoomAsRead({ roomId: roomId as number }).catch((err) => {
+          console.warn("markChatRoomAsRead failed:", err);
+        });
+      } catch (error) {
+        console.error("Failed to load chat room detail:", error);
+        if (!mounted) return;
+        setIsError(true);
+      } finally {
+        if (!mounted) return;
+        setIsLoading(false);
+      }
+    }
+
+    loadDetail();
+
+    return () => {
+      mounted = false;
+    };
+  }, [chatId]);
+
+  const sortedMessages = useMemo(() => {
+    return [...messages].sort((a, b) => a.messageId - b.messageId);
+  }, [messages]);
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -45,56 +90,115 @@ export default function ChatRoomScreen({ chatId, onBack, onProductClick, themeCo
       className="flex-1 flex flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
-        <button onClick={onBack} className="p-2"><ChevronLeft size={24} /></button>
-        <h1 className="flex-1 text-center font-bold text-lg mr-10">이경석</h1>
+        <button onClick={onBack} className="p-2">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="flex-1 text-center font-bold text-lg mr-10">
+          {roomName || "채팅방"}
+        </h1>
       </div>
 
-      {/* Product Info at Top */}
-      <div 
+      <div
         className="p-4 border-b border-gray-50 flex items-center space-x-4 bg-gray-50/50 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => onProductClick(1)}
+        onClick={() => productId && onProductClick(productId)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-          <img src="https://picsum.photos/seed/p1/100/100" alt="Product" className="w-full h-full object-cover" />
+          {productImageUrl ? (
+            <img
+              src={productImageUrl}
+              alt={productName || "Product"}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-400">
+              이미지
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold truncate">아이폰 14 Pro 256GB 딥퍼플</p>
-          <p className="text-[10px] text-green-600 font-bold">거래 중</p>
+          <p className="text-xs font-bold truncate">
+            {productName || "상품 정보"}
+          </p>
+          <p className="text-[10px] font-bold" style={{ color: themeColor }}>
+            거래 중
+          </p>
         </div>
-        <button className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold shrink-0">상세보기</button>
+        <button className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold shrink-0">
+          상세보기
+        </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-        <div className="flex justify-center">
-          <span className="px-3 py-1 bg-gray-100 rounded-full text-[10px] text-gray-400">2026년 3월 22일</span>
-        </div>
-        
-        <div className="flex items-start space-x-3">
-          <div className="w-8 h-8 rounded-full bg-gray-100"></div>
-          <div className="space-y-1">
-            <div className="bg-gray-100 rounded-2xl rounded-tl-none p-3 max-w-[240px]">
-              <p className="text-sm">네, 직거래 가능합니다. 어디서 뵐까요?</p>
-            </div>
-            <span className="text-[10px] text-gray-400">오후 12:45</span>
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {isLoading ? (
+          <div className="h-full flex items-center justify-center text-sm text-gray-400">
+            채팅방 정보를 불러오는 중...
           </div>
-        </div>
+        ) : isError ? (
+          <div className="h-full flex flex-col items-center justify-center gap-3 text-sm text-gray-400">
+            <p>채팅방 정보를 불러오지 못했습니다.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : sortedMessages.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-sm text-gray-400">
+            아직 메시지가 없습니다.
+          </div>
+        ) : (
+          sortedMessages.map((msg) => {
+            const isMine = msg.senderType === "ME";
 
-        <div className="flex items-start justify-end space-x-3">
-          <div className="space-y-1 text-right">
-            <div className="bg-black text-white rounded-2xl rounded-tr-none p-3 max-w-[240px]">
-              <p className="text-sm">강남역 10번 출구 어떠신가요?</p>
-            </div>
-            <span className="text-[10px] text-gray-400">오후 12:46</span>
-          </div>
-        </div>
+            return (
+              <div
+                key={msg.messageId}
+                className={`flex items-end ${isMine ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`max-w-[240px] p-3 rounded-2xl text-sm ${
+                    isMine
+                      ? "bg-black text-white rounded-tr-none"
+                      : "bg-gray-100 text-gray-900 rounded-tl-none"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap break-words">
+                    {msg.content}
+                  </p>
+                  <p
+                    className={`mt-1 text-[10px] ${
+                      isMine ? "text-gray-300" : "text-gray-400"
+                    }`}
+                  >
+                    {new Intl.DateTimeFormat("ko-KR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    }).format(new Date(msg.createdAt))}
+                  </p>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="p-4 border-t border-gray-100 flex items-center space-x-3">
-        <button className="p-2 bg-gray-50 rounded-xl"><PlusCircle size={24} className="text-gray-400" /></button>
+        <button className="p-2 bg-gray-50 rounded-xl">
+          <PlusCircle size={24} className="text-gray-400" />
+        </button>
         <div className="flex-1 h-12 bg-gray-50 rounded-2xl px-4 flex items-center">
-          <input type="text" placeholder="메시지를 입력하세요" className="flex-1 bg-transparent outline-none text-sm" />
+          <input
+            type="text"
+            placeholder="메시지를 입력하세요"
+            className="flex-1 bg-transparent outline-none text-sm"
+            disabled
+          />
         </div>
-        <button className="p-3 bg-black text-white rounded-xl"><Send size={20} /></button>
+        <button className="p-3 bg-black text-white rounded-xl" disabled>
+          <Send size={20} />
+        </button>
       </div>
     </motion.div>
   );
