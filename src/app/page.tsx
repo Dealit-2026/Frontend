@@ -45,6 +45,7 @@ import FindLocationScreen from "./(auth)/find-location";
 import PhoneAuthScreen from "./(auth)/phone-auth";
 import TermsAgreementScreen from "./(auth)/terms";
 import ProfileSetupScreen from "./(auth)/profile-setup";
+import ProfileEditScreen from "./(main)/mypage/edit-profile";
 import CategorySelectionScreen from "./(auth)/category-selection";
 import MainLayout from "./(main)";
 import TabButton from "../components/common/bottom-navigation/TabButton";
@@ -78,6 +79,7 @@ import WinningBidCompletionScreen from "./auctions/[auctionId]/winning-complete"
 import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
+import { fetchMyProfileForm, saveMyLocation } from "@/services/mypage/service";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -94,6 +96,7 @@ export default function App() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userLocation, setUserLocation] = useState("서울특별시 강남구 역삼동");
   const [isEditingLocation, setIsEditingLocation] = useState(false);
+  const [locationReturnScreen, setLocationReturnScreen] = useState<Screen | null>(null);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -177,17 +180,31 @@ export default function App() {
                   navigateTo("phone_auth");
                 }
               }}
-              onFindLocation={() => navigateTo("find_location")}
+              onFindLocation={() => {
+                setLocationReturnScreen(null);
+                navigateTo("find_location");
+              }}
               currentLocation={userLocation}
             />
           )}
           {currentScreen === "find_location" && (
             <FindLocationScreen
               key="find_location"
-              onBack={() => navigateTo("region_setup")}
+              onBack={() => {
+                if (locationReturnScreen) {
+                  navigateTo(locationReturnScreen);
+                  setLocationReturnScreen(null);
+                } else {
+                  navigateTo("region_setup");
+                }
+              }}
               onComplete={(newLocation) => {
                 setUserLocation(newLocation);
-                if (isEditingLocation) {
+                if (locationReturnScreen) {
+                  saveMyLocation(newLocation);
+                  navigateTo(locationReturnScreen);
+                  setLocationReturnScreen(null);
+                } else if (isEditingLocation) {
                   navigateTo("main");
                   setIsEditingLocation(false);
                 } else {
@@ -231,6 +248,42 @@ export default function App() {
                   navigateTo("category_selection");
                 }
               }}
+            />
+          )}
+          {currentScreen === "edit_profile" && (
+            <ProfileEditScreen
+              key="edit_profile"
+              onLocationEdit={() => {
+                fetchMyProfileForm().then((form) => {
+                  if (form.location) {
+                    setUserLocation(form.location);
+                  }
+                });
+                navigateTo("edit_profile_region");
+              }}
+              onBack={() => {
+                navigateTo("main");
+                setIsEditingProfile(false);
+              }}
+              onComplete={() => {
+                navigateTo("main");
+                setIsEditingProfile(false);
+              }}
+            />
+          )}
+          {currentScreen === "edit_profile_region" && (
+            <RegionSetupScreen
+              key="edit_profile_region"
+              onBack={() => navigateTo("edit_profile")}
+              onNext={() => {
+                saveMyLocation(userLocation);
+                navigateTo("edit_profile");
+              }}
+              onFindLocation={() => {
+                setLocationReturnScreen("edit_profile_region");
+                navigateTo("find_location");
+              }}
+              currentLocation={userLocation}
             />
           )}
           {currentScreen === "category_selection" && (
@@ -283,7 +336,7 @@ export default function App() {
               }}
               onProfileEditClick={() => {
                 setIsEditingProfile(true);
-                navigateTo("profile_setup");
+                navigateTo("edit_profile");
               }}
               onLocationEditClick={() => {
                 setIsEditingLocation(true);
