@@ -25,13 +25,14 @@ import { notFound } from "next/navigation";
 import ChatRoomScreen from "./index";
 
 interface ChatRoomPageProps {
-  params: {
+  params: Promise<{
     roomId: string;
-  };
+  }>;
 }
 
-export default function ChatRoomPage({ params }: ChatRoomPageProps) {
-  const parsedRoomId = Number(params.roomId);
+export default async function ChatRoomPage({ params }: ChatRoomPageProps) {
+  const { roomId } = await params;
+  const parsedRoomId = Number(roomId);
 
   if (!Number.isInteger(parsedRoomId) || parsedRoomId <= 0) {
     notFound();
