@@ -70,6 +70,7 @@ export function createFallbackChatRooms(): ChatRoomListItemVM[] {
       timeLabel: "5분 전",
       unreadCount: 2,
       profileImageUrl: "https://picsum.photos/seed/user1/100/100",
+      chatType: "AUCTION",
     },
   ];
 }
