@@ -1,22 +1,35 @@
 // src/services/chats/service.ts
 import * as chatsApi from "./api";
+import {
+  createFallbackChatRoomsResponse,
+  createFallbackChatRoomDetailResult,
+  createFallbackCreateChatRoomResponse,
+  createFallbackMarkReadResponse,
+  createFallbackRoom,
+  createFallbackUnreadCountResponse,
+} from "./fallback";
 import type {
-  ChatRoomDetailResult,
+  ChatActionButtons,
+  ChatMessageType,
+  ChatMessageVM,
   ChatRoomDetailVM,
   ChatRoomListItemResponse,
   ChatRoomListItemVM,
+  ChatRoomMessagesResult,
   ChatRoomType,
   CreateChatRoomRequest,
-  GetChatRoomDetailRequest,
+  GetChatRoomMessagesRequest,
   GetChatRoomsRequest,
-  MarkChatRoomAsReadRequest,
+  MarkChatRoomAsReadResponse,
+  ReportChatMessageRequest,
+  SendChatMessageRequest,
 } from "./types";
 
 /**
  * service.ts 규칙:
  * - page/컴포넌트가 직접 사용하는 진입점
  * - API 응답 -> 화면 친화 형태(VM) 변환
- * - unread 관련 도메인 규칙 통합
+ * - 상세 화면은 room 메타가 없을 수 있으므로 안전한 fallback 유지
  */
 
 /* =========================
@@ -27,8 +40,9 @@ function toProductTypeLabel(type: ChatRoomType): "Deal it!" | "일반 판매" {
   return type === "AUCTION" ? "Deal it!" : "일반 판매";
 }
 
-function toTimeLabel(iso: string | null): string {
+function toTimeLabel(iso: string | null | undefined): string {
   if (!iso) return "";
+
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
 
@@ -50,126 +64,46 @@ function toTimeLabel(iso: string | null): string {
   }).format(date);
 }
 
-/* =========================
- * 목록 변환
- * ========================= */
+function mapMessageType(type: ChatMessageType): ChatMessageType {
+  return type;
+}
 
-export function toChatRoomListItemVM(
+function toMessageVM(message: {
+  messageId: number;
+  senderId: number;
+  senderNickname: string;
+  messageType: ChatMessageType;
+  content: string;
+  isRead: boolean;
+  sentAt: string;
+}): ChatMessageVM {
+  return {
+    ...message,
+    messageType: mapMessageType(message.messageType),
+    senderType: message.senderNickname === "나" ? "ME" : "OTHER",
+  };
+}
+
+function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
   return {
     id: item.roomId,
-    name: item.participant.nickname,
-    productName: item.product.productName,
-    productTypeLabel: toProductTypeLabel(item.product.saleType),
-    lastMessage: item.lastMessage ?? "",
-    timeLabel: toTimeLabel(item.lastMessageAt),
+    name: item.opponent.nickname,
+    productName: item.product.name,
+    productTypeLabel: toProductTypeLabel(item.chatType),
+    lastMessage: item.lastMessage?.content ?? "",
+    timeLabel: toTimeLabel(item.lastMessage?.sentAt ?? item.updatedAt),
     unreadCount: item.unreadCount,
-    profileImageUrl: item.participant.profileImageUrl,
+    profileImageUrl: item.opponent.profileImageUrl ?? null,
+    chatType: item.chatType,
+    isWinner: undefined,
+    actionButtons: undefined,
   };
 }
 
-export function toChatRoomListVM(
-  items: ChatRoomListItemResponse[],
-): ChatRoomListItemVM[] {
-  return items.map(toChatRoomListItemVM);
-}
-
-/** 개발 단계 fallback 데이터 (백엔드 미연결 시) */
-function getChatRoomsFallback(): ChatRoomListItemVM[] {
-  return [
-    {
-      id: 1,
-      name: "이경석",
-      productName: "아이폰 14 Pro 256GB",
-      productTypeLabel: "Deal it!",
-      lastMessage: "네, 직거래 가능합니다",
-      timeLabel: "5분 전",
-      unreadCount: 2,
-      profileImageUrl: "https://picsum.photos/seed/user1/100/100",
-    },
-    {
-      id: 2,
-      name: "이동녕",
-      productName: "맥북 프로 16인치",
-      productTypeLabel: "일반 판매",
-      lastMessage: "직거래 안됩니다...",
-      timeLabel: "1시간 전",
-      unreadCount: 0,
-      profileImageUrl: "https://picsum.photos/seed/user2/100/100",
-    },
-    {
-      id: 3,
-      name: "이다윤",
-      productName: "에어팟 프로 2세대",
-      productTypeLabel: "일반 판매",
-      lastMessage: "입금 확인했습니다",
-      timeLabel: "3시간 전",
-      unreadCount: 1,
-      profileImageUrl: "https://picsum.photos/seed/user3/100/100",
-    },
-  ];
-}
-
-/* =========================
- * 상세 변환
- * ========================= */
-
-export function toChatRoomDetailVM(detail: {
-  roomId: number;
-  participant: { nickname: string };
-  product: {
-    productId: number;
-    productName: string;
-    productImageUrl: string | null;
-  };
-}): ChatRoomDetailVM {
-  return {
-    roomId: detail.roomId,
-    opponentName: detail.participant.nickname,
-    productId: detail.product.productId,
-    productName: detail.product.productName,
-    productImageUrl: detail.product.productImageUrl,
-    productStatusLabel: "거래 중", // 1차 고정값
-  };
-}
-
-/** 상세 fallback 데이터 (백엔드 미연결 시) */
-function getChatRoomDetailFallback(roomId: number): ChatRoomDetailResult {
-  return {
-    room: {
-      roomId,
-      opponentName: "상대방",
-      productId: 1,
-      productName: "임시 상품",
-      productImageUrl: "https://picsum.photos/seed/p1/100/100",
-      productStatusLabel: "거래 중",
-    },
-    messages: [
-      {
-        messageId: 1,
-        senderType: "OTHER",
-        senderId: 2,
-        senderNickname: "상대방",
-        content: "안녕하세요! 문의 주신 내용 확인했습니다.",
-        messageType: "TEXT",
-        createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-        isRead: true,
-      },
-      {
-        messageId: 2,
-        senderType: "ME",
-        senderId: 1,
-        senderNickname: "나",
-        content: "네, 감사합니다. 거래 가능 시간 궁금해요.",
-        messageType: "TEXT",
-        createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-        isRead: true,
-      },
-    ],
-    nextCursor: null,
-    hasNext: false,
-  };
+function toRoomVMFromDetailRequest(roomId: number): ChatRoomDetailVM {
+  return createFallbackRoom(roomId);
 }
 
 /* =========================
@@ -183,19 +117,15 @@ export async function fetchChatRooms(request: GetChatRoomsRequest = {}) {
 
     return {
       ...response,
-      items: toChatRoomListVM(response.items),
+      content: response.content.map(toChatRoomListItemVM),
     };
   } catch (error) {
     console.warn("fetchChatRooms fallback activated:", error);
 
-    const fallbackItems = getChatRoomsFallback();
-
-    return {
-      items: fallbackItems,
-      nextCursor: null,
-      hasNext: false,
-      totalUnreadCount: getTotalUnreadFromList(fallbackItems),
-    };
+    return createFallbackChatRoomsResponse(
+      request.page ?? 0,
+      request.size ?? 20,
+    );
   }
 }
 
@@ -205,44 +135,67 @@ export async function createChatRoom(request: CreateChatRoomRequest) {
     return await chatsApi.postChatRoom(request);
   } catch (error) {
     console.warn("createChatRoom failed:", error);
-    // 생성은 fallback roomId로 임시 대체
-    return {
-      roomId: 1,
-      createdAt: new Date().toISOString(),
-    };
+
+    return createFallbackCreateChatRoomResponse(request);
   }
 }
 
-/** 상세 조회 */
-export async function fetchChatRoomDetail(
-  request: GetChatRoomDetailRequest,
-): Promise<ChatRoomDetailResult> {
+/** 메시지 조회 */
+export async function fetchChatMessages(
+  request: GetChatRoomMessagesRequest,
+): Promise<ChatRoomMessagesResult> {
   try {
-    const response = await chatsApi.getChatRoomDetail(request);
+    const response = await chatsApi.getChatRoomMessages(request);
 
     return {
-      room: toChatRoomDetailVM(response),
-      messages: response.messages,
-      nextCursor: response.nextCursor,
+      room: toRoomVMFromDetailRequest(request.roomId),
+      messages: response.content.map(toMessageVM),
+      page: response.page,
+      size: response.size,
+      totalElements: response.totalElements,
+      totalPages: response.totalPages,
       hasNext: response.hasNext,
     };
   } catch (error) {
-    console.warn("fetchChatRoomDetail fallback activated:", error);
-    return getChatRoomDetailFallback(request.roomId);
+    console.warn("fetchChatMessages fallback activated:", error);
+
+    return createFallbackChatRoomDetailResult(request.roomId);
   }
 }
 
+/** 상세 조회 호환 함수 */
+export async function fetchChatRoomDetail(
+  request: GetChatRoomMessagesRequest,
+): Promise<ChatRoomMessagesResult> {
+  return fetchChatMessages(request);
+}
+
+/** 메시지 전송 */
+export async function sendChatMessage(
+  roomId: number,
+  request: SendChatMessageRequest,
+) {
+  return chatsApi.postChatMessage(roomId, request);
+}
+
+/** 채팅 메시지 신고 */
+export async function reportChatMessage(
+  messageId: number,
+  request: ReportChatMessageRequest,
+) {
+  return chatsApi.postChatMessageReport(messageId, request);
+}
+
 /** 안읽음 읽음 처리 */
-export async function markChatRoomAsRead(request: MarkChatRoomAsReadRequest) {
+export async function markChatRoomAsRead(
+  roomId: number,
+): Promise<MarkChatRoomAsReadResponse> {
   try {
-    return await chatsApi.patchChatRoomRead(request);
+    return await chatsApi.patchChatRoomRead(roomId);
   } catch (error) {
     console.warn("markChatRoomAsRead fallback:", error);
-    return {
-      roomId: request.roomId,
-      unreadCount: 0,
-      updatedAt: new Date().toISOString(),
-    };
+
+    return createFallbackMarkReadResponse(roomId);
   }
 }
 
@@ -252,9 +205,8 @@ export async function fetchTotalUnreadCount() {
     return await chatsApi.getUnreadCount();
   } catch (error) {
     console.warn("fetchTotalUnreadCount fallback:", error);
-    return {
-      totalUnreadCount: 0,
-    };
+
+    return createFallbackUnreadCountResponse();
   }
 }
 
@@ -262,10 +214,6 @@ export async function fetchTotalUnreadCount() {
  * unread 통합 규칙(도메인 유틸)
  * ========================= */
 
-/**
- * 목록에서 특정 방 unread를 0으로 반영하는 규칙.
- * page에서 상태 업데이트 시 재사용 가능.
- */
 export function applyReadToChatList(
   list: ChatRoomListItemVM[],
   roomId: number,
@@ -275,7 +223,6 @@ export function applyReadToChatList(
   );
 }
 
-/** 목록 전체 unread 총합 계산 */
 export function getTotalUnreadFromList(list: ChatRoomListItemVM[]): number {
   return list.reduce((sum, item) => sum + item.unreadCount, 0);
 }

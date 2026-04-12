@@ -151,8 +151,8 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
 import React, { useEffect, useMemo, useState } from "react";
 import { MessageCircle, Search, X } from "lucide-react";
 
-import { fetchChatRooms } from "@/services/chats/service";
-import type { ChatRoomListItemVM } from "@/services/chats/types";
+import { fetchChatRooms } from "../../services/chats/service";
+import type { ChatRoomListItemVM } from "../../services/chats/types";
 
 interface ChatListScreenProps {
   themeColor: string;
@@ -178,10 +178,10 @@ export default function ChatListScreen({
         setIsLoading(true);
         setIsError(false);
 
-        const response = await fetchChatRooms({ size: 20 });
+        const response = await fetchChatRooms({ page: 0, size: 20 });
 
         if (!mounted) return;
-        setChats(response.items);
+        setChats(response.content);
       } catch (error) {
         console.error("Failed to load chat rooms:", error);
         if (!mounted) return;
@@ -300,7 +300,10 @@ export default function ChatListScreen({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2 min-w-0">
                     <span className="font-bold shrink-0">{chat.name}</span>
-                    <span className="text-[10px] text-gray-500 truncate max-w-[100px]">
+                    <span
+                      className="text-[10px] text-gray-500 truncate"
+                      style={{ maxWidth: "100px" }}
+                    >
                       {chat.productName}
                     </span>
                     <span

@@ -5,10 +5,10 @@ import { ChevronLeft, PlusCircle, Send } from "lucide-react";
 import { motion } from "motion/react";
 
 import {
-  fetchChatRoomDetail,
+  fetchChatMessages,
   markChatRoomAsRead,
-} from "@/services/chats/service";
-import type { ChatMessageResponse } from "@/services/chats/types";
+} from "../../../services/chats/service";
+import type { ChatMessageVM } from "../../../services/chats/types";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
@@ -31,7 +31,7 @@ export default function ChatRoomScreen({
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
 
-  const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
+  const [messages, setMessages] = useState<ChatMessageVM[]>([]);
 
   useEffect(() => {
     const roomId = chatId;
@@ -44,8 +44,9 @@ export default function ChatRoomScreen({
         setIsLoading(true);
         setIsError(false);
 
-        const detail = await fetchChatRoomDetail({
+        const detail = await fetchChatMessages({
           roomId: roomId as number,
+          page: 0,
           size: 30,
         });
 
@@ -58,7 +59,7 @@ export default function ChatRoomScreen({
         setMessages(detail.messages);
 
         // 읽음 처리 (실패해도 상세 렌더링은 유지)
-        markChatRoomAsRead({ roomId: roomId as number }).catch((err) => {
+        markChatRoomAsRead(roomId as number).catch((err: unknown) => {
           console.warn("markChatRoomAsRead failed:", err);
         });
       } catch (error) {
@@ -79,7 +80,9 @@ export default function ChatRoomScreen({
   }, [chatId]);
 
   const sortedMessages = useMemo(() => {
-    return [...messages].sort((a, b) => a.messageId - b.messageId);
+    return [...messages].sort(
+      (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
+    );
   }, [messages]);
 
   return (
@@ -157,13 +160,13 @@ export default function ChatRoomScreen({
                 className={`flex items-end ${isMine ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[240px] p-3 rounded-2xl text-sm ${
+                  className={`max-w-60 p-3 rounded-2xl text-sm ${
                     isMine
                       ? "bg-black text-white rounded-tr-none"
                       : "bg-gray-100 text-gray-900 rounded-tl-none"
                   }`}
                 >
-                  <p className="whitespace-pre-wrap break-words">
+                  <p className="whitespace-pre-wrap wrap-break-word">
                     {msg.content}
                   </p>
                   <p
@@ -175,7 +178,7 @@ export default function ChatRoomScreen({
                       hour: "2-digit",
                       minute: "2-digit",
                       hour12: true,
-                    }).format(new Date(msg.createdAt))}
+                    }).format(new Date(msg.sentAt))}
                   </p>
                 </div>
               </div>

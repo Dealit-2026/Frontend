@@ -1,128 +1,183 @@
 // src/services/chats/types.ts
 
 /**
- * chats 도메인 1차 범위:
- * - 목록
- * - 생성
- * - 안읽음
- * - 상세(roomId)
- * 실시간(SSE/WS)은 2차에서 확장
+ * chats 도메인 범위:
+ * - 채팅방 생성/목록
+ * - 메시지 조회/전송/삭제
+ * - 읽음/안읽음 조회
+ * - 신고/웹소켓 확장 포인트
  */
 
 /* =========================
  * 공통/기본 타입
  * ========================= */
 
-export type ChatRoomType = "AUCTION" | "REGULAR";
+export type ChatRoomType = "GENERAL" | "AUCTION";
+export type ChatProductSaleType = "GENERAL" | "AUCTION";
+export type ChatProductStatus = "ACTIVE" | "AUCTION_ENDED" | string;
+export type ChatParticipantRole = "SELLER" | "BUYER";
+export type ChatMessageType = "TEXT" | "IMAGE" | "SYSTEM" | "TALK";
+export type ChatMessageSenderType = "ME" | "OTHER" | "SYSTEM";
+export type ChatActionButtonType =
+  | "GENERAL_PURCHASE"
+  | "AUCTION_PAYMENT"
+  | "SELLER_CONFIRM"
+  | "BUYER_CONFIRM"
+  | null;
 
-export interface ChatParticipant {
+export interface ChatActionButtons {
+  canPay: boolean;
+  canCompleteTrade: boolean;
+  payButtonType: Exclude<ChatActionButtonType, null> | null;
+  completeTradeButtonType: Exclude<ChatActionButtonType, null> | null;
+}
+
+export interface ChatRoomProduct {
+  productId: number;
+  name: string;
+  thumbnailUrl: string | null;
+  saleType?: ChatProductSaleType;
+  status?: ChatProductStatus;
+}
+
+export interface ChatRoomParticipant {
   userId: number;
   nickname: string;
-  profileImageUrl: string | null;
+  profileImageUrl?: string | null;
+  role?: ChatParticipantRole;
 }
 
-export interface ChatProductSummary {
-  productId: number;
-  productName: string;
-  productImageUrl: string | null;
-  saleType: ChatRoomType;
-}
-
-/* =========================
- * 목록(List) - API DTO
- * ========================= */
-
-export interface GetChatRoomsRequest {
-  cursor?: number | null;
-  size?: number;
-  keyword?: string;
-}
-
-export interface ChatRoomListItemResponse {
-  roomId: number;
-  participant: ChatParticipant;
-  product: ChatProductSummary;
-  lastMessage: string | null;
-  lastMessageAt: string | null; // ISO string
-  unreadCount: number;
-}
-
-export interface GetChatRoomsResponse {
-  items: ChatRoomListItemResponse[];
-  nextCursor: number | null;
-  hasNext: boolean;
-  totalUnreadCount: number;
+export interface ChatRoomLastMessage {
+  messageId: number;
+  type: ChatMessageType;
+  content: string;
+  sentAt: string;
 }
 
 /* =========================
- * 생성(Create) - API DTO
+ * 채팅방 생성
  * ========================= */
 
 export interface CreateChatRoomRequest {
   productId: number;
-  opponentUserId: number;
+  receiverId: number;
 }
 
 export interface CreateChatRoomResponse {
   roomId: number;
-  createdAt: string; // ISO string
+  chatType: ChatRoomType;
+  product: ChatRoomProduct;
+  participants: ChatRoomParticipant[];
+  isWinner: boolean;
+  actionButtons: ChatActionButtons;
+  createdAt: string;
 }
 
 /* =========================
- * 안읽음(Unread) - API DTO
+ * 채팅방 목록
  * ========================= */
 
-export interface MarkChatRoomAsReadRequest {
-  roomId: number;
-  lastReadMessageId?: number | null;
-}
-
-export interface MarkChatRoomAsReadResponse {
-  roomId: number;
-  unreadCount: number; // 보통 0
-  updatedAt: string; // ISO string
-}
-
-export interface GetUnreadCountResponse {
-  totalUnreadCount: number;
-}
-
-/* =========================
- * 상세(Room Detail) - API DTO
- * ========================= */
-
-export interface GetChatRoomDetailRequest {
-  roomId: number;
-  cursor?: number | null;
+export interface GetChatRoomsRequest {
+  page?: number;
   size?: number;
 }
 
-export type ChatMessageSenderType = "ME" | "OTHER" | "SYSTEM";
-export type ChatMessageType = "TEXT" | "IMAGE" | "SYSTEM";
-
-export interface ChatMessageResponse {
-  messageId: number;
-  senderType: ChatMessageSenderType;
-  senderId: number | null;
-  senderNickname: string | null;
-  content: string;
-  messageType: ChatMessageType;
-  createdAt: string; // ISO string
-  isRead: boolean;
+export interface ChatRoomListItemResponse {
+  roomId: number;
+  chatType: ChatRoomType;
+  product: Pick<ChatRoomProduct, "productId" | "name" | "thumbnailUrl">;
+  opponent: Pick<ChatRoomParticipant, "userId" | "nickname" | "profileImageUrl">;
+  lastMessage: ChatRoomLastMessage | null;
+  unreadCount: number;
+  updatedAt: string;
 }
 
-export interface GetChatRoomDetailResponse {
-  roomId: number;
-  participant: ChatParticipant;
-  product: ChatProductSummary;
-  messages: ChatMessageResponse[];
-  nextCursor: number | null;
+export interface GetChatRoomsResponse {
+  content: ChatRoomListItemResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
   hasNext: boolean;
 }
 
 /* =========================
+ * 메시지 조회/전송/삭제
+ * ========================= */
+
+export interface GetChatRoomMessagesRequest {
+  roomId: number;
+  page?: number;
+  size?: number;
+}
+
+export interface ChatMessageResponse {
+  messageId: number;
+  senderId: number;
+  senderNickname: string;
+  messageType: ChatMessageType;
+  content: string;
+  isRead: boolean;
+  sentAt: string;
+}
+
+export interface GetChatRoomMessagesResponse {
+  content: ChatMessageResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+export interface SendChatMessageRequest {
+  messageType: ChatMessageType;
+  content: string;
+}
+
+export interface SendChatMessageResponse {
+  messageId: number;
+  roomId: number;
+  senderId: number;
+  messageType: ChatMessageType;
+  content: string;
+  isRead: boolean;
+  sentAt: string;
+}
+
+export interface DeleteChatMessageResponse {
+  message: string;
+  messageId: number;
+  timestamp: string;
+}
+
+export interface ReportChatMessageRequest {
+  reason: string;
+}
+
+export interface ReportChatMessageResponse {
+  messageId: number;
+  reported: boolean;
+  timestamp: string;
+}
+
+/* =========================
+ * 읽음/안읽음
+ * ========================= */
+
+export interface MarkChatRoomAsReadResponse {
+  roomId: number;
+  message: string;
+  readAt: string;
+}
+
+export interface GetUnreadCountResponse {
+  unreadCount: number;
+  updatedAt: string;
+}
+
+/* =========================
  * 화면(ViewModel) 타입
- * - page/index에서 바로 쓰기 쉬운 형태
  * ========================= */
 
 export interface ChatRoomListItemVM {
@@ -134,6 +189,9 @@ export interface ChatRoomListItemVM {
   timeLabel: string;
   unreadCount: number;
   profileImageUrl: string | null;
+  chatType: ChatRoomType;
+  isWinner?: boolean;
+  actionButtons?: ChatActionButtons;
 }
 
 export interface ChatRoomDetailVM {
@@ -143,22 +201,31 @@ export interface ChatRoomDetailVM {
   productName: string;
   productImageUrl: string | null;
   productStatusLabel: string;
+  chatType?: ChatRoomType;
+  isWinner?: boolean;
+  actionButtons?: ChatActionButtons;
 }
 
-/* =========================
- * Service 반환 계약 (화면 전용)
- * ========================= */
+export interface ChatMessageVM extends ChatMessageResponse {
+  senderType?: ChatMessageSenderType;
+}
 
-export interface ChatRoomDetailResult {
+export interface ChatRoomMessagesResult {
   room: ChatRoomDetailVM;
-  messages: ChatMessageResponse[];
-  nextCursor: number | null;
+  messages: ChatMessageVM[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
   hasNext: boolean;
 }
 
 /* =========================
- * (선택) 기존 코드 호환용 별칭
+ * 확장 포인트 / 별칭
  * ========================= */
 
 export type ChatRoomSummary = ChatRoomListItemResponse;
 export type ChatRoomMessage = ChatMessageResponse;
+export type GetChatRoomDetailRequest = GetChatRoomMessagesRequest;
+export type GetChatRoomDetailResponse = GetChatRoomMessagesResponse;
+export type ChatRoomDetailResult = ChatRoomMessagesResult;
