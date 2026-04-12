@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, PlusCircle, Send } from "lucide-react";
 import { motion } from "motion/react";
+import { useRouter } from "next/navigation";
 
 import {
   fetchChatMessages,
@@ -12,8 +13,8 @@ import type { ChatMessageVM } from "../../../services/chats/types";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
-  onBack: () => void;
-  onProductClick: (id: number) => void;
+  onBack?: () => void;
+  onProductClick?: (id: number) => void;
   themeColor: string;
 }
 
@@ -23,6 +24,7 @@ export default function ChatRoomScreen({
   onProductClick,
   themeColor,
 }: ChatRoomScreenProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
 
@@ -85,6 +87,32 @@ export default function ChatRoomScreen({
     );
   }, [messages]);
 
+  const messageTimeFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    [],
+  );
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
+    router.back();
+  };
+
+  const handleProductClick = (id: number) => {
+    if (onProductClick) {
+      onProductClick(id);
+      return;
+    }
+    router.push(`/products/${id}`);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -93,7 +121,7 @@ export default function ChatRoomScreen({
       className="flex-1 flex flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
-        <button onClick={onBack} className="p-2">
+        <button onClick={handleBack} className="p-2" aria-label="뒤로가기">
           <ChevronLeft size={24} />
         </button>
         <h1 className="flex-1 text-center font-bold text-lg mr-10">
@@ -103,7 +131,7 @@ export default function ChatRoomScreen({
 
       <div
         className="p-4 border-b border-gray-50 flex items-center space-x-4 bg-gray-50/50 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => productId && onProductClick(productId)}
+        onClick={() => productId && handleProductClick(productId)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
           {productImageUrl ? (
@@ -174,11 +202,7 @@ export default function ChatRoomScreen({
                       isMine ? "text-gray-300" : "text-gray-400"
                     }`}
                   >
-                    {new Intl.DateTimeFormat("ko-KR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                    }).format(new Date(msg.sentAt))}
+                    {messageTimeFormatter.format(new Date(msg.sentAt))}
                   </p>
                 </div>
               </div>

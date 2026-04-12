@@ -280,6 +280,14 @@ export default function ChatListScreen({
             <div
               key={chat.id}
               onClick={() => onChatClick(chat.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onChatClick(chat.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
               className="flex items-center px-6 py-4 space-x-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50/50"
             >
               <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0">
