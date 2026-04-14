@@ -3,5 +3,11 @@ import React from 'react';
 import ProductDetailScreen from '../../products/[productId]';
 
 export default function AuctionDetailScreen(props: any) {
-  return <ProductDetailScreen {...props} mode="auction" />;
+  return (
+    <ProductDetailScreen
+      {...props}
+      mode="auction"
+      auctionStatus="AUCTION_SCHEDULED"
+    />
+  );
 }

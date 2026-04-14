@@ -8,6 +8,7 @@ import {
   calculateBidUnit,
   createDefaultAuctionForm,
   createDraft,
+  deleteAuctionImage,
   formatAuctionSchedule,
   formatDisplayPrice,
   getAuctionFieldContent,
@@ -62,6 +63,7 @@ export default function RegisterScreen({
     createDefaultAuctionForm(),
   );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -70,6 +72,12 @@ export default function RegisterScreen({
   const auctionFieldContent = getAuctionFieldContent(saleType);
   const handleBack = onBack ?? (() => router.back());
   const handleComplete = onComplete ?? (() => router.push("/"));
+
+  const showErrorMessage = (message: string) => {
+    if (typeof window !== "undefined") {
+      window.alert(message);
+    }
+  };
 
   useEffect(() => {
     if (!isEditMode) {
@@ -84,6 +92,7 @@ export default function RegisterScreen({
     createDraft({
       saleType,
       name,
+      categoryName,
       price,
       startPrice: price,
       description,
@@ -116,6 +125,37 @@ export default function RegisterScreen({
   };
 
   const handleRegister = async () => {
+    if (!name.trim()) {
+      showErrorMessage("상품명을 입력해 주세요.");
+      return;
+    }
+
+    if (!categoryId) {
+      showErrorMessage(
+        "카테고리 직접 입력은 아직 등록에 반영되지 않습니다. 우선 AI 추천으로 카테고리를 선택해 주세요.",
+      );
+      return;
+    }
+
+    if (!price) {
+      showErrorMessage(
+        saleType === "auction"
+          ? "시작가를 입력해 주세요."
+          : "판매가를 입력해 주세요.",
+      );
+      return;
+    }
+
+    if (!description.trim()) {
+      showErrorMessage("상품 설명을 입력해 주세요.");
+      return;
+    }
+
+    if (images.length === 0) {
+      showErrorMessage("상품 이미지를 1장 이상 등록해 주세요.");
+      return;
+    }
+
     const draft = buildDraft();
     setIsSubmitting(true);
 
@@ -125,6 +165,7 @@ export default function RegisterScreen({
       handleComplete();
     } catch (error) {
       console.error("Failed to register auction", error);
+      showErrorMessage("상품 등록에 실패했습니다. 입력값과 서버 상태를 확인해 주세요.");
     } finally {
       setIsSubmitting(false);
     }
@@ -194,7 +235,7 @@ export default function RegisterScreen({
         setSaleType(draft.saleType || mode);
         setName(draft.name);
         setCategoryId(draft.categoryId);
-        setCategoryName(initialData?.category || "");
+        setCategoryName(draft.categoryName ?? (initialData?.category || ""));
         setPrice(draft.price);
         setDescription(draft.description);
         setImages(draft.images);
@@ -211,7 +252,29 @@ export default function RegisterScreen({
     setShowLoadDraftModal(false);
   };
 
-  const handleRemoveImage = (targetSortOrder: number) => {
+  const handleRemoveImage = async (targetSortOrder: number) => {
+    const targetImage = images.find(
+      (image) => image.sortOrder === targetSortOrder,
+    );
+
+    if (!targetImage) {
+      return;
+    }
+
+    if (targetImage.imageId > 0) {
+      setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
+
+      try {
+        await deleteAuctionImage(targetImage.imageId);
+      } catch (error) {
+        console.error("Failed to delete image", error);
+        setDeletingImageIds((currentIds) =>
+          currentIds.filter((imageId) => imageId !== targetImage.imageId),
+        );
+        return;
+      }
+    }
+
     setImages((currentImages) =>
       currentImages
         .filter((image) => image.sortOrder !== targetSortOrder)
@@ -220,6 +283,12 @@ export default function RegisterScreen({
           sortOrder: index + 1,
         })),
     );
+
+    if (targetImage.imageId > 0) {
+      setDeletingImageIds((currentIds) =>
+        currentIds.filter((imageId) => imageId !== targetImage.imageId),
+      );
+    }
   };
 
   const handleSaleTypeChange = (nextSaleType: SaleType) => {
@@ -235,6 +304,11 @@ export default function RegisterScreen({
         bidUnit: calculateBidUnit(price),
       }));
     }
+  };
+
+  const handleCategoryNameChange = (value: string) => {
+    setCategoryName(value);
+    setCategoryId(null);
   };
 
   const handlePriceChange = (value: string) => {
@@ -284,6 +358,7 @@ export default function RegisterScreen({
       themeColor={themeColor}
       auctionFieldContent={auctionFieldContent}
       isUploadingImage={isUploadingImage}
+      deletingImageIds={deletingImageIds}
       isSavingDraft={isSavingDraft}
       isSubmitting={isSubmitting}
       onBack={handleBack}
@@ -291,6 +366,7 @@ export default function RegisterScreen({
       onCloseDraftModal={() => setShowDraftModal(false)}
       onCloseLoadDraftModal={() => setShowLoadDraftModal(false)}
       onNameChange={setName}
+      onCategoryNameChange={handleCategoryNameChange}
       onDescriptionChange={setDescription}
       onSaleTypeChange={handleSaleTypeChange}
       onPriceChange={handlePriceChange}

@@ -21,6 +21,11 @@ export interface UploadAuctionImageResponse {
   imageUrl: string;
 }
 
+export interface DeleteAuctionImageResponse {
+  imageId: number;
+  deleted: boolean;
+}
+
 // 경매 관련 폼 상태.
 // 입력 중인 값이므로 숫자도 string으로 관리한다.
 export interface AuctionFormValues {
@@ -38,6 +43,7 @@ export interface AuctionCreateFormValues {
   description: string;
   saleType: SaleType;
   categoryId: number | null;
+  categoryName?: string;
   price: string;
   startPrice: string;
   auctionEndAt: string;
@@ -69,7 +75,12 @@ export interface AuctionCreateRequest {
 export interface AuctionCreateResponse {
   productId: number;
   saleType: ProductSaleType;
-  status: "DRAFT" | "ON_SALE" | "AUCTION_SCHEDULED" | "AUCTION_LIVE";
+  status: "DRAFT" | "ON_SALE" | "AUCTION_SCHEDULED" | "AUCTION_LIVE" | "ENDED";
+  auction: {
+    status: "AUCTION_SCHEDULED" | "AUCTION_LIVE" | "ENDED";
+    startAt: string;
+    endAt: string;
+  } | null;
 }
 
 // 임시저장도 등록과 거의 같은 request shape를 사용한다.

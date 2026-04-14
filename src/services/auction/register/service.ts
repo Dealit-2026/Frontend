@@ -140,6 +140,7 @@ export function createDraft(
     description: draft.description ?? "",
     saleType,
     categoryId: draft.categoryId ?? null,
+    categoryName: draft.categoryName ?? "",
     price,
     startPrice,
     auctionEndAt: draft.auctionEndAt ?? draft.auction?.endsAt ?? "",
@@ -244,6 +245,10 @@ export function buildRecommendPriceRequest(
 export async function uploadAuctionImage(file: File, sortOrder: number) {
   const uploadedImage = await auctionApi.uploadAuctionImage(file);
   return toProductImagePayload(uploadedImage, sortOrder);
+}
+
+export async function deleteAuctionImage(imageId: number) {
+  return auctionApi.deleteAuctionImage(imageId);
 }
 
 // 임시저장도 page.tsx에서 직접 DTO를 만들지 않도록 service에서 조립 후 위임한다.
