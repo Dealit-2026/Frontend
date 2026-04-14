@@ -1,3 +1,4 @@
+/*
 "use client";
 import React, { useState, useEffect } from 'react';
 import { 
@@ -126,6 +127,227 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
                   {chat.unread > 0 && (
                     <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ backgroundColor: themeColor }}>
                       {chat.unread}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 space-y-4 text-gray-400">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
+              <MessageCircle size={32} />
+            </div>
+            <p className="text-sm font-medium">탐색 결과가 없습니다.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+*/
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { MessageCircle, Search, X } from "lucide-react";
+
+import { fetchChatRooms } from "../../services/chats/service";
+import type { ChatRoomListItemVM } from "../../services/chats/types";
+
+interface ChatListScreenProps {
+  themeColor: string;
+  onChatClick: (id: number) => void;
+}
+
+export default function ChatListScreen({
+  themeColor,
+  onChatClick,
+}: ChatListScreenProps) {
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const [chats, setChats] = useState<ChatRoomListItemVM[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      try {
+        setIsLoading(true);
+        setIsError(false);
+
+        const response = await fetchChatRooms({ page: 0, size: 20 });
+
+        if (!mounted) return;
+        setChats(response.content);
+      } catch (error) {
+        console.error("Failed to load chat rooms:", error);
+        if (!mounted) return;
+        setIsError(true);
+      } finally {
+        if (!mounted) return;
+        setIsLoading(false);
+      }
+    }
+
+    load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const filteredChats = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return chats;
+
+    return chats.filter((chat) => {
+      return (
+        chat.name.toLowerCase().includes(query) ||
+        chat.productName.toLowerCase().includes(query) ||
+        chat.lastMessage.toLowerCase().includes(query) ||
+        chat.productTypeLabel.toLowerCase().includes(query)
+      );
+    });
+  }, [chats, searchQuery]);
+
+  return (
+    <div className="flex flex-col h-full bg-white">
+      <div className="flex flex-col border-b border-gray-50 sticky top-0 bg-white z-10">
+        <div className="h-16 flex items-center px-6 justify-between">
+          <h1 className="text-xl font-bold">채팅</h1>
+          {!isSearching && (
+            <button
+              onClick={() => setIsSearching(true)}
+              className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+            >
+              <Search size={24} />
+            </button>
+          )}
+        </div>
+
+        {isSearching && (
+          <div className="px-6 pb-4 flex items-center space-x-3">
+            <div className="flex-1 h-10 bg-gray-50 rounded-xl flex items-center px-3 space-x-2">
+              <Search size={18} className="text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                placeholder="대화 상대, 상품명 탐색"
+                className="flex-1 bg-transparent outline-none text-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")}>
+                  <X size={16} className="text-gray-400" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setIsSearching(false);
+                setSearchQuery("");
+              }}
+              className="p-2 hover:bg-gray-50 rounded-full transition-colors text-gray-500"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        {isLoading ? (
+          <div className="h-64 flex items-center justify-center text-sm text-gray-400">
+            채팅 목록을 불러오는 중...
+          </div>
+        ) : isError ? (
+          <div className="h-64 flex flex-col items-center justify-center gap-3 text-sm text-gray-400">
+            <p>채팅 목록을 불러오지 못했습니다.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : filteredChats.length > 0 ? (
+          filteredChats.map((chat) => (
+            <div
+              key={chat.id}
+              onClick={() => onChatClick(chat.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onChatClick(chat.id);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              className="flex items-center px-6 py-4 space-x-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50/50"
+            >
+              <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0">
+                {chat.profileImageUrl ? (
+                  <img
+                    src={chat.profileImageUrl}
+                    alt={chat.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                    없음
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 min-w-0">
+                    <span className="font-bold shrink-0">{chat.name}</span>
+                    <span
+                      className="text-[10px] text-gray-500 truncate"
+                      style={{ maxWidth: "100px" }}
+                    >
+                      {chat.productName}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        chat.productTypeLabel === "Deal it!"
+                          ? "bg-red-50 text-red-500"
+                          : ""
+                      }`}
+                      style={
+                        chat.productTypeLabel !== "Deal it!"
+                          ? {
+                              backgroundColor: `${themeColor}15`,
+                              color: themeColor,
+                            }
+                          : undefined
+                      }
+                    >
+                      {chat.productTypeLabel}
+                    </span>
+                  </div>
+
+                  <span className="text-[10px] text-gray-400">
+                    {chat.timeLabel}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-500 truncate">
+                    {chat.lastMessage}
+                  </p>
+                  {chat.unreadCount > 0 && (
+                    <div
+                      className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      {chat.unreadCount}
                     </div>
                   )}
                 </div>
