@@ -34,6 +34,58 @@ export interface RegisterScreenProps {
   initialData?: any;
 }
 
+function normalizeInitialImages(initialData: any): ProductImagePayload[] {
+  if (!initialData) {
+    return [];
+  }
+
+  const rawImages = Array.isArray(initialData.images)
+    ? initialData.images
+    : Array.isArray(initialData.imageUrls)
+      ? initialData.imageUrls
+      : initialData.img
+        ? [initialData]
+        : [];
+
+  return rawImages
+    .map((image: any, index: number) => {
+      if (typeof image === "string") {
+        return {
+          imageId: 0,
+          imageUrl: image,
+          sortOrder: index + 1,
+        };
+      }
+
+      const imageId =
+        image.imageId ??
+        image.id ??
+        image.imgId ??
+        image.productImageId ??
+        initialData.imageId ??
+        initialData.imgId ??
+        initialData.productImageId ??
+        0;
+
+      const imageUrl =
+        image.imageUrl ?? image.url ?? image.img ?? initialData.img ?? "";
+
+      if (!imageUrl) {
+        return null;
+      }
+
+      return {
+        imageId,
+        imageUrl,
+        sortOrder: image.sortOrder ?? index + 1,
+      };
+    })
+    .filter(
+      (image: ProductImagePayload | null): image is ProductImagePayload =>
+        image !== null,
+    );
+}
+
 export default function RegisterScreen({
   onBack,
   onComplete,
@@ -55,9 +107,7 @@ export default function RegisterScreen({
   );
   const [description, setDescription] = useState(initialData?.description || "");
   const [images, setImages] = useState<ProductImagePayload[]>(
-    initialData?.img
-      ? [{ imageId: 0, imageUrl: initialData.img, sortOrder: 1 }]
-      : [],
+    normalizeInitialImages(initialData),
   );
   const [auction, setAuction] = useState<AuctionFormValues>(
     createDefaultAuctionForm(),
