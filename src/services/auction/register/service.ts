@@ -1,5 +1,6 @@
 import * as auctionApi from "@/services/auction/register/api";
 import type {
+  AuctionCategory,
   AuctionFieldContent,
   AuctionFormValues,
   AuctionRegisterDraft,
@@ -245,6 +246,10 @@ export function buildRecommendPriceRequest(
 export async function uploadAuctionImage(file: File, sortOrder: number) {
   const uploadedImage = await auctionApi.uploadAuctionImage(file);
   return toProductImagePayload(uploadedImage, sortOrder);
+}
+
+export async function getAuctionCategories(): Promise<AuctionCategory[]> {
+  return auctionApi.getAuctionCategories();
 }
 
 export async function deleteAuctionImage(imageId: number) {

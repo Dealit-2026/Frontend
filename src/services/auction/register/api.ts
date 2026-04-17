@@ -1,4 +1,5 @@
 import {
+  AuctionCategory,
   CreateAuctionRequest,
   CreateAuctionResponse,
   DeleteAuctionImageResponse,
@@ -15,8 +16,21 @@ import {
 // 숫자 변환, 폼 가공, 기본값 생성은 service.ts에서 처리한다.
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "http://localhost:8080";
 const AUCTION_API_BASE = `${API_BASE_URL}/api/v1/auction`;
+
+export async function getAuctionCategories(): Promise<AuctionCategory[]> {
+  const response = await fetch(`${AUCTION_API_BASE}/categories`, {
+    method: "GET",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch auction categories: ${response.status}`);
+  }
+
+  return response.json();
+}
 
 // 1. 상품 이미지 업로드.
 // 카메라 클릭 후 선택한 File을 multipart/form-data로 서버에 전송한다.

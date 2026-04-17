@@ -26,6 +26,15 @@ export interface DeleteAuctionImageResponse {
   deleted: boolean;
 }
 
+export interface AuctionCategory {
+  id: number;
+  nameKo: string;
+  nameEn: string;
+  depth: number;
+  parentId: number | null;
+  children: AuctionCategory[];
+}
+
 // 경매 관련 폼 상태.
 // 입력 중인 값이므로 숫자도 string으로 관리한다.
 export interface AuctionFormValues {

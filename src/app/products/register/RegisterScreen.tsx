@@ -11,8 +11,8 @@ import {
   deleteAuctionImage,
   formatAuctionSchedule,
   formatDisplayPrice,
+  getAuctionCategories,
   getAuctionFieldContent,
-  recommendAuctionCategory,
   recommendAuctionPrice,
   registerAuction,
   sanitizeNumericInput,
@@ -21,6 +21,7 @@ import {
   updateAuctionDuration,
 } from "@/services/auction/register/service";
 import type {
+  AuctionCategory,
   AuctionFormValues,
   ProductImagePayload,
   SaleType,
@@ -86,6 +87,33 @@ function normalizeInitialImages(initialData: any): ProductImagePayload[] {
     );
 }
 
+interface SelectedCategoryPath {
+  primary: AuctionCategory;
+  secondary: AuctionCategory;
+  tertiary: AuctionCategory;
+}
+
+function findCategoryPathByLeafId(
+  categories: AuctionCategory[],
+  leafCategoryId: number,
+): SelectedCategoryPath | null {
+  for (const primary of categories) {
+    for (const secondary of primary.children) {
+      for (const tertiary of secondary.children) {
+        if (tertiary.id === leafCategoryId && tertiary.depth === 3) {
+          return {
+            primary,
+            secondary,
+            tertiary,
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 export default function RegisterScreen({
   onBack,
   onComplete,
@@ -98,10 +126,18 @@ export default function RegisterScreen({
   const [showLoadDraftModal, setShowLoadDraftModal] = useState(false);
   const [saleType, setSaleType] = useState<SaleType>(initialData?.type || mode);
   const [name, setName] = useState(initialData?.name || "");
-  const [categoryId, setCategoryId] = useState<number | null>(
+  const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(
     initialData?.categoryId ?? null,
   );
-  const [categoryName, setCategoryName] = useState(initialData?.category || "");
+  const [categories, setCategories] = useState<AuctionCategory[]>([]);
+  const [selectedPrimaryCategoryId, setSelectedPrimaryCategoryId] = useState<
+    number | null
+  >(null);
+  const [selectedSecondaryCategoryId, setSelectedSecondaryCategoryId] =
+    useState<number | null>(null);
+  const [selectedTertiaryCategoryId, setSelectedTertiaryCategoryId] = useState<
+    number | null
+  >(null);
   const [price, setPrice] = useState(
     initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
   );
@@ -116,12 +152,42 @@ export default function RegisterScreen({
   const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [categoryLoadError, setCategoryLoadError] = useState<string | null>(
+    null,
+  );
+  const [showCategoryError, setShowCategoryError] = useState(false);
 
   const themeColor = saleType === "regular" ? "#98E446" : "#F64257";
   const isEditMode = !!initialData;
   const auctionFieldContent = getAuctionFieldContent(saleType);
   const handleBack = onBack ?? (() => router.back());
   const handleComplete = onComplete ?? (() => router.push("/"));
+  const selectedPrimaryCategory =
+    categories.find((category) => category.id === selectedPrimaryCategoryId) ??
+    null;
+  const secondaryCategories = selectedPrimaryCategory?.children ?? [];
+  const selectedSecondaryCategory =
+    secondaryCategories.find(
+      (category) => category.id === selectedSecondaryCategoryId,
+    ) ?? null;
+  const tertiaryCategories = selectedSecondaryCategory?.children ?? [];
+  const selectedTertiaryCategory =
+    tertiaryCategories.find(
+      (category) => category.id === selectedTertiaryCategoryId,
+    ) ?? null;
+  const categoryId = selectedTertiaryCategory?.id ?? null;
+  const categoryName = [
+    selectedPrimaryCategory?.nameKo,
+    selectedSecondaryCategory?.nameKo,
+    selectedTertiaryCategory?.nameKo,
+  ]
+    .filter(Boolean)
+    .join(" > ");
+  const isCategorySelectionComplete = !!selectedTertiaryCategory;
+  const shouldShowCategoryError =
+    showCategoryError &&
+    (!isCategorySelectionComplete || !!categoryLoadError || isLoadingCategories);
 
   const showErrorMessage = (message: string) => {
     if (typeof window !== "undefined") {
@@ -137,6 +203,60 @@ export default function RegisterScreen({
       }
     }
   }, [isEditMode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCategories = async () => {
+      setIsLoadingCategories(true);
+      setCategoryLoadError(null);
+
+      try {
+        const fetchedCategories = await getAuctionCategories();
+        if (!isMounted) {
+          return;
+        }
+
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Failed to fetch auction categories", error);
+        if (isMounted) {
+          setCategoryLoadError(
+            "카테고리 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingCategories(false);
+        }
+      }
+    };
+
+    void loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (categories.length === 0 || !pendingCategoryId) {
+      return;
+    }
+
+    const matchedPath = findCategoryPathByLeafId(categories, pendingCategoryId);
+
+    if (!matchedPath) {
+      setPendingCategoryId(null);
+      return;
+    }
+
+    setSelectedPrimaryCategoryId(matchedPath.primary.id);
+    setSelectedSecondaryCategoryId(matchedPath.secondary.id);
+    setSelectedTertiaryCategoryId(matchedPath.tertiary.id);
+    setPendingCategoryId(null);
+    setShowCategoryError(false);
+  }, [categories, pendingCategoryId]);
 
   const buildDraft = () =>
     createDraft({
@@ -175,15 +295,25 @@ export default function RegisterScreen({
   };
 
   const handleRegister = async () => {
+    setShowCategoryError(true);
+
     if (!name.trim()) {
       showErrorMessage("상품명을 입력해 주세요.");
       return;
     }
 
+    if (isLoadingCategories) {
+      showErrorMessage("카테고리 목록을 불러오는 중입니다. 잠시만 기다려 주세요.");
+      return;
+    }
+
+    if (categoryLoadError) {
+      showErrorMessage(categoryLoadError);
+      return;
+    }
+
     if (!categoryId) {
-      showErrorMessage(
-        "카테고리 직접 입력은 아직 등록에 반영되지 않습니다. 우선 AI 추천으로 카테고리를 선택해 주세요.",
-      );
+      showErrorMessage("3차 카테고리까지 모두 선택해 주세요.");
       return;
     }
 
@@ -245,19 +375,6 @@ export default function RegisterScreen({
     }
   };
 
-  const handleRecommendCategory = async () => {
-    try {
-      const recommendation = await recommendAuctionCategory({
-        name,
-        description,
-      });
-      setCategoryId(recommendation.categoryId);
-      setCategoryName(recommendation.categoryName);
-    } catch (error) {
-      console.error("Failed to recommend category", error);
-    }
-  };
-
   const handleRecommendPrice = async () => {
     try {
       const recommendation = await recommendAuctionPrice({
@@ -284,8 +401,11 @@ export default function RegisterScreen({
         const draft = createDraft(JSON.parse(savedDraft));
         setSaleType(draft.saleType || mode);
         setName(draft.name);
-        setCategoryId(draft.categoryId);
-        setCategoryName(draft.categoryName ?? (initialData?.category || ""));
+        setPendingCategoryId(draft.categoryId);
+        setSelectedPrimaryCategoryId(null);
+        setSelectedSecondaryCategoryId(null);
+        setSelectedTertiaryCategoryId(null);
+        setShowCategoryError(false);
         setPrice(draft.price);
         setDescription(draft.description);
         setImages(draft.images);
@@ -356,9 +476,27 @@ export default function RegisterScreen({
     }
   };
 
-  const handleCategoryNameChange = (value: string) => {
-    setCategoryName(value);
-    setCategoryId(null);
+  const handlePrimaryCategoryChange = (value: string) => {
+    const nextCategoryId = value ? Number(value) : null;
+    setSelectedPrimaryCategoryId(nextCategoryId);
+    setSelectedSecondaryCategoryId(null);
+    setSelectedTertiaryCategoryId(null);
+    setPendingCategoryId(null);
+    setShowCategoryError(false);
+  };
+
+  const handleSecondaryCategoryChange = (value: string) => {
+    const nextCategoryId = value ? Number(value) : null;
+    setSelectedSecondaryCategoryId(nextCategoryId);
+    setSelectedTertiaryCategoryId(null);
+    setPendingCategoryId(null);
+    setShowCategoryError(false);
+  };
+
+  const handleTertiaryCategoryChange = (value: string) => {
+    setSelectedTertiaryCategoryId(value ? Number(value) : null);
+    setPendingCategoryId(null);
+    setShowCategoryError(false);
   };
 
   const handlePriceChange = (value: string) => {
@@ -399,6 +537,10 @@ export default function RegisterScreen({
       showLoadDraftModal={showLoadDraftModal}
       saleType={saleType}
       name={name}
+      categories={categories}
+      selectedPrimaryCategoryId={selectedPrimaryCategoryId}
+      selectedSecondaryCategoryId={selectedSecondaryCategoryId}
+      selectedTertiaryCategoryId={selectedTertiaryCategoryId}
       categoryName={categoryName}
       price={price}
       description={description}
@@ -411,12 +553,17 @@ export default function RegisterScreen({
       deletingImageIds={deletingImageIds}
       isSavingDraft={isSavingDraft}
       isSubmitting={isSubmitting}
+      isLoadingCategories={isLoadingCategories}
+      categoryLoadError={categoryLoadError}
+      showCategoryError={shouldShowCategoryError}
       onBack={handleBack}
       onOpenDraftModal={() => setShowDraftModal(true)}
       onCloseDraftModal={() => setShowDraftModal(false)}
       onCloseLoadDraftModal={() => setShowLoadDraftModal(false)}
       onNameChange={setName}
-      onCategoryNameChange={handleCategoryNameChange}
+      onPrimaryCategoryChange={handlePrimaryCategoryChange}
+      onSecondaryCategoryChange={handleSecondaryCategoryChange}
+      onTertiaryCategoryChange={handleTertiaryCategoryChange}
       onDescriptionChange={setDescription}
       onSaleTypeChange={handleSaleTypeChange}
       onPriceChange={handlePriceChange}
@@ -425,12 +572,17 @@ export default function RegisterScreen({
       onImageButtonClick={handleImageButtonClick}
       onImageUpload={handleImageUpload}
       onRemoveImage={handleRemoveImage}
-      onRecommendCategory={handleRecommendCategory}
       onRecommendPrice={handleRecommendPrice}
       onSaveDraft={handleSaveDraft}
       onDiscardDraft={handleDiscardDraft}
       onLoadDraft={handleLoadDraft}
       onRegister={handleRegister}
+      isRegisterDisabled={
+        isSubmitting ||
+        isLoadingCategories ||
+        !!categoryLoadError ||
+        !isCategorySelectionComplete
+      }
       formatDisplayPrice={formatDisplayPrice}
       formatAuctionSchedule={formatAuctionSchedule}
     />
