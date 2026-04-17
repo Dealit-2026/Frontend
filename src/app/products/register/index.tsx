@@ -29,6 +29,7 @@ export interface RegisterScreenViewProps {
     helperText: string;
   };
   isUploadingImage: boolean;
+  deletingImageIds: number[];
   isSavingDraft: boolean;
   isSubmitting: boolean;
   onBack: () => void;
@@ -36,6 +37,7 @@ export interface RegisterScreenViewProps {
   onCloseDraftModal: () => void;
   onCloseLoadDraftModal: () => void;
   onNameChange: (value: string) => void;
+  onCategoryNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onSaleTypeChange: (value: SaleType) => void;
   onPriceChange: (value: string) => void;
@@ -69,6 +71,7 @@ export default function RegisterScreenView({
   themeColor,
   auctionFieldContent,
   isUploadingImage,
+  deletingImageIds,
   isSavingDraft,
   isSubmitting,
   onBack,
@@ -76,6 +79,7 @@ export default function RegisterScreenView({
   onCloseDraftModal,
   onCloseLoadDraftModal,
   onNameChange,
+  onCategoryNameChange,
   onDescriptionChange,
   onSaleTypeChange,
   onPriceChange,
@@ -151,9 +155,17 @@ export default function RegisterScreenView({
                 />
                 <button
                   onClick={() => onRemoveImage(image.sortOrder)}
+                  disabled={deletingImageIds.includes(image.imageId)}
                   className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center text-white"
                 >
-                  <X size={12} />
+                  <X
+                    size={12}
+                    className={
+                      deletingImageIds.includes(image.imageId)
+                        ? "opacity-40"
+                        : ""
+                    }
+                  />
                 </button>
               </div>
             ))}
@@ -176,9 +188,9 @@ export default function RegisterScreenView({
               <input
                 type="text"
                 placeholder="카테고리"
-                readOnly
                 value={categoryName}
-                className="w-full py-2 text-base font-medium outline-none placeholder-gray-400 cursor-pointer"
+                onChange={(event) => onCategoryNameChange(event.target.value)}
+                className="w-full py-2 pr-16 text-base font-medium outline-none placeholder-gray-400"
               />
               <button
                 type="button"

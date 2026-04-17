@@ -36,6 +36,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Screen, Tab } from '../../../types/index';
 import { ExploreIcon } from '../../../components/common/ExploreIcon';
 
+type AuctionStatus = 'AUCTION_SCHEDULED' | 'AUCTION_LIVE' | 'ENDED';
+
 export default function ProductDetailScreen({ 
   productId, 
   onBack,
@@ -45,6 +47,8 @@ export default function ProductDetailScreen({
   onPurchaseClick,
   themeColor,
   mode,
+  auctionStatus = 'AUCTION_LIVE',
+  auctionStartAt,
   showToast,
   onBidComplete
 }: { 
@@ -57,6 +61,8 @@ export default function ProductDetailScreen({
   onPurchaseClick?: () => void;
   themeColor: string;
   mode: 'regular' | 'auction';
+  auctionStatus?: AuctionStatus;
+  auctionStartAt?: string;
   showToast: (msg: string) => void;
   key?: string;
 }) {
@@ -68,8 +74,19 @@ export default function ProductDetailScreen({
   const [bidCount, setBidCount] = useState(23);
   const [inputBidAmount, setInputBidAmount] = useState(860000);
   const isRegular = mode === 'regular';
+  const isAuctionScheduled = !isRegular && auctionStatus === 'AUCTION_SCHEDULED';
   const bidUnit = 10000;
   const minBidAmount = currentPrice + bidUnit;
+
+  const scheduledStartLabel = auctionStartAt
+    ? new Intl.DateTimeFormat('ko-KR', {
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date(auctionStartAt))
+    : '시작 시간이 확정되면 안내될 예정이에요.';
 
   useEffect(() => {
     if (showBidSheet) {
@@ -132,7 +149,7 @@ export default function ProductDetailScreen({
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <span className="px-2 py-1 text-white text-[10px] font-bold rounded" style={{ backgroundColor: themeColor }}>
-                {isRegular ? '일반 판매' : '진행중'}
+                {isRegular ? '일반 판매' : isAuctionScheduled ? '경매 예정' : '진행중'}
               </span>
               <span className="text-xs text-gray-400">전자제품</span>
             </div>
@@ -141,13 +158,13 @@ export default function ProductDetailScreen({
             <div 
               className={`rounded-2xl p-6 space-y-2 cursor-pointer transition-transform active:scale-[0.98] ${!isRegular ? 'hover:brightness-95' : ''}`}
               style={{ backgroundColor: `${themeColor}10` }}
-              onClick={() => !isRegular && onBidStatusClick()}
+              onClick={() => !isRegular && !isAuctionScheduled && onBidStatusClick()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium" style={{ color: themeColor }}>{isRegular ? '판매가' : '현재가'}</span>
                 <div className="flex items-center space-x-1">
                   <span className="text-2xl font-bold" style={{ color: themeColor }}>₩{currentPrice.toLocaleString()}</span>
-                  {!isRegular && <ChevronRight size={20} style={{ color: themeColor }} />}
+                  {!isRegular && !isAuctionScheduled && <ChevronRight size={20} style={{ color: themeColor }} />}
                 </div>
               </div>
               
@@ -167,13 +184,20 @@ export default function ProductDetailScreen({
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                  <span>입찰 {bidCount}회</span>
-                  <div className="flex items-center space-x-1">
-                    <Clock size={12} />
-                    <span>2시간 35분 남음</span>
+                <>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>{isAuctionScheduled ? '입찰은 시작 후 가능해요' : `입찰 ${bidCount}회`}</span>
+                    <div className="flex items-center space-x-1">
+                      <Clock size={12} />
+                      <span>{isAuctionScheduled ? scheduledStartLabel : '2시간 35분 남음'}</span>
+                    </div>
                   </div>
-                </div>
+                  {isAuctionScheduled && (
+                    <p className="text-xs font-medium pt-1" style={{ color: themeColor }}>
+                      아직 시작 전인 경매입니다. 시작 시간 이후 참여할 수 있어요.
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -247,11 +271,18 @@ export default function ProductDetailScreen({
               <MessageCircle size={24} />
             </button>
             <button 
-              onClick={() => setShowBidSheet(true)} 
-              className="flex-1 h-14 text-white font-bold rounded-xl transition-colors shadow-lg" 
-              style={{ backgroundColor: themeColor, '--tw-shadow-color': `${themeColor}40` } as React.CSSProperties}
+              onClick={() => !isAuctionScheduled && setShowBidSheet(true)} 
+              disabled={isAuctionScheduled}
+              className={`flex-1 h-14 font-bold rounded-xl transition-colors ${
+                isAuctionScheduled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-white shadow-lg'
+              }`} 
+              style={
+                isAuctionScheduled
+                  ? undefined
+                  : ({ backgroundColor: themeColor, '--tw-shadow-color': `${themeColor}40` } as React.CSSProperties)
+              }
             >
-              입찰하기
+              {isAuctionScheduled ? '입찰은 시작 후 가능해요' : '입찰하기'}
             </button>
           </>
         )}
