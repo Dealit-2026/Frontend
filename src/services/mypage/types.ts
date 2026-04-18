@@ -16,7 +16,6 @@ export interface UpdateMyProfileRequest {
   nickname: string;
   bio: string;
   profileImageUrl: string | null;
-  location: string;
 }
 
 export interface UpdateMyLocationRequest {

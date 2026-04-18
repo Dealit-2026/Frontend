@@ -79,7 +79,10 @@ import WinningBidCompletionScreen from "./auctions/[auctionId]/winning-complete"
 import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
+import { getErrorMessage } from "@/services/apiError";
+import { clearAuthToken } from "@/services/auth/service";
 import { fetchMyProfileForm, saveMyLocation } from "@/services/mypage/service";
+import { updateMyProfileDraft } from "@/services/mypage/profileDraft";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -94,9 +97,10 @@ export default function App() {
   >("all");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [userLocation, setUserLocation] = useState("서울특별시 강남구 역삼동");
+  const [userLocation, setUserLocation] = useState("");
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [locationReturnScreen, setLocationReturnScreen] = useState<Screen | null>(null);
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -172,12 +176,18 @@ export default function App() {
                   navigateTo("signup");
                 }
               }}
-              onNext={() => {
-                if (isEditingLocation) {
-                  navigateTo("main");
-                  setIsEditingLocation(false);
-                } else {
-                  navigateTo("phone_auth");
+              onNext={async () => {
+                try {
+                  await saveMyLocation(userLocation);
+
+                  if (isEditingLocation) {
+                    navigateTo("main");
+                    setIsEditingLocation(false);
+                  } else {
+                    navigateTo("phone_auth");
+                  }
+                } catch (error) {
+                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
                 }
               }}
               onFindLocation={() => {
@@ -185,6 +195,7 @@ export default function App() {
                 navigateTo("find_location");
               }}
               currentLocation={userLocation}
+              onLocationChange={setUserLocation}
             />
           )}
           {currentScreen === "find_location" && (
@@ -198,17 +209,24 @@ export default function App() {
                   navigateTo("region_setup");
                 }
               }}
-              onComplete={(newLocation) => {
+              onComplete={async (newLocation) => {
                 setUserLocation(newLocation);
-                if (locationReturnScreen) {
-                  saveMyLocation(newLocation);
-                  navigateTo(locationReturnScreen);
-                  setLocationReturnScreen(null);
-                } else if (isEditingLocation) {
-                  navigateTo("main");
-                  setIsEditingLocation(false);
-                } else {
-                  navigateTo("phone_auth");
+
+                try {
+                  await saveMyLocation(newLocation);
+
+                  if (locationReturnScreen) {
+                    updateMyProfileDraft({ location: newLocation });
+                    navigateTo(locationReturnScreen);
+                    setLocationReturnScreen(null);
+                  } else if (isEditingLocation) {
+                    navigateTo("main");
+                    setIsEditingLocation(false);
+                  } else {
+                    navigateTo("phone_auth");
+                  }
+                } catch (error) {
+                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
                 }
               }}
             />
@@ -266,6 +284,8 @@ export default function App() {
                 setIsEditingProfile(false);
               }}
               onComplete={() => {
+                setProfileRefreshKey((prevKey) => prevKey + 1);
+                setCurrentTab("mypage");
                 navigateTo("main");
                 setIsEditingProfile(false);
               }}
@@ -275,15 +295,21 @@ export default function App() {
             <RegionSetupScreen
               key="edit_profile_region"
               onBack={() => navigateTo("edit_profile")}
-              onNext={() => {
-                saveMyLocation(userLocation);
-                navigateTo("edit_profile");
+              onNext={async () => {
+                try {
+                  await saveMyLocation(userLocation);
+                  updateMyProfileDraft({ location: userLocation });
+                  navigateTo("edit_profile");
+                } catch (error) {
+                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
+                }
               }}
               onFindLocation={() => {
                 setLocationReturnScreen("edit_profile_region");
                 navigateTo("find_location");
               }}
               currentLocation={userLocation}
+              onLocationChange={setUserLocation}
             />
           )}
           {currentScreen === "category_selection" && (
@@ -347,7 +373,9 @@ export default function App() {
               onThemeChange={setThemeMode}
               themeColor={themeColor}
               userLocation={userLocation}
+              profileRefreshKey={profileRefreshKey}
               onLogout={() => {
+                clearAuthToken();
                 setCurrentTab("home");
                 navigateTo("login");
               }}

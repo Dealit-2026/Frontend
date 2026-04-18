@@ -1,3 +1,5 @@
+import { getApiErrorMessage } from "@/services/apiError";
+import { getAuthorizationHeaders } from "@/services/auth/service";
 import type {
   MyProfileResponse,
   UpdateMyLocationRequest,
@@ -7,12 +9,13 @@ import type {
 } from "@/services/mypage/types";
 
 export async function getMyProfile(): Promise<MyProfileResponse> {
-  const response = await fetch("/users/me/mypage", {
+  const response = await fetch("/api/v1/users/me/mypage", {
     method: "GET",
+    headers: getAuthorizationHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to get my profile: ${response.status}`);
+    throw new Error(await getApiErrorMessage(response, "마이페이지 조회에 실패했습니다."));
   }
 
   return response.json();
@@ -21,16 +24,17 @@ export async function getMyProfile(): Promise<MyProfileResponse> {
 export async function updateMyProfile(
   payload: UpdateMyProfileRequest,
 ): Promise<MyProfileResponse> {
-  const response = await fetch("/users/me/profile", {
+  const response = await fetch("/api/v1/users/me/profile", {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update my profile: ${response.status}`);
+    throw new Error(await getApiErrorMessage(response, "프로필 저장에 실패했습니다."));
   }
 
   return response.json();
@@ -39,16 +43,17 @@ export async function updateMyProfile(
 export async function updateMyLocation(
   payload: UpdateMyLocationRequest,
 ): Promise<UpdateMyLocationResponse> {
-  const response = await fetch("/users/me/location", {
+  const response = await fetch("/api/v1/users/me/location", {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to update my location: ${response.status}`);
+    throw new Error(await getApiErrorMessage(response, "지역 저장에 실패했습니다."));
   }
 
   return response.json();
@@ -60,13 +65,14 @@ export async function uploadProfileImage(
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch("/users/me/profile-image", {
+  const response = await fetch("/api/v1/users/me/profile-image", {
     method: "POST",
+    headers: getAuthorizationHeaders(),
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to upload profile image: ${response.status}`);
+    throw new Error(await getApiErrorMessage(response, "프로필 이미지 업로드에 실패했습니다."));
   }
 
   return response.json();
