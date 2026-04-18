@@ -68,7 +68,6 @@ export function buildUpdateMyProfileRequest(
   return {
     nickname: form.nickname.trim(),
     bio: form.bio.trim(),
-    profileImageUrl: null,
   };
 }
 
