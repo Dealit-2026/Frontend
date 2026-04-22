@@ -2,7 +2,6 @@
 import type {
   CreateChatRoomRequest,
   CreateChatRoomResponse,
-  DeleteChatMessageResponse,
   GetChatRoomMessagesRequest,
   GetChatRoomMessagesResponse,
   GetChatRoomsRequest,
@@ -15,11 +14,30 @@ import type {
   SendChatMessageResponse,
 } from "./types";
 
+const CHAT_API_PREFIX = "/api/v1/chats";
+
 /**
  * api.ts 규칙:
  * - HTTP 요청/응답만 담당
  * - 데이터 가공/도메인 판단은 service.ts에서 처리
  */
+
+function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("accessToken");
+}
+
+function createAuthHeaders(
+  headers: Record<string, string> = {},
+): Record<string, string> {
+  const token = getAccessToken();
+  if (!token) return headers;
+
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 function toQueryString(
   params: Record<string, string | number | null | undefined>,
@@ -46,11 +64,11 @@ async function parseJson<T>(response: Response): Promise<T> {
 export async function postChatRoom(
   payload: CreateChatRoomRequest,
 ): Promise<CreateChatRoomResponse> {
-  const response = await fetch("/chats/rooms", {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms`, {
     method: "POST",
-    headers: {
+    headers: createAuthHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(payload),
   });
 
@@ -66,8 +84,9 @@ export async function getChatRooms(
     size: request.size ?? 20,
   });
 
-  const response = await fetch(`/chats/rooms${query}`, {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms${query}`, {
     method: "GET",
+    headers: createAuthHeaders(),
   });
 
   return parseJson<GetChatRoomsResponse>(response);
@@ -80,9 +99,13 @@ export async function getChatRoomMessages(
   const { roomId, page = 0, size = 50 } = request;
   const query = toQueryString({ page, size });
 
-  const response = await fetch(`/chats/rooms/${roomId}/messages${query}`, {
-    method: "GET",
-  });
+  const response = await fetch(
+    `${CHAT_API_PREFIX}/rooms/${roomId}/messages${query}`,
+    {
+      method: "GET",
+      headers: createAuthHeaders(),
+    },
+  );
 
   return parseJson<GetChatRoomMessagesResponse>(response);
 }
@@ -92,34 +115,37 @@ export async function postChatMessage(
   roomId: number,
   payload: SendChatMessageRequest,
 ): Promise<SendChatMessageResponse> {
-  const response = await fetch(`/chats/rooms/${roomId}/messages`, {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}/messages`, {
     method: "POST",
-    headers: {
+    headers: createAuthHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(payload),
   });
 
   return parseJson<SendChatMessageResponse>(response);
 }
 
-/** 5) 메시지 삭제 */
-export async function deleteChatMessage(
-  messageId: number,
-): Promise<DeleteChatMessageResponse> {
-  const response = await fetch(`/chats/messages/${messageId}`, {
+/** 5) 메시지 삭제 (204 No Content) */
+export async function deleteChatMessage(messageId: number): Promise<void> {
+  const response = await fetch(`${CHAT_API_PREFIX}/messages/${messageId}`, {
     method: "DELETE",
+    headers: createAuthHeaders(),
   });
 
-  return parseJson<DeleteChatMessageResponse>(response);
+  if (response.status === 204) return;
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+  }
 }
 
-/** 6) 채팅방 읽음 처리 */
+/** 6) 채팅방 읽음 처리 (200 + JSON) */
 export async function patchChatRoomRead(
   roomId: number,
 ): Promise<MarkChatRoomAsReadResponse> {
-  const response = await fetch(`/chats/rooms/${roomId}/read`, {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}/read`, {
     method: "PATCH",
+    headers: createAuthHeaders(),
   });
 
   return parseJson<MarkChatRoomAsReadResponse>(response);
@@ -130,21 +156,25 @@ export async function postChatMessageReport(
   messageId: number,
   payload: ReportChatMessageRequest,
 ): Promise<ReportChatMessageResponse> {
-  const response = await fetch(`/chats/messages/${messageId}/report`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetch(
+    `${CHAT_API_PREFIX}/messages/${messageId}/reports`,
+    {
+      method: "POST",
+      headers: createAuthHeaders({
+        "Content-Type": "application/json",
+      }),
+      body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-  });
+  );
 
   return parseJson<ReportChatMessageResponse>(response);
 }
 
 /** 8) 안읽은 채팅 수 조회 */
 export async function getUnreadCount(): Promise<GetUnreadCountResponse> {
-  const response = await fetch("/chats/unread-count", {
+  const response = await fetch(`${CHAT_API_PREFIX}/unread-count`, {
     method: "GET",
+    headers: createAuthHeaders(),
   });
 
   return parseJson<GetUnreadCountResponse>(response);
