@@ -65,7 +65,8 @@ export default function MainLayout({
   onThemeChange,
   themeColor,
   userLocation,
-  onLogout
+  onLogout,
+  profileRefreshKey = 0,
 }: { 
   activeTab: Tab; 
   onTabChange: (tab: Tab) => void;
@@ -90,6 +91,7 @@ export default function MainLayout({
   themeColor: string;
   userLocation: string;
   onLogout: () => void;
+  profileRefreshKey?: number;
   key?: string;
 }) {
   const [lastTab, setLastTab] = useState<Tab>(activeTab === 'register' ? 'home' : activeTab);
@@ -164,6 +166,7 @@ export default function MainLayout({
             onBiddingClick={onBiddingClick}
             userLocation={userLocation}
             onLogout={onLogout}
+            refreshKey={profileRefreshKey}
           />
         )}
       </div>

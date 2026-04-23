@@ -36,7 +36,20 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Screen, Tab } from '../../../types/index';
 import { ExploreIcon } from '../../../components/common/ExploreIcon';
 
-export default function RegionSetupScreen({ onBack, onNext, onFindLocation, currentLocation }: { onBack: () => void; onNext: () => void; onFindLocation: () => void; currentLocation?: string; key?: string }) {
+export default function RegionSetupScreen({
+  onBack,
+  onNext,
+  onFindLocation,
+  currentLocation,
+  onLocationChange,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  onFindLocation: () => void;
+  currentLocation?: string;
+  onLocationChange?: (location: string) => void;
+  key?: string;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -83,6 +96,8 @@ export default function RegionSetupScreen({ onBack, onNext, onFindLocation, curr
         <div className="w-full relative">
           <input
             type="text"
+            value={currentLocation || ""}
+            onChange={(event) => onLocationChange?.(event.target.value)}
             placeholder="동네 이름으로 탐색 (ex. 역삼동)"
             className="w-full h-12 bg-gray-100 rounded-lg px-4 outline-none focus:ring-2 focus:ring-[#98E446]"
           />
@@ -99,7 +114,7 @@ export default function RegionSetupScreen({ onBack, onNext, onFindLocation, curr
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {currentLocation ? '수정 완료' : '다음'}
+          {currentLocation ? '확인' : '다음'}
         </button>
       </div>
     </motion.div>

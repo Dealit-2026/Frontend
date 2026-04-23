@@ -11,9 +11,11 @@ import {
   ShoppingBag,
   Star,
   Store,
+  User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
+import { getErrorMessage } from "@/services/apiError";
 import { fetchMyPageProfile } from "@/services/mypage/service";
 import type { MyPageProfileViewModel } from "@/services/mypage/types";
 
@@ -32,6 +34,7 @@ interface MyPageScreenProps {
   onBiddingClick: () => void;
   onLogout: () => void;
   userLocation?: string;
+  refreshKey?: number;
 }
 
 export default function MyPageScreen({
@@ -47,23 +50,35 @@ export default function MyPageScreen({
   onSalesHistoryClick,
   onBiddingClick,
   onLogout,
+  refreshKey = 0,
 }: MyPageScreenProps) {
   const [profile, setProfile] = useState<MyPageProfileViewModel | null>(null);
+  const [profileErrorMessage, setProfileErrorMessage] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     let ignore = false;
 
-    fetchMyPageProfile().then((nextProfile) => {
-      if (!ignore) {
-        setProfile(nextProfile);
-      }
-    });
+    fetchMyPageProfile()
+      .then((nextProfile) => {
+        if (!ignore) {
+          setProfile(nextProfile);
+          setProfileErrorMessage("");
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setProfile(null);
+          setProfileErrorMessage(
+            getErrorMessage(error, "마이페이지 정보를 불러오지 못했습니다."),
+          );
+        }
+      });
 
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   const menus = [
     { icon: <ShoppingBag size={20} />, label: "구매 내역", onClick: onPurchaseHistoryClick },
@@ -89,16 +104,31 @@ export default function MyPageScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-8">
+        {profileErrorMessage && (
+          <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
+            {profileErrorMessage}
+          </div>
+        )}
+
         <div className="flex items-center space-x-4">
           <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 border border-gray-200">
-            {profile ? (
+            {profile?.profileImageUrl ? (
               <img
                 src={profile.profileImageUrl}
                 alt={`${profile.nickname} 프로필`}
                 className="w-full h-full object-cover"
+                onError={() =>
+                  setProfile((prevProfile) =>
+                    prevProfile
+                      ? { ...prevProfile, profileImageUrl: "" }
+                      : prevProfile,
+                  )
+                }
               />
             ) : (
-              <div className="w-full h-full animate-pulse bg-gray-200" />
+              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                <User size={32} />
+              </div>
             )}
           </div>
           <div className="space-y-1">
