@@ -80,9 +80,13 @@ import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
 import { getErrorMessage } from "@/services/apiError";
-import { clearAuthToken } from "@/services/auth/service";
 import { fetchMyProfileForm, saveMyLocation } from "@/services/mypage/service";
 import { updateMyProfileDraft } from "@/services/mypage/profileDraft";
+import {
+  clearAuthToken,
+  fetchCurrentMember,
+  getAuthToken,
+} from "@/services/auth/service";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -99,7 +103,8 @@ export default function App() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userLocation, setUserLocation] = useState("");
   const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [locationReturnScreen, setLocationReturnScreen] = useState<Screen | null>(null);
+  const [locationReturnScreen, setLocationReturnScreen] =
+    useState<Screen | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
@@ -128,6 +133,34 @@ export default function App() {
     setSelectedProductId(id);
     setCurrentScreen("product_detail");
   };
+
+  useEffect(() => {
+    const accessToken = getAuthToken();
+
+    if (!accessToken) {
+      setCurrentScreen("login");
+      return;
+    }
+
+    let ignore = false;
+
+    fetchCurrentMember()
+      .then(() => {
+        if (!ignore) {
+          setCurrentScreen("main");
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setCurrentTab("home");
+          setCurrentScreen("login");
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white flex justify-center px-4 font-sans text-[#141414]">
@@ -187,7 +220,9 @@ export default function App() {
                     navigateTo("phone_auth");
                   }
                 } catch (error) {
-                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
+                  showToast(
+                    getErrorMessage(error, "지역 저장에 실패했습니다."),
+                  );
                 }
               }}
               onFindLocation={() => {
@@ -226,7 +261,9 @@ export default function App() {
                     navigateTo("phone_auth");
                   }
                 } catch (error) {
-                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
+                  showToast(
+                    getErrorMessage(error, "지역 저장에 실패했습니다."),
+                  );
                 }
               }}
             />
@@ -301,7 +338,9 @@ export default function App() {
                   updateMyProfileDraft({ location: userLocation });
                   navigateTo("edit_profile");
                 } catch (error) {
-                  showToast(getErrorMessage(error, "지역 저장에 실패했습니다."));
+                  showToast(
+                    getErrorMessage(error, "지역 저장에 실패했습니다."),
+                  );
                 }
               }}
               onFindLocation={() => {

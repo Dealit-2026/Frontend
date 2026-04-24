@@ -1,4 +1,5 @@
-﻿import * as authApi from "@/services/auth/api";
+import { ApiRequestError } from "@/services/apiError";
+import * as authApi from "@/services/auth/api";
 import type {
   AuthResult,
   CurrentMemberResponse,
@@ -12,11 +13,74 @@ import type {
   SignUpResponse,
 } from "@/services/auth/types";
 
-const AUTH_TOKEN_STORAGE_KEY = "dealit_access_token";
-const AUTH_TOKEN_TYPE_STORAGE_KEY = "dealit_token_type";
+const ACCESS_TOKEN_STORAGE_KEY = "accessToken";
+const TOKEN_TYPE_STORAGE_KEY = "tokenType";
+const LEGACY_ACCESS_TOKEN_STORAGE_KEY = "dealit_access_token";
+const LEGACY_TOKEN_TYPE_STORAGE_KEY = "dealit_token_type";
+const DEFAULT_TOKEN_TYPE = "Bearer";
 
 function canUseStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
+}
+
+function normalizeTokenType(tokenType: string | null | undefined) {
+  const normalizedTokenType = tokenType?.trim();
+
+  if (normalizedTokenType === "Bearer") {
+    return normalizedTokenType;
+  }
+
+  return DEFAULT_TOKEN_TYPE;
+}
+
+function migrateLegacyTokenStorage(legacyAccessToken: string) {
+  const nextTokenType = normalizeTokenType(
+    localStorage.getItem(LEGACY_TOKEN_TYPE_STORAGE_KEY),
+  );
+
+  localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, legacyAccessToken);
+  localStorage.setItem(TOKEN_TYPE_STORAGE_KEY, nextTokenType);
+  localStorage.removeItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
+}
+
+function getStoredTokenType() {
+  if (!canUseStorage()) {
+    return DEFAULT_TOKEN_TYPE;
+  }
+
+  const currentTokenType = localStorage.getItem(TOKEN_TYPE_STORAGE_KEY);
+
+  if (currentTokenType) {
+    return normalizeTokenType(currentTokenType);
+  }
+
+  const legacyTokenType = localStorage.getItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
+
+  if (!legacyTokenType) {
+    return DEFAULT_TOKEN_TYPE;
+  }
+
+  const nextTokenType = normalizeTokenType(legacyTokenType);
+  localStorage.setItem(TOKEN_TYPE_STORAGE_KEY, nextTokenType);
+  localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
+
+  return nextTokenType;
+}
+
+function redirectToLogin() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (window.location.pathname !== "/login") {
+    window.location.href = "/login";
+  }
+}
+
+export function handleUnauthorizedAccess() {
+  clearAuthToken();
+  redirectToLogin();
 }
 
 export function saveAuthToken(loginResponse: LoginResponse) {
@@ -24,8 +88,13 @@ export function saveAuthToken(loginResponse: LoginResponse) {
     return;
   }
 
-  localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, loginResponse.accessToken);
-  localStorage.setItem(AUTH_TOKEN_TYPE_STORAGE_KEY, loginResponse.tokenType || "Bearer");
+  localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, loginResponse.accessToken);
+  localStorage.setItem(
+    TOKEN_TYPE_STORAGE_KEY,
+    normalizeTokenType(loginResponse.tokenType),
+  );
+  localStorage.removeItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
 }
 
 export function clearAuthToken() {
@@ -33,8 +102,10 @@ export function clearAuthToken() {
     return;
   }
 
-  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
-  localStorage.removeItem(AUTH_TOKEN_TYPE_STORAGE_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(TOKEN_TYPE_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
 }
 
 export function getAuthToken() {
@@ -42,7 +113,23 @@ export function getAuthToken() {
     return null;
   }
 
-  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  const currentAccessToken = localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+
+  if (currentAccessToken) {
+    return currentAccessToken;
+  }
+
+  const legacyAccessToken = localStorage.getItem(
+    LEGACY_ACCESS_TOKEN_STORAGE_KEY,
+  );
+
+  if (!legacyAccessToken) {
+    return null;
+  }
+
+  migrateLegacyTokenStorage(legacyAccessToken);
+
+  return legacyAccessToken;
 }
 
 export function getAuthorizationHeaders(): Record<string, string> {
@@ -52,12 +139,8 @@ export function getAuthorizationHeaders(): Record<string, string> {
     return {};
   }
 
-  const tokenType = canUseStorage()
-    ? localStorage.getItem(AUTH_TOKEN_TYPE_STORAGE_KEY) || "Bearer"
-    : "Bearer";
-
   return {
-    Authorization: `${tokenType} ${accessToken}`,
+    Authorization: `${getStoredTokenType()} ${accessToken}`,
   };
 }
 
@@ -131,7 +214,15 @@ export async function login(
 }
 
 export async function fetchCurrentMember(): Promise<CurrentMemberResponse> {
-  return authApi.getCurrentMember(getAuthorizationHeaders());
+  try {
+    return await authApi.getCurrentMember(getAuthorizationHeaders());
+  } catch (error) {
+    if (error instanceof ApiRequestError && error.status === 401) {
+      handleUnauthorizedAccess();
+    }
+
+    throw error;
+  }
 }
 
 export async function signUp(
