@@ -26,6 +26,7 @@ export default function RegularRegisterScreen(props: Omit<RegisterScreenProps, "
   return (
     <RegisterScreen
       {...props}
+      getCategories={getAuctionCategories}
       mode="regular"
       servicesByType={{
         regular: {

@@ -29,6 +29,7 @@ export interface RegisterScreenProps {
   themeColor?: string;
   mode?: SaleType;
   initialData?: any;
+  getCategories: () => Promise<ProductCategory[]>;
   servicesByType: Record<SaleType, RegisterScreenServices>;
 }
 
@@ -132,6 +133,7 @@ export default function RegisterScreen({
   onComplete,
   mode = "regular",
   initialData,
+  getCategories,
   servicesByType,
 }: RegisterScreenProps) {
   const router = useRouter();
@@ -253,7 +255,7 @@ export default function RegisterScreen({
       setCategoryLoadError(null);
 
       try {
-        const fetchedCategories = await currentServices.getCategories();
+        const fetchedCategories = await getCategories();
         if (!isMounted) {
           return;
         }
@@ -278,7 +280,7 @@ export default function RegisterScreen({
     return () => {
       isMounted = false;
     };
-  }, [currentServices]);
+  }, [getCategories]);
 
   useEffect(() => {
     if (categories.length === 0 || !pendingCategoryId) {
