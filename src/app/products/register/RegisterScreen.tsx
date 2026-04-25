@@ -26,6 +26,7 @@ import type {
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
+import { fetchMyProfileForm } from "@/services/mypage/service";
 
 export interface RegisterScreenProps {
   onBack?: () => void;
@@ -142,6 +143,7 @@ export default function RegisterScreen({
     initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
   );
   const [description, setDescription] = useState(initialData?.description || "");
+  const [location, setLocation] = useState(initialData?.location || "");
   const [images, setImages] = useState<ProductImagePayload[]>(
     normalizeInitialImages(initialData),
   );
@@ -157,6 +159,7 @@ export default function RegisterScreen({
     null,
   );
   const [showCategoryError, setShowCategoryError] = useState(false);
+  const hasLoadedDraftRef = useRef(false);
 
   const themeColor = saleType === "regular" ? "#98E446" : "#F64257";
   const isEditMode = !!initialData;
@@ -203,6 +206,30 @@ export default function RegisterScreen({
       }
     }
   }, [isEditMode]);
+
+  useEffect(() => {
+    if (isEditMode) {
+      return;
+    }
+
+    let isMounted = true;
+
+    fetchMyProfileForm()
+      .then((profileForm) => {
+        if (!isMounted || hasLoadedDraftRef.current || location) {
+          return;
+        }
+
+        setLocation(profileForm.location);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch profile form", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditMode, location]);
 
   useEffect(() => {
     let isMounted = true;
@@ -269,7 +296,7 @@ export default function RegisterScreen({
       images,
       categoryId,
       allowOffer: false,
-      location: "",
+      location,
       draftId: null,
       auctionEndAt: auction.endsAt,
       auction: {
@@ -399,6 +426,7 @@ export default function RegisterScreen({
       const savedDraft = localStorage.getItem("product_draft");
       if (savedDraft) {
         const draft = createDraft(JSON.parse(savedDraft));
+        hasLoadedDraftRef.current = true;
         setSaleType(draft.saleType || mode);
         setName(draft.name);
         setPendingCategoryId(draft.categoryId);
@@ -408,6 +436,7 @@ export default function RegisterScreen({
         setShowCategoryError(false);
         setPrice(draft.price);
         setDescription(draft.description);
+        setLocation(draft.location);
         setImages(draft.images);
         setAuction(draft.auction);
       }

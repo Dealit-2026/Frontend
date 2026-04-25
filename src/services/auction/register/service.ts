@@ -217,7 +217,10 @@ export function buildCreateAuctionRequest(
 export function buildSaveAuctionDraftRequest(
   draft: AuctionRegisterDraft,
 ): SaveAuctionDraftRequest {
-  return buildCreateAuctionRequest(draft);
+  return {
+    ...buildCreateAuctionRequest(draft),
+    price: draft.price ? Number(draft.price) : null,
+  };
 }
 
 // 카테고리 AI 추천 요청은 현재 입력된 상품명/설명만 사용한다.

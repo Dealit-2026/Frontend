@@ -64,7 +64,9 @@ export interface RegularProductCreateResponse {
 }
 
 export interface SaveRegularProductDraftRequest
-  extends RegularProductCreateRequest {}
+  extends Omit<RegularProductCreateRequest, "price"> {
+  price: number | null;
+}
 
 export interface SaveRegularProductDraftResponse {
   draftId: number;

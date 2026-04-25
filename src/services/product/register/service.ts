@@ -90,7 +90,10 @@ export function buildCreateRegularProductRequest(
 export function buildSaveRegularProductDraftRequest(
   draft: RegularProductRegisterDraft,
 ): SaveRegularProductDraftRequest {
-  return buildCreateRegularProductRequest(draft);
+  return {
+    ...buildCreateRegularProductRequest(draft),
+    price: draft.price ? Number(draft.price) : null,
+  };
 }
 
 export function buildRecommendRegularProductCategoryRequest(

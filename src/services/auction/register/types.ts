@@ -92,8 +92,11 @@ export interface AuctionCreateResponse {
   } | null;
 }
 
-// 임시저장도 등록과 거의 같은 request shape를 사용한다.
-export interface SaveProductDraftRequest extends AuctionCreateRequest {}
+// 임시저장은 등록보다 느슨한 입력을 허용한다.
+export interface SaveProductDraftRequest
+  extends Omit<AuctionCreateRequest, "price"> {
+  price: number | null;
+}
 
 export interface SaveProductDraftResponse {
   draftId: number;
