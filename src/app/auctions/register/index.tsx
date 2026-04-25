@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
-import RegisterScreen from '../../products/register/RegisterScreen';
+import AuctionRegisterContainer from '../../products/register/AuctionRegisterScreen';
 
 export default function AuctionRegisterScreen(props: any) {
-  return <RegisterScreen {...props} mode="auction" />;
+  return <AuctionRegisterContainer {...props} />;
 }

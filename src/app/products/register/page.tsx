@@ -1,7 +1,7 @@
 "use client";
 
-import RegisterScreen from "./RegisterScreen";
+import RegularRegisterScreen from "./RegularRegisterScreen";
 
 export default function RegisterPage() {
-  return <RegisterScreen mode="regular" />;
+  return <RegularRegisterScreen />;
 }

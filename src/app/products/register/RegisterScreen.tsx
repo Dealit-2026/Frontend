@@ -8,20 +8,15 @@ import {
   calculateBidUnit,
   createDefaultAuctionForm,
   createDraft,
-  deleteProductImage,
   formatAuctionSchedule,
   formatDisplayPrice,
-  getProductCategories,
   getAuctionFieldContent,
-  recommendProductPrice,
-  registerProduct,
   sanitizeNumericInput,
-  saveProductDraft,
-  uploadProductImage,
   updateAuctionDuration,
 } from "@/services/auction/register/service";
 import type {
   AuctionFormValues,
+  AuctionRegisterDraft,
   ProductCategory,
   ProductImagePayload,
   SaleType,
@@ -34,6 +29,23 @@ export interface RegisterScreenProps {
   themeColor?: string;
   mode?: SaleType;
   initialData?: any;
+  servicesByType: Record<SaleType, RegisterScreenServices>;
+}
+
+export interface RegisterScreenServices {
+  getCategories: () => Promise<ProductCategory[]>;
+  uploadImage: (file: File, sortOrder: number) => Promise<ProductImagePayload>;
+  deleteImage: (imageId: number) => Promise<unknown>;
+  saveDraft: (draft: AuctionRegisterDraft) => Promise<unknown>;
+  recommendPrice: (draft: {
+    name: string;
+    description: string;
+    saleType: SaleType;
+  }) => Promise<{
+    recommendedPrice: number;
+    startPrice?: number | null;
+  }>;
+  register: (draft: AuctionRegisterDraft) => Promise<unknown>;
 }
 
 function normalizeInitialImages(initialData: any): ProductImagePayload[] {
@@ -120,6 +132,7 @@ export default function RegisterScreen({
   onComplete,
   mode = "regular",
   initialData,
+  servicesByType,
 }: RegisterScreenProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -197,6 +210,7 @@ export default function RegisterScreen({
       window.alert(message);
     }
   };
+  const currentServices = servicesByType[saleType];
 
   useEffect(() => {
     if (!isEditMode) {
@@ -239,7 +253,7 @@ export default function RegisterScreen({
       setCategoryLoadError(null);
 
       try {
-        const fetchedCategories = await getProductCategories();
+        const fetchedCategories = await currentServices.getCategories();
         if (!isMounted) {
           return;
         }
@@ -264,7 +278,7 @@ export default function RegisterScreen({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentServices]);
 
   useEffect(() => {
     if (categories.length === 0 || !pendingCategoryId) {
@@ -310,7 +324,7 @@ export default function RegisterScreen({
     setIsSavingDraft(true);
 
     try {
-      await saveProductDraft(draft);
+      await currentServices.saveDraft(draft);
       localStorage.setItem("product_draft", JSON.stringify(draft));
       setShowDraftModal(false);
       handleBack();
@@ -367,7 +381,7 @@ export default function RegisterScreen({
     setIsSubmitting(true);
 
     try {
-      await registerProduct(draft);
+      await currentServices.register(draft);
       localStorage.removeItem("product_draft");
       handleComplete();
     } catch (error) {
@@ -392,7 +406,7 @@ export default function RegisterScreen({
 
     setIsUploadingImage(true);
     try {
-      const uploadedImage = await uploadProductImage(file, images.length + 1);
+      const uploadedImage = await currentServices.uploadImage(file, images.length + 1);
       setImages((currentImages) => [...currentImages, uploadedImage]);
     } catch (error) {
       console.error("Failed to upload image", error);
@@ -404,7 +418,7 @@ export default function RegisterScreen({
 
   const handleRecommendPrice = async () => {
     try {
-      const recommendation = await recommendProductPrice({
+      const recommendation = await currentServices.recommendPrice({
         name,
         description,
         saleType,
@@ -464,7 +478,7 @@ export default function RegisterScreen({
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
-        await deleteProductImage(targetImage.imageId);
+        await currentServices.deleteImage(targetImage.imageId);
       } catch (error) {
         console.error("Failed to delete image", error);
         setDeletingImageIds((currentIds) =>

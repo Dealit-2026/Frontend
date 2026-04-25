@@ -1,7 +1,7 @@
 "use client";
 
-import RegisterScreen from "../../products/register/RegisterScreen";
+import AuctionRegisterScreen from "../../products/register/AuctionRegisterScreen";
 
 export default function AuctionRegisterPage() {
-  return <RegisterScreen mode="auction" />;
+  return <AuctionRegisterScreen />;
 }

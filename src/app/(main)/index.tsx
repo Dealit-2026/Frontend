@@ -35,9 +35,10 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../types/index';
 import { ExploreIcon } from '../../components/common/ExploreIcon';
+import AuctionRegisterScreen from '../products/register/AuctionRegisterScreen';
 import HomeScreen from './home';
 import SearchScreen from './search';
-import RegisterScreen from '../products/register/RegisterScreen';
+import RegularRegisterScreen from '../products/register/RegularRegisterScreen';
 import ChatListScreen from '../chats';
 import MyPageScreen from './mypage';
 import TabButton from '../../components/common/bottom-navigation/TabButton';
@@ -95,6 +96,8 @@ export default function MainLayout({
   key?: string;
 }) {
   const [lastTab, setLastTab] = useState<Tab>(activeTab === 'register' ? 'home' : activeTab);
+  const RegisterComponent =
+    themeMode === 'auction' ? AuctionRegisterScreen : RegularRegisterScreen;
   
   useEffect(() => {
     if (activeTab !== 'register') {
@@ -140,11 +143,10 @@ export default function MainLayout({
               transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.5 }}
               className="absolute inset-0 z-50"
             >
-              <RegisterScreen 
+              <RegisterComponent 
                 onBack={() => onTabChange(lastTab)} 
                 onComplete={() => onTabChange('home')} 
                 themeColor={themeColor} 
-                mode={themeMode} 
               />
             </motion.div>
           )}

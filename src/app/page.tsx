@@ -57,7 +57,6 @@ import HomeScreen from "./(main)/home";
 import WishlistScreen from "./(main)/wishlist";
 import SearchScreen from "./(main)/search";
 import SearchDetailScreen from "./(main)/search/detail";
-import RegisterScreen from "./products/register/RegisterScreen";
 import ChatListScreen from "./chats";
 import MyPageScreen from "./(main)/mypage";
 import ProductDetailScreen from "./products/[productId]";
