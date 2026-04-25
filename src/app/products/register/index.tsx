@@ -5,8 +5,8 @@ import { Camera, ChevronLeft, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import type {
-  AuctionCategory,
   AuctionFormValues,
+  ProductCategory,
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
@@ -17,7 +17,7 @@ export interface RegisterScreenViewProps {
   showLoadDraftModal: boolean;
   saleType: SaleType;
   name: string;
-  categories: AuctionCategory[];
+  categories: ProductCategory[];
   selectedPrimaryCategoryId: number | null;
   selectedSecondaryCategoryId: number | null;
   selectedTertiaryCategoryId: number | null;

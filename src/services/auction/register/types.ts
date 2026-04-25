@@ -172,3 +172,9 @@ export type CreateAuctionRequest = AuctionCreateRequest;
 export type CreateAuctionResponse = AuctionCreateResponse;
 export type SaveAuctionDraftRequest = SaveProductDraftRequest;
 export type SaveAuctionDraftResponse = SaveProductDraftResponse;
+
+// 공용 상품 등록 화면에서 사용할 별칭.
+// 현재 등록 화면은 일반 판매/경매를 모두 다루므로 의미를 더 직접적으로 드러낸다.
+export type ProductCategory = AuctionCategory;
+export type ProductRegisterDraft = AuctionCreateFormValues;
+export type ProductFieldContent = AuctionFieldContent;

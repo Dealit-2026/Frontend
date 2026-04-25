@@ -1,3 +1,4 @@
+import { getApiErrorMessage } from "@/services/apiError";
 import {
   AuctionCategory,
   CreateAuctionRequest,
@@ -18,10 +19,10 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
   "http://localhost:8080";
-const AUCTION_API_BASE = `${API_BASE_URL}/api/v1/auction`;
+const PRODUCT_API_BASE = `${API_BASE_URL}/api/v1/products`;
 
 export async function getAuctionCategories(): Promise<AuctionCategory[]> {
-  const response = await fetch(`${AUCTION_API_BASE}/categories`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/categories`, {
     method: "GET",
   });
 
@@ -41,7 +42,7 @@ export async function uploadAuctionImage(
   const formData = new FormData();
   formData.append("file", file);
 
-  const response = await fetch(`${AUCTION_API_BASE}/image`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/image`, {
     method: "POST",
     body: formData,
   });
@@ -56,7 +57,7 @@ export async function uploadAuctionImage(
 export async function deleteAuctionImage(
   imageId: number,
 ): Promise<DeleteAuctionImageResponse> {
-  const response = await fetch(`${AUCTION_API_BASE}/image/${imageId}`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/image/${imageId}`, {
     method: "DELETE",
   });
 
@@ -72,7 +73,7 @@ export async function deleteAuctionImage(
 export async function saveAuctionDraft(
   payload: SaveAuctionDraftRequest,
 ): Promise<SaveAuctionDraftResponse> {
-  const response = await fetch(`${AUCTION_API_BASE}/draft`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/draft`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -92,7 +93,7 @@ export async function saveAuctionDraft(
 export async function recommendAuctionCategory(
   payload: RecommendCategoryRequest,
 ): Promise<RecommendCategoryResponse> {
-  const response = await fetch(`${AUCTION_API_BASE}/category/recommend`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/category/recommend`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -112,7 +113,7 @@ export async function recommendAuctionCategory(
 export async function recommendAuctionPrice(
   payload: RecommendPriceRequest,
 ): Promise<RecommendPriceResponse> {
-  const response = await fetch(`${AUCTION_API_BASE}/price/recommend`, {
+  const response = await fetch(`${PRODUCT_API_BASE}/price/recommend`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -132,7 +133,7 @@ export async function recommendAuctionPrice(
 export async function postAuction(
   payload: CreateAuctionRequest,
 ): Promise<CreateAuctionResponse> {
-  const response = await fetch(AUCTION_API_BASE, {
+  const response = await fetch(PRODUCT_API_BASE, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -141,7 +142,9 @@ export async function postAuction(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create auction: ${response.status}`);
+    throw new Error(
+      await getApiErrorMessage(response, "상품 등록에 실패했습니다."),
+    );
   }
 
   return response.json();

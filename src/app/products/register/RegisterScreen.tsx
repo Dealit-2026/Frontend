@@ -8,21 +8,21 @@ import {
   calculateBidUnit,
   createDefaultAuctionForm,
   createDraft,
-  deleteAuctionImage,
+  deleteProductImage,
   formatAuctionSchedule,
   formatDisplayPrice,
-  getAuctionCategories,
+  getProductCategories,
   getAuctionFieldContent,
-  recommendAuctionPrice,
-  registerAuction,
+  recommendProductPrice,
+  registerProduct,
   sanitizeNumericInput,
-  saveAuctionDraft,
-  uploadAuctionImage,
+  saveProductDraft,
+  uploadProductImage,
   updateAuctionDuration,
 } from "@/services/auction/register/service";
 import type {
-  AuctionCategory,
   AuctionFormValues,
+  ProductCategory,
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
@@ -88,13 +88,13 @@ function normalizeInitialImages(initialData: any): ProductImagePayload[] {
 }
 
 interface SelectedCategoryPath {
-  primary: AuctionCategory;
-  secondary: AuctionCategory;
-  tertiary: AuctionCategory;
+  primary: ProductCategory;
+  secondary: ProductCategory;
+  tertiary: ProductCategory;
 }
 
 function findCategoryPathByLeafId(
-  categories: AuctionCategory[],
+  categories: ProductCategory[],
   leafCategoryId: number,
 ): SelectedCategoryPath | null {
   for (const primary of categories) {
@@ -129,7 +129,7 @@ export default function RegisterScreen({
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(
     initialData?.categoryId ?? null,
   );
-  const [categories, setCategories] = useState<AuctionCategory[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [selectedPrimaryCategoryId, setSelectedPrimaryCategoryId] = useState<
     number | null
   >(null);
@@ -212,7 +212,7 @@ export default function RegisterScreen({
       setCategoryLoadError(null);
 
       try {
-        const fetchedCategories = await getAuctionCategories();
+        const fetchedCategories = await getProductCategories();
         if (!isMounted) {
           return;
         }
@@ -283,7 +283,7 @@ export default function RegisterScreen({
     setIsSavingDraft(true);
 
     try {
-      await saveAuctionDraft(draft);
+      await saveProductDraft(draft);
       localStorage.setItem("product_draft", JSON.stringify(draft));
       setShowDraftModal(false);
       handleBack();
@@ -340,7 +340,7 @@ export default function RegisterScreen({
     setIsSubmitting(true);
 
     try {
-      await registerAuction(draft);
+      await registerProduct(draft);
       localStorage.removeItem("product_draft");
       handleComplete();
     } catch (error) {
@@ -365,7 +365,7 @@ export default function RegisterScreen({
 
     setIsUploadingImage(true);
     try {
-      const uploadedImage = await uploadAuctionImage(file, images.length + 1);
+      const uploadedImage = await uploadProductImage(file, images.length + 1);
       setImages((currentImages) => [...currentImages, uploadedImage]);
     } catch (error) {
       console.error("Failed to upload image", error);
@@ -377,7 +377,7 @@ export default function RegisterScreen({
 
   const handleRecommendPrice = async () => {
     try {
-      const recommendation = await recommendAuctionPrice({
+      const recommendation = await recommendProductPrice({
         name,
         description,
         saleType,
@@ -435,7 +435,7 @@ export default function RegisterScreen({
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
-        await deleteAuctionImage(targetImage.imageId);
+        await deleteProductImage(targetImage.imageId);
       } catch (error) {
         console.error("Failed to delete image", error);
         setDeletingImageIds((currentIds) =>

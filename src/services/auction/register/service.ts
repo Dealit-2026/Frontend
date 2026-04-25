@@ -281,3 +281,37 @@ export async function recommendAuctionPrice(
 export async function registerAuction(draft: AuctionRegisterDraft) {
   return auctionApi.postAuction(buildCreateAuctionRequest(draft));
 }
+
+// 공용 등록 화면에서 사용하는 상품 등록용 함수명.
+// 실제 payload는 saleType 값으로 분기되므로 일반 판매/경매를 모두 처리한다.
+export async function uploadProductImage(file: File, sortOrder: number) {
+  return uploadAuctionImage(file, sortOrder);
+}
+
+export async function getProductCategories(): Promise<AuctionCategory[]> {
+  return getAuctionCategories();
+}
+
+export async function deleteProductImage(imageId: number) {
+  return deleteAuctionImage(imageId);
+}
+
+export async function saveProductDraft(draft: AuctionRegisterDraft) {
+  return saveAuctionDraft(draft);
+}
+
+export async function recommendProductCategory(
+  draft: Pick<AuctionRegisterDraft, "name" | "description">,
+) {
+  return recommendAuctionCategory(draft);
+}
+
+export async function recommendProductPrice(
+  draft: Pick<AuctionRegisterDraft, "name" | "description" | "saleType">,
+) {
+  return recommendAuctionPrice(draft);
+}
+
+export async function registerProduct(draft: AuctionRegisterDraft) {
+  return registerAuction(draft);
+}
