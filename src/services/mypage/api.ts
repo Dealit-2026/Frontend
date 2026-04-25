@@ -1,5 +1,8 @@
-import { getApiErrorMessage } from "@/services/apiError";
-import { getAuthorizationHeaders } from "@/services/auth/service";
+import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
+import {
+  getAuthorizationHeaders,
+  handleUnauthorizedAccess,
+} from "@/services/auth/service";
 import type {
   MyProfileResponse,
   UpdateMyLocationRequest,
@@ -8,6 +11,20 @@ import type {
   UploadProfileImageResponse,
 } from "@/services/mypage/types";
 
+async function throwProtectedApiError(
+  response: Response,
+  fallbackMessage: string,
+) {
+  if (response.status === 401) {
+    handleUnauthorizedAccess();
+  }
+
+  throw new ApiRequestError(
+    await getApiErrorMessage(response, fallbackMessage),
+    response.status,
+  );
+}
+
 export async function getMyProfile(): Promise<MyProfileResponse> {
   const response = await fetch("/api/v1/users/me/mypage", {
     method: "GET",
@@ -15,7 +32,7 @@ export async function getMyProfile(): Promise<MyProfileResponse> {
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "마이페이지 조회에 실패했습니다."));
+    await throwProtectedApiError(response, "마이페이지 조회에 실패했습니다.");
   }
 
   return response.json();
@@ -34,7 +51,7 @@ export async function updateMyProfile(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "프로필 저장에 실패했습니다."));
+    await throwProtectedApiError(response, "프로필 저장에 실패했습니다.");
   }
 
   return response.json();
@@ -53,7 +70,7 @@ export async function updateMyLocation(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "지역 저장에 실패했습니다."));
+    await throwProtectedApiError(response, "지역 저장에 실패했습니다.");
   }
 
   return response.json();
@@ -72,7 +89,10 @@ export async function uploadProfileImage(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "프로필 이미지 업로드에 실패했습니다."));
+    await throwProtectedApiError(
+      response,
+      "프로필 이미지 업로드에 실패했습니다.",
+    );
   }
 
   return response.json();

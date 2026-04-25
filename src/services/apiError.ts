@@ -1,4 +1,17 @@
-﻿export async function getApiErrorMessage(response: Response, fallbackMessage: string) {
+﻿export class ApiRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiRequestError";
+    this.status = status;
+  }
+}
+
+export async function getApiErrorMessage(
+  response: Response,
+  fallbackMessage: string,
+) {
   try {
     const data = await response.json();
 

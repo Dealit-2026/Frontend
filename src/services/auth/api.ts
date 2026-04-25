@@ -1,4 +1,4 @@
-﻿import { getApiErrorMessage } from "@/services/apiError";
+﻿import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
 import type {
   CurrentMemberResponse,
   LoginIdCheckResponse,
@@ -19,7 +19,10 @@ export async function postLogin(payload: LoginRequest): Promise<LoginResponse> {
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "로그인에 실패했습니다."));
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, "로그인에 실패했습니다."),
+      response.status,
+    );
   }
 
   return response.json();
@@ -34,7 +37,10 @@ export async function getCurrentMember(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "내 정보 조회에 실패했습니다."));
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, "내 정보 조회에 실패했습니다."),
+      response.status,
+    );
   }
 
   return response.json();
@@ -52,7 +58,10 @@ export async function postSignUp(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "회원가입에 실패했습니다."));
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, "회원가입에 실패했습니다."),
+      response.status,
+    );
   }
 
   return response.json();
@@ -67,7 +76,10 @@ export async function checkLoginId(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "아이디 중복 확인에 실패했습니다."));
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, "아이디 중복 확인에 실패했습니다."),
+      response.status,
+    );
   }
 
   return response.json();
@@ -82,10 +94,11 @@ export async function checkNickname(
   });
 
   if (!response.ok) {
-    throw new Error(await getApiErrorMessage(response, "닉네임 중복 확인에 실패했습니다."));
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, "닉네임 중복 확인에 실패했습니다."),
+      response.status,
+    );
   }
 
   return response.json();
 }
-
-
