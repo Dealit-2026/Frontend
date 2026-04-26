@@ -41,8 +41,7 @@ import FindIdScreen from "./(auth)/find-id";
 import FindPasswordScreen from "./(auth)/find-password";
 import SignupScreen from "./(auth)/signup";
 import RegionSetupScreen from "./(auth)/region-setup";
-import FindLocationScreen from "./(auth)/find-location";
-import PhoneAuthScreen from "./(auth)/phone-auth";
+import EmailAuthScreen from "./(auth)/email-auth";
 import TermsAgreementScreen from "./(auth)/terms";
 import ProfileSetupScreen from "./(auth)/profile-setup";
 import ProfileEditScreen from "./(main)/mypage/edit-profile";
@@ -80,16 +79,32 @@ import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
 import { getErrorMessage } from "@/services/apiError";
-import { fetchMyProfileForm, saveMyLocation } from "@/services/mypage/service";
-import { updateMyProfileDraft } from "@/services/mypage/profileDraft";
+import {
+  applyLocationDetailAddress,
+  createDefaultLocationForm,
+  getLocationDisplayName,
+  openDaumPostcodeSearch,
+  resolveCurrentLocation,
+} from "@/services/location/service";
+import type { LocationFormValues } from "@/services/location/types";
+import { fetchMyLocationForm, saveMyLocation } from "@/services/mypage/service";
+import {
+  clearMyProfileDraft,
+  updateMyProfileDraft,
+} from "@/services/mypage/profileDraft";
+import { clearSignUpDraft, getSignUpDraft } from "@/services/auth/signUpDraft";
 import {
   clearAuthToken,
   fetchCurrentMember,
   getAuthToken,
+  signUp,
 } from "@/services/auth/service";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
+  const [emailAuthMode, setEmailAuthMode] = useState<"signup" | "profile">(
+    "signup",
+  );
   const [currentTab, setCurrentTab] = useState<Tab>("home");
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null,
@@ -101,11 +116,13 @@ export default function App() {
   >("all");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [userLocation, setUserLocation] = useState("");
+  const [userLocationForm, setUserLocationForm] = useState<LocationFormValues>(
+    createDefaultLocationForm(),
+  );
   const [isEditingLocation, setIsEditingLocation] = useState(false);
-  const [locationReturnScreen, setLocationReturnScreen] =
-    useState<Screen | null>(null);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
+  const [isResolvingCurrentLocation, setIsResolvingCurrentLocation] =
+    useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
@@ -132,6 +149,41 @@ export default function App() {
   const navigateToProduct = (id: number) => {
     setSelectedProductId(id);
     setCurrentScreen("product_detail");
+  };
+
+  const handleLocationPostcodeSearch = async () => {
+    try {
+      const nextLocationForm = await openDaumPostcodeSearch(
+        userLocationForm.detailAddress,
+      );
+      setUserLocationForm(nextLocationForm);
+    } catch (error) {
+      const message = getErrorMessage(error, "주소 검색을 불러오지 못했습니다.");
+
+      if (message !== "주소 검색이 취소되었습니다.") {
+        showToast(message);
+      }
+    }
+  };
+
+  const handleCurrentLocationResolve = async () => {
+    setIsResolvingCurrentLocation(true);
+
+    try {
+      const nextLocationForm = await resolveCurrentLocation();
+      setUserLocationForm(
+        applyLocationDetailAddress(
+          nextLocationForm,
+          userLocationForm.detailAddress,
+        ),
+      );
+    } catch (error) {
+      showToast(
+        getErrorMessage(error, "현재 위치를 불러오지 못했습니다."),
+      );
+    } finally {
+      setIsResolvingCurrentLocation(false);
+    }
   };
 
   useEffect(() => {
@@ -195,7 +247,11 @@ export default function App() {
               key="signup"
               showToast={showToast}
               onBack={() => navigateTo("login")}
-              onNext={() => navigateTo("region_setup")}
+              onNext={() => {
+                setUserLocationForm(createDefaultLocationForm());
+                setEmailAuthMode("signup");
+                navigateTo("email_auth");
+              }}
             />
           )}
           {currentScreen === "region_setup" && (
@@ -206,18 +262,24 @@ export default function App() {
                   navigateTo("main");
                   setIsEditingLocation(false);
                 } else {
-                  navigateTo("signup");
+                  navigateTo("terms");
                 }
               }}
               onNext={async () => {
                 try {
-                  await saveMyLocation(userLocation);
+                  if (!isEditingLocation && !getAuthToken()) {
+                    const signUpResult = await signUp(getSignUpDraft());
+                    clearSignUpDraft();
+                    showToast(signUpResult.message);
+                  }
+
+                  await saveMyLocation(userLocationForm);
 
                   if (isEditingLocation) {
                     navigateTo("main");
                     setIsEditingLocation(false);
                   } else {
-                    navigateTo("phone_auth");
+                    navigateTo("profile_setup");
                   }
                 } catch (error) {
                   showToast(
@@ -225,62 +287,38 @@ export default function App() {
                   );
                 }
               }}
-              onFindLocation={() => {
-                setLocationReturnScreen(null);
-                navigateTo("find_location");
-              }}
-              currentLocation={userLocation}
-              onLocationChange={setUserLocation}
+              onOpenPostcode={handleLocationPostcodeSearch}
+              onUseCurrentLocation={handleCurrentLocationResolve}
+              locationForm={userLocationForm}
+              onLocationChange={setUserLocationForm}
+              isResolvingCurrentLocation={isResolvingCurrentLocation}
+              confirmLabel={isEditingLocation ? "확인" : "다음"}
             />
           )}
-          {currentScreen === "find_location" && (
-            <FindLocationScreen
-              key="find_location"
-              onBack={() => {
-                if (locationReturnScreen) {
-                  navigateTo(locationReturnScreen);
-                  setLocationReturnScreen(null);
-                } else {
-                  navigateTo("region_setup");
-                }
-              }}
-              onComplete={async (newLocation) => {
-                setUserLocation(newLocation);
-
-                try {
-                  await saveMyLocation(newLocation);
-
-                  if (locationReturnScreen) {
-                    updateMyProfileDraft({ location: newLocation });
-                    navigateTo(locationReturnScreen);
-                    setLocationReturnScreen(null);
-                  } else if (isEditingLocation) {
-                    navigateTo("main");
-                    setIsEditingLocation(false);
-                  } else {
-                    navigateTo("phone_auth");
-                  }
-                } catch (error) {
-                  showToast(
-                    getErrorMessage(error, "지역 저장에 실패했습니다."),
-                  );
-                }
-              }}
-            />
-          )}
-          {currentScreen === "phone_auth" && (
-            <PhoneAuthScreen
-              key="phone_auth"
+          {currentScreen === "email_auth" && (
+            <EmailAuthScreen
+              key="email_auth"
               showToast={showToast}
-              onBack={() => navigateTo("region_setup")}
-              onComplete={() => navigateTo("terms")}
+              onBack={() =>
+                navigateTo(emailAuthMode === "profile" ? "edit_profile" : "signup")
+              }
+              onComplete={() => {
+                if (emailAuthMode === "profile") {
+                  navigateTo("edit_profile");
+                  return;
+                }
+
+                navigateTo("terms");
+              }}
+              onSkip={() => navigateTo("terms")}
+              mode={emailAuthMode}
             />
           )}
           {currentScreen === "terms" && (
             <TermsAgreementScreen
               key="terms"
-              onBack={() => navigateTo("phone_auth")}
-              onNext={() => navigateTo("profile_setup")}
+              onBack={() => navigateTo("email_auth")}
+              onNext={() => navigateTo("region_setup")}
             />
           )}
           {currentScreen === "profile_setup" && (
@@ -309,16 +347,24 @@ export default function App() {
             <ProfileEditScreen
               key="edit_profile"
               onLocationEdit={() => {
-                fetchMyProfileForm().then((form) => {
-                  if (form.location) {
-                    setUserLocation(form.location);
-                  }
-                });
+                fetchMyLocationForm()
+                  .then((locationForm) => {
+                    setUserLocationForm(locationForm);
+                  })
+                  .catch((error) => {
+                    showToast(
+                      getErrorMessage(error, "지역 정보를 불러오지 못했습니다."),
+                    );
+                  });
                 navigateTo("edit_profile_region");
               }}
               onBack={() => {
                 navigateTo("main");
                 setIsEditingProfile(false);
+              }}
+              onEmailVerify={() => {
+                setEmailAuthMode("profile");
+                navigateTo("email_auth");
               }}
               onComplete={() => {
                 setProfileRefreshKey((prevKey) => prevKey + 1);
@@ -334,8 +380,11 @@ export default function App() {
               onBack={() => navigateTo("edit_profile")}
               onNext={async () => {
                 try {
-                  await saveMyLocation(userLocation);
-                  updateMyProfileDraft({ location: userLocation });
+                  await saveMyLocation(userLocationForm);
+                  updateMyProfileDraft({
+                    location: getLocationDisplayName(userLocationForm),
+                    locationDetails: userLocationForm,
+                  });
                   navigateTo("edit_profile");
                 } catch (error) {
                   showToast(
@@ -343,12 +392,12 @@ export default function App() {
                   );
                 }
               }}
-              onFindLocation={() => {
-                setLocationReturnScreen("edit_profile_region");
-                navigateTo("find_location");
-              }}
-              currentLocation={userLocation}
-              onLocationChange={setUserLocation}
+              onOpenPostcode={handleLocationPostcodeSearch}
+              onUseCurrentLocation={handleCurrentLocationResolve}
+              locationForm={userLocationForm}
+              onLocationChange={setUserLocationForm}
+              isResolvingCurrentLocation={isResolvingCurrentLocation}
+              confirmLabel="확인"
             />
           )}
           {currentScreen === "category_selection" && (
@@ -405,16 +454,26 @@ export default function App() {
               }}
               onLocationEditClick={() => {
                 setIsEditingLocation(true);
+                fetchMyLocationForm()
+                  .then((locationForm) => {
+                    setUserLocationForm(locationForm);
+                  })
+                  .catch(() => {
+                    setUserLocationForm(createDefaultLocationForm());
+                  });
                 navigateTo("region_setup");
               }}
               onWishlistClick={() => navigateTo("wishlist")}
               themeMode={themeMode}
               onThemeChange={setThemeMode}
               themeColor={themeColor}
-              userLocation={userLocation}
+              userLocation={getLocationDisplayName(userLocationForm)}
               profileRefreshKey={profileRefreshKey}
               onLogout={() => {
                 clearAuthToken();
+                clearSignUpDraft();
+                clearMyProfileDraft();
+                setUserLocationForm(createDefaultLocationForm());
                 setCurrentTab("home");
                 navigateTo("login");
               }}

@@ -14,12 +14,13 @@ export interface CurrentMemberResponse {
   loginId: string;
   email: string;
   nickname: string;
+  verified?: boolean;
 }
 
 export interface SignUpRequest {
   loginId: string;
   password: string;
-  email: string;
+  email: string | null;
   name: string | null;
 }
 
@@ -39,6 +40,25 @@ export interface LoginIdCheckResponse {
 export interface NicknameCheckResponse {
   nickname: string;
   available: boolean;
+}
+
+export interface SendEmailVerificationRequest {
+  email: string;
+}
+
+export interface SendEmailVerificationResponse {
+  email: string;
+  expiresInSeconds: number;
+}
+
+export interface ConfirmEmailVerificationRequest {
+  email: string;
+  code: string;
+}
+
+export interface ConfirmEmailVerificationResponse {
+  email: string;
+  verified: boolean;
 }
 
 export interface LoginFormValues {
