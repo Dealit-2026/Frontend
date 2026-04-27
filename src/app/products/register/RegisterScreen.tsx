@@ -231,12 +231,12 @@ export default function RegisterScreen({
     let isMounted = true;
 
     fetchMyProfileForm()
-      .then((profileForm) => {
+      .then((profileEditData) => {
         if (!isMounted || hasLoadedDraftRef.current || location) {
           return;
         }
 
-        setLocation(profileForm.location);
+        setLocation(profileEditData.form.location);
       })
       .catch((error) => {
         console.error("Failed to fetch profile form", error);
