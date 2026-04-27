@@ -29,6 +29,7 @@ export interface RegisterScreenProps {
   themeColor?: string;
   mode?: SaleType;
   initialData?: any;
+  getCategories: () => Promise<ProductCategory[]>;
   servicesByType: Record<SaleType, RegisterScreenServices>;
 }
 
@@ -132,6 +133,7 @@ export default function RegisterScreen({
   onComplete,
   mode = "regular",
   initialData,
+  getCategories,
   servicesByType,
 }: RegisterScreenProps) {
   const router = useRouter();
@@ -253,7 +255,7 @@ export default function RegisterScreen({
       setCategoryLoadError(null);
 
       try {
-        const fetchedCategories = await currentServices.getCategories();
+        const fetchedCategories = await getCategories();
         if (!isMounted) {
           return;
         }
@@ -278,7 +280,7 @@ export default function RegisterScreen({
     return () => {
       isMounted = false;
     };
-  }, [currentServices]);
+  }, [getCategories]);
 
   useEffect(() => {
     if (categories.length === 0 || !pendingCategoryId) {
@@ -312,7 +314,6 @@ export default function RegisterScreen({
       allowOffer: false,
       location,
       draftId: null,
-      auctionEndAt: auction.endsAt,
       auction: {
         ...auction,
         startPrice: price,
@@ -555,17 +556,6 @@ export default function RegisterScreen({
     }
   };
 
-  const handleAuctionStartChange = (value: string) => {
-    const nextAuction = updateAuctionDuration(
-      {
-        ...auction,
-        startsAt: value,
-      },
-      auction.durationDays,
-    );
-    setAuction(nextAuction);
-  };
-
   const handleAuctionDurationChange = (value: string) => {
     const nextDuration = Number(value);
     setAuction((currentAuction) =>
@@ -610,7 +600,6 @@ export default function RegisterScreen({
       onDescriptionChange={setDescription}
       onSaleTypeChange={handleSaleTypeChange}
       onPriceChange={handlePriceChange}
-      onAuctionStartChange={handleAuctionStartChange}
       onAuctionDurationChange={handleAuctionDurationChange}
       onImageButtonClick={handleImageButtonClick}
       onImageUpload={handleImageUpload}

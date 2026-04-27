@@ -52,7 +52,6 @@ export interface RegisterScreenViewProps {
   onDescriptionChange: (value: string) => void;
   onSaleTypeChange: (value: SaleType) => void;
   onPriceChange: (value: string) => void;
-  onAuctionStartChange: (value: string) => void;
   onAuctionDurationChange: (value: string) => void;
   onImageButtonClick: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -103,7 +102,6 @@ export default function RegisterScreenView({
   onDescriptionChange,
   onSaleTypeChange,
   onPriceChange,
-  onAuctionStartChange,
   onAuctionDurationChange,
   onImageButtonClick,
   onImageUpload,
@@ -393,21 +391,10 @@ export default function RegisterScreenView({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <label className="space-y-2">
                     <span className="text-xs text-gray-500 font-medium">
-                      시작 일시
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={auction.startsAt}
-                      onChange={(event) => onAuctionStartChange(event.target.value)}
-                      className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-xs text-gray-500 font-medium">
-                      진행 기간
+                      경매 기간
                     </span>
                     <select
                       value={auction.durationDays}

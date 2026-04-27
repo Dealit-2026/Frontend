@@ -20,7 +20,8 @@ import {
 // api.ts는 HTTP 호출만 담당한다.
 // 숫자 변환, 폼 가공, 기본값 생성은 service.ts에서 처리한다.
 
-const AUCTION_API_BASE = "/api/v1/auction";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
+const AUCTION_API_BASE = `${API_BASE_URL}/api/v1/auction`;
 
 async function throwProtectedApiError(
   response: Response,

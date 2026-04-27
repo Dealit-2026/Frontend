@@ -22,10 +22,13 @@ import {
 
 type RegisterScreenProps = ComponentProps<typeof RegisterScreen>;
 
-export default function RegularRegisterScreen(props: Omit<RegisterScreenProps, "servicesByType">) {
+export default function RegularRegisterScreen(
+  props: Omit<RegisterScreenProps, "getCategories" | "servicesByType">,
+) {
   return (
     <RegisterScreen
       {...props}
+      getCategories={getAuctionCategories}
       mode="regular"
       servicesByType={{
         regular: {
