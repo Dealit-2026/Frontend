@@ -25,6 +25,8 @@ const TEXT = {
   title: "\ud504\ub85c\ud544 \uc218\uc815",
   profileAlt: "\ud504\ub85c\ud544",
   editPhoto: "\ud504\ub85c\ud544 \uc0ac\uc9c4 \uc218\uc815",
+  name: "\uc774\ub984",
+  namePlaceholder: "\uc774\ub984 \uc785\ub825",
   nickname: "\ub2c9\ub124\uc784",
   nicknamePlaceholder: "\ub2c9\ub124\uc784 \uc785\ub825 (2-10\uc790)",
   nicknameHelper: "\ub2e4\ub978 \uc0ac\ub78c\uc5d0\uac8c \ubcf4\uc5ec\uc9c0\ub294 \uc774\ub984\uc774\uc5d0\uc694.",
@@ -36,9 +38,13 @@ const TEXT = {
   saving: "\uc800\uc7a5 \uc911",
   complete: "\uc644\ub8cc",
   duplicateCheck: "\uc911\ubcf5\ud655\uc778",
+  verifyEmail: "\uc774\uba54\uc77c \uc778\uc99d\ud558\uae30",
   nicknameAvailable: "\uc0ac\uc6a9 \uac00\ub2a5\ud55c \ub2c9\ub124\uc784\uc785\ub2c8\ub2e4.",
   nicknameDuplicate: "\uc911\ubcf5\ub41c \ub2c9\ub124\uc784\uc785\ub2c8\ub2e4.",
   nicknameCheckTitle: "\ub2c9\ub124\uc784 \uc911\ubcf5 \ud655\uc778",
+  verifyEmailTitle: "\uc774\uba54\uc77c \uc778\uc99d",
+  verifyEmailMessage:
+    "\ud604\uc7ac \uacc4\uc815\uc740 \uc774\uba54\uc77c \ubbf8\uc778\uc99d \uc0c1\ud0dc\uc608\uc694. \uc778\uc99d \ud750\ub984 \uc5f0\uacb0\uc740 \ub2e4\uc74c \ub2e8\uacc4\uc5d0\uc11c \uc774\uc5b4\uc11c \ubd99\uc77c \uc218 \uc788\uac8c \uc900\ube44\ud574\ub450\uc5c8\uc5b4\uc694.",
 };
 
 type CheckStatus = "idle" | "available" | "duplicate";
@@ -47,12 +53,16 @@ interface ProfileEditScreenProps {
   onBack: () => void;
   onComplete: () => void;
   onLocationEdit?: () => void;
+  onEmailVerify?: () => void;
+  refreshToken?: string;
 }
 
 export default function ProfileEditScreen({
   onBack,
   onComplete,
   onLocationEdit,
+  onEmailVerify,
+  refreshToken = "",
 }: ProfileEditScreenProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const imagePreviewUrlRef = useRef<string | null>(null);
@@ -63,6 +73,7 @@ export default function ProfileEditScreen({
   const [initialNickname, setInitialNickname] = useState("");
   const [nicknameCheckStatus, setNicknameCheckStatus] =
     useState<CheckStatus>("idle");
+  const [isEmailVerified, setIsEmailVerified] = useState<boolean | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [resultModal, setResultModal] = useState({
     isOpen: false,
@@ -79,14 +90,16 @@ export default function ProfileEditScreen({
 
     let ignore = false;
 
-    fetchMyProfileForm().then((nextForm) => {
+    fetchMyProfileForm().then((profileEditData) => {
       if (ignore) {
         return;
       }
 
+      const nextForm = profileEditData.form;
       setInitialNickname(nextForm.nickname);
+      setIsEmailVerified(profileEditData.verified);
 
-      if (!draft) {
+      if (!draft || refreshToken) {
         setForm(nextForm);
         setMyProfileDraft(nextForm);
       }
@@ -102,7 +115,7 @@ export default function ProfileEditScreen({
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [refreshToken]);
 
   useEffect(() => {
     return () => {
@@ -112,7 +125,8 @@ export default function ProfileEditScreen({
     };
   }, []);
 
-  const isFormValid = form.nickname.trim().length >= 2;
+  const isFormValid =
+    form.name.trim().length >= 1 && form.nickname.trim().length >= 2;
   const isNicknameUnchanged =
     form.nickname.trim() !== "" &&
     form.nickname.trim() === initialNickname.trim();
@@ -179,6 +193,15 @@ export default function ProfileEditScreen({
 
   const handleImageButtonClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleEmailVerifyClick = () => {
+    if (onEmailVerify) {
+      onEmailVerify();
+      return;
+    }
+
+    openResultModal(TEXT.verifyEmailTitle, TEXT.verifyEmailMessage);
   };
 
   const handleImageChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -290,6 +313,20 @@ export default function ProfileEditScreen({
 
         <div className="space-y-6">
           <div className="space-y-2">
+            <label className="text-sm font-bold" htmlFor="name">
+              {TEXT.name}
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={form.name}
+              onChange={(event) => updateForm({ name: event.target.value })}
+              placeholder={TEXT.namePlaceholder}
+              className="w-full h-12 bg-gray-100 rounded-lg px-4 outline-none focus:ring-2 focus:ring-[#98E446]"
+            />
+          </div>
+
+          <div className="space-y-2">
             <label className="text-sm font-bold" htmlFor="nickname">
               {TEXT.nickname}
             </label>
@@ -340,6 +377,18 @@ export default function ProfileEditScreen({
               </span>
             </button>
           </div>
+
+          {isEmailVerified === false && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={handleEmailVerifyClick}
+                className="w-full h-12 rounded-lg border border-[#98E446] bg-[#F4FFE7] text-sm font-semibold text-[#3C6B12] transition-colors hover:bg-[#EAFAD3]"
+              >
+                {TEXT.verifyEmail}
+              </button>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-sm font-bold" htmlFor="bio">

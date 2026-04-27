@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 import { getErrorMessage } from "@/services/apiError";
 import ResultModal from "@/components/common/modal/ResultModal";
 import { checkNicknameAvailability } from "@/services/auth/service";
+import { getSignUpDraft } from "@/services/auth/signUpDraft";
 import { saveMyProfile, uploadMyProfileImage } from "@/services/mypage/service";
 
 type CheckStatus = "idle" | "available" | "duplicate";
@@ -117,6 +118,7 @@ export default function ProfileSetupScreen({
 
     try {
       await saveMyProfile({
+        name: getSignUpDraft().name,
         nickname,
         bio,
         profileImageUrl,

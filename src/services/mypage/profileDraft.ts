@@ -1,16 +1,16 @@
-﻿import type { MyProfileFormValues } from "@/services/mypage/types";
+import type { MyProfileDraftValues } from "@/services/mypage/types";
 
-let myProfileDraft: MyProfileFormValues | null = null;
+let myProfileDraft: MyProfileDraftValues | null = null;
 
 export function getMyProfileDraft() {
   return myProfileDraft;
 }
 
-export function setMyProfileDraft(form: MyProfileFormValues) {
+export function setMyProfileDraft(form: MyProfileDraftValues) {
   myProfileDraft = form;
 }
 
-export function updateMyProfileDraft(nextForm: Partial<MyProfileFormValues>) {
+export function updateMyProfileDraft(nextForm: Partial<MyProfileDraftValues>) {
   if (!myProfileDraft) {
     return;
   }

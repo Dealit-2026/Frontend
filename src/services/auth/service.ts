@@ -2,12 +2,14 @@ import { ApiRequestError } from "@/services/apiError";
 import * as authApi from "@/services/auth/api";
 import type {
   AuthResult,
+  ConfirmEmailVerificationResponse,
   CurrentMemberResponse,
   LoginFormValues,
   LoginIdCheckResponse,
   LoginRequest,
   LoginResponse,
   NicknameCheckResponse,
+  SendEmailVerificationResponse,
   SignUpFormValues,
   SignUpRequest,
   SignUpResponse,
@@ -182,6 +184,18 @@ export function isSignUpFormValid(form: SignUpFormValues) {
   );
 }
 
+export function isSignUpAccountFormValid(form: SignUpFormValues) {
+  return (
+    form.loginId.trim() !== "" &&
+    isPasswordValid(form.password) &&
+    form.password === form.confirmPassword
+  );
+}
+
+export function isNameValid(name: string) {
+  return name.trim() !== "";
+}
+
 export function buildLoginRequest(form: LoginFormValues): LoginRequest {
   return {
     loginId: form.loginId.trim(),
@@ -190,10 +204,12 @@ export function buildLoginRequest(form: LoginFormValues): LoginRequest {
 }
 
 export function buildSignUpRequest(form: SignUpFormValues): SignUpRequest {
+  const normalizedEmail = form.email.trim();
+
   return {
     loginId: form.loginId.trim(),
     password: form.password,
-    email: form.email.trim(),
+    email: normalizedEmail === "" ? null : normalizedEmail,
     name: form.name.trim() || null,
   };
 }
@@ -247,4 +263,22 @@ export async function checkNicknameAvailability(
   nickname: string,
 ): Promise<NicknameCheckResponse> {
   return authApi.checkNickname(nickname.trim());
+}
+
+export async function requestEmailVerificationCode(
+  email: string,
+): Promise<SendEmailVerificationResponse> {
+  return authApi.sendEmailVerification({
+    email: email.trim(),
+  }, getAuthorizationHeaders());
+}
+
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<ConfirmEmailVerificationResponse> {
+  return authApi.confirmEmailVerification({
+    email: email.trim(),
+    code: code.trim(),
+  }, getAuthorizationHeaders());
 }

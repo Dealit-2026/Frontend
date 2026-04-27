@@ -4,6 +4,7 @@ import {
   handleUnauthorizedAccess,
 } from "@/services/auth/service";
 import type {
+  MyLocationResponse,
   MyProfileResponse,
   UpdateMyLocationRequest,
   UpdateMyLocationResponse,
@@ -29,10 +30,25 @@ export async function getMyProfile(): Promise<MyProfileResponse> {
   const response = await fetch("/api/v1/users/me/mypage", {
     method: "GET",
     headers: getAuthorizationHeaders(),
+    cache: "no-store",
   });
 
   if (!response.ok) {
     await throwProtectedApiError(response, "마이페이지 조회에 실패했습니다.");
+  }
+
+  return response.json();
+}
+
+export async function getMyLocation(): Promise<MyLocationResponse> {
+  const response = await fetch("/api/v1/users/me/location", {
+    method: "GET",
+    headers: getAuthorizationHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "지역 정보를 불러오지 못했습니다.");
   }
 
   return response.json();

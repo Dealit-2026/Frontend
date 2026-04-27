@@ -1,5 +1,11 @@
+import {
+  createLocationFormFromSavedLocation,
+  getLocationDisplayName,
+} from "@/services/location/service";
+import type { LocationFormValues } from "@/services/location/types";
 import * as mypageApi from "@/services/mypage/api";
 import type {
+  MyProfileEditViewModel,
   MyPageProfileViewModel,
   MyProfileFormValues,
   MyProfileResponse,
@@ -44,6 +50,7 @@ function resolveProfileImageUrl(profileImageUrl: string | null) {
 
 export function createDefaultProfileForm(): MyProfileFormValues {
   return {
+    name: "",
     nickname: "",
     bio: "",
     profileImageUrl: null,
@@ -51,10 +58,16 @@ export function createDefaultProfileForm(): MyProfileFormValues {
   };
 }
 
+function normalizeOptionalText(value: string) {
+  const trimmedValue = value.trim();
+  return trimmedValue === "" ? null : trimmedValue;
+}
+
 export function normalizeProfileForm(
   profile: MyProfileResponse,
 ): MyProfileFormValues {
   return {
+    name: profile.name ?? "",
     nickname: profile.nickname ?? "",
     bio: profile.bio ?? "",
     profileImageUrl: resolveProfileImageUrl(profile.profileImageUrl) || null,
@@ -66,16 +79,33 @@ export function buildUpdateMyProfileRequest(
   form: MyProfileFormValues,
 ): UpdateMyProfileRequest {
   return {
+    name: normalizeOptionalText(form.name),
     nickname: form.nickname.trim(),
     bio: form.bio.trim(),
   };
 }
 
 export function buildUpdateMyLocationRequest(
-  location: string,
+  locationForm: LocationFormValues,
 ): UpdateMyLocationRequest {
   return {
-    location: location.trim(),
+    location: getLocationDisplayName(locationForm),
+    postalCode: normalizeOptionalText(locationForm.postalCode),
+    roadAddress: normalizeOptionalText(locationForm.roadAddress),
+    jibunAddress: normalizeOptionalText(locationForm.jibunAddress),
+    detailAddress: normalizeOptionalText(locationForm.detailAddress),
+    latitude: locationForm.latitude,
+    longitude: locationForm.longitude,
+    locationSource: locationForm.locationSource,
+  };
+}
+
+export function toMyProfileEditViewModel(
+  profile: MyProfileResponse,
+): MyProfileEditViewModel {
+  return {
+    form: normalizeProfileForm(profile),
+    verified: profile.verified,
   };
 }
 
@@ -84,6 +114,7 @@ export function toMyPageProfileViewModel(
 ): MyPageProfileViewModel {
   return {
     id: profile.id,
+    name: profile.name || "",
     nickname: profile.nickname || "\uc774\ub984 \uc5c6\uc74c",
     email: profile.email,
     bio: profile.bio ?? "",
@@ -102,7 +133,11 @@ export async function fetchMyPageProfile() {
 }
 
 export async function fetchMyProfileForm() {
-  return normalizeProfileForm(await mypageApi.getMyProfile());
+  return toMyProfileEditViewModel(await mypageApi.getMyProfile());
+}
+
+export async function fetchMyLocationForm() {
+  return createLocationFormFromSavedLocation(await mypageApi.getMyLocation());
 }
 
 export async function uploadMyProfileImage(file: File) {
@@ -121,6 +156,6 @@ export async function saveMyProfile(form: MyProfileFormValues) {
   return toMyPageProfileViewModel(updatedProfile);
 }
 
-export async function saveMyLocation(location: string) {
-  return mypageApi.updateMyLocation(buildUpdateMyLocationRequest(location));
+export async function saveMyLocation(locationForm: LocationFormValues) {
+  return mypageApi.updateMyLocation(buildUpdateMyLocationRequest(locationForm));
 }

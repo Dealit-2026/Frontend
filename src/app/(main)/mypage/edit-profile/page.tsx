@@ -1,17 +1,16 @@
-"use client";
+import ProfileEditPageClient from "./page-client";
 
-import { useRouter } from "next/navigation";
+interface ProfileEditPageProps {
+  searchParams?: Promise<{
+    verifiedRefresh?: string;
+  }>;
+}
 
-import ProfileEditScreen from "./index";
+export default async function ProfileEditPage({
+  searchParams,
+}: ProfileEditPageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const refreshToken = resolvedSearchParams?.verifiedRefresh || "";
 
-export default function ProfileEditPage() {
-  const router = useRouter();
-
-  return (
-    <ProfileEditScreen
-      onBack={() => router.back()}
-      onComplete={() => router.push("/mypage")}
-      onLocationEdit={() => router.push("/mypage/edit-profile/location")}
-    />
-  );
+  return <ProfileEditPageClient refreshToken={refreshToken} />;
 }
