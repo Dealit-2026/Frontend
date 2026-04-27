@@ -92,8 +92,11 @@ export interface AuctionCreateResponse {
   } | null;
 }
 
-// 임시저장도 등록과 거의 같은 request shape를 사용한다.
-export interface SaveProductDraftRequest extends AuctionCreateRequest {}
+// 임시저장은 등록보다 느슨한 입력을 허용한다.
+export interface SaveProductDraftRequest
+  extends Omit<AuctionCreateRequest, "price"> {
+  price: number | null;
+}
 
 export interface SaveProductDraftResponse {
   draftId: number;
@@ -172,3 +175,9 @@ export type CreateAuctionRequest = AuctionCreateRequest;
 export type CreateAuctionResponse = AuctionCreateResponse;
 export type SaveAuctionDraftRequest = SaveProductDraftRequest;
 export type SaveAuctionDraftResponse = SaveProductDraftResponse;
+
+// 공용 상품 등록 화면에서 사용할 별칭.
+// 현재 등록 화면은 일반 판매/경매를 모두 다루므로 의미를 더 직접적으로 드러낸다.
+export type ProductCategory = AuctionCategory;
+export type ProductRegisterDraft = AuctionCreateFormValues;
+export type ProductFieldContent = AuctionFieldContent;

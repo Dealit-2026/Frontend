@@ -8,24 +8,20 @@ import {
   calculateBidUnit,
   createDefaultAuctionForm,
   createDraft,
-  deleteAuctionImage,
   formatAuctionSchedule,
   formatDisplayPrice,
-  getAuctionCategories,
   getAuctionFieldContent,
-  recommendAuctionPrice,
-  registerAuction,
   sanitizeNumericInput,
-  saveAuctionDraft,
-  uploadAuctionImage,
   updateAuctionDuration,
 } from "@/services/auction/register/service";
 import type {
-  AuctionCategory,
   AuctionFormValues,
+  AuctionRegisterDraft,
+  ProductCategory,
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
+import { fetchMyProfileForm } from "@/services/mypage/service";
 
 export interface RegisterScreenProps {
   onBack?: () => void;
@@ -33,6 +29,23 @@ export interface RegisterScreenProps {
   themeColor?: string;
   mode?: SaleType;
   initialData?: any;
+  servicesByType: Record<SaleType, RegisterScreenServices>;
+}
+
+export interface RegisterScreenServices {
+  getCategories: () => Promise<ProductCategory[]>;
+  uploadImage: (file: File, sortOrder: number) => Promise<ProductImagePayload>;
+  deleteImage: (imageId: number) => Promise<unknown>;
+  saveDraft: (draft: AuctionRegisterDraft) => Promise<unknown>;
+  recommendPrice: (draft: {
+    name: string;
+    description: string;
+    saleType: SaleType;
+  }) => Promise<{
+    recommendedPrice: number;
+    startPrice?: number | null;
+  }>;
+  register: (draft: AuctionRegisterDraft) => Promise<unknown>;
 }
 
 function normalizeInitialImages(initialData: any): ProductImagePayload[] {
@@ -88,13 +101,13 @@ function normalizeInitialImages(initialData: any): ProductImagePayload[] {
 }
 
 interface SelectedCategoryPath {
-  primary: AuctionCategory;
-  secondary: AuctionCategory;
-  tertiary: AuctionCategory;
+  primary: ProductCategory;
+  secondary: ProductCategory;
+  tertiary: ProductCategory;
 }
 
 function findCategoryPathByLeafId(
-  categories: AuctionCategory[],
+  categories: ProductCategory[],
   leafCategoryId: number,
 ): SelectedCategoryPath | null {
   for (const primary of categories) {
@@ -119,6 +132,7 @@ export default function RegisterScreen({
   onComplete,
   mode = "regular",
   initialData,
+  servicesByType,
 }: RegisterScreenProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -129,7 +143,7 @@ export default function RegisterScreen({
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(
     initialData?.categoryId ?? null,
   );
-  const [categories, setCategories] = useState<AuctionCategory[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [selectedPrimaryCategoryId, setSelectedPrimaryCategoryId] = useState<
     number | null
   >(null);
@@ -142,6 +156,7 @@ export default function RegisterScreen({
     initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
   );
   const [description, setDescription] = useState(initialData?.description || "");
+  const [location, setLocation] = useState(initialData?.location || "");
   const [images, setImages] = useState<ProductImagePayload[]>(
     normalizeInitialImages(initialData),
   );
@@ -157,6 +172,7 @@ export default function RegisterScreen({
     null,
   );
   const [showCategoryError, setShowCategoryError] = useState(false);
+  const hasLoadedDraftRef = useRef(false);
 
   const themeColor = saleType === "regular" ? "#98E446" : "#F64257";
   const isEditMode = !!initialData;
@@ -194,6 +210,7 @@ export default function RegisterScreen({
       window.alert(message);
     }
   };
+  const currentServices = servicesByType[saleType];
 
   useEffect(() => {
     if (!isEditMode) {
@@ -205,6 +222,30 @@ export default function RegisterScreen({
   }, [isEditMode]);
 
   useEffect(() => {
+    if (isEditMode) {
+      return;
+    }
+
+    let isMounted = true;
+
+    fetchMyProfileForm()
+      .then((profileForm) => {
+        if (!isMounted || hasLoadedDraftRef.current || location) {
+          return;
+        }
+
+        setLocation(profileForm.location);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch profile form", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditMode, location]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const loadCategories = async () => {
@@ -212,7 +253,7 @@ export default function RegisterScreen({
       setCategoryLoadError(null);
 
       try {
-        const fetchedCategories = await getAuctionCategories();
+        const fetchedCategories = await currentServices.getCategories();
         if (!isMounted) {
           return;
         }
@@ -237,7 +278,7 @@ export default function RegisterScreen({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentServices]);
 
   useEffect(() => {
     if (categories.length === 0 || !pendingCategoryId) {
@@ -269,7 +310,7 @@ export default function RegisterScreen({
       images,
       categoryId,
       allowOffer: false,
-      location: "",
+      location,
       draftId: null,
       auctionEndAt: auction.endsAt,
       auction: {
@@ -283,7 +324,7 @@ export default function RegisterScreen({
     setIsSavingDraft(true);
 
     try {
-      await saveAuctionDraft(draft);
+      await currentServices.saveDraft(draft);
       localStorage.setItem("product_draft", JSON.stringify(draft));
       setShowDraftModal(false);
       handleBack();
@@ -340,7 +381,7 @@ export default function RegisterScreen({
     setIsSubmitting(true);
 
     try {
-      await registerAuction(draft);
+      await currentServices.register(draft);
       localStorage.removeItem("product_draft");
       handleComplete();
     } catch (error) {
@@ -365,7 +406,7 @@ export default function RegisterScreen({
 
     setIsUploadingImage(true);
     try {
-      const uploadedImage = await uploadAuctionImage(file, images.length + 1);
+      const uploadedImage = await currentServices.uploadImage(file, images.length + 1);
       setImages((currentImages) => [...currentImages, uploadedImage]);
     } catch (error) {
       console.error("Failed to upload image", error);
@@ -377,7 +418,7 @@ export default function RegisterScreen({
 
   const handleRecommendPrice = async () => {
     try {
-      const recommendation = await recommendAuctionPrice({
+      const recommendation = await currentServices.recommendPrice({
         name,
         description,
         saleType,
@@ -399,6 +440,7 @@ export default function RegisterScreen({
       const savedDraft = localStorage.getItem("product_draft");
       if (savedDraft) {
         const draft = createDraft(JSON.parse(savedDraft));
+        hasLoadedDraftRef.current = true;
         setSaleType(draft.saleType || mode);
         setName(draft.name);
         setPendingCategoryId(draft.categoryId);
@@ -408,6 +450,7 @@ export default function RegisterScreen({
         setShowCategoryError(false);
         setPrice(draft.price);
         setDescription(draft.description);
+        setLocation(draft.location);
         setImages(draft.images);
         setAuction(draft.auction);
       }
@@ -435,7 +478,7 @@ export default function RegisterScreen({
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
-        await deleteAuctionImage(targetImage.imageId);
+        await currentServices.deleteImage(targetImage.imageId);
       } catch (error) {
         console.error("Failed to delete image", error);
         setDeletingImageIds((currentIds) =>

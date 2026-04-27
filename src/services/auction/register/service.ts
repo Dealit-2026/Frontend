@@ -217,7 +217,10 @@ export function buildCreateAuctionRequest(
 export function buildSaveAuctionDraftRequest(
   draft: AuctionRegisterDraft,
 ): SaveAuctionDraftRequest {
-  return buildCreateAuctionRequest(draft);
+  return {
+    ...buildCreateAuctionRequest(draft),
+    price: draft.price ? Number(draft.price) : null,
+  };
 }
 
 // 카테고리 AI 추천 요청은 현재 입력된 상품명/설명만 사용한다.
@@ -280,4 +283,38 @@ export async function recommendAuctionPrice(
 // 페이지에서 바로 API를 호출하지 않도록 service에서 조립 후 위임한다.
 export async function registerAuction(draft: AuctionRegisterDraft) {
   return auctionApi.postAuction(buildCreateAuctionRequest(draft));
+}
+
+// 공용 등록 화면에서 사용하는 상품 등록용 함수명.
+// 실제 payload는 saleType 값으로 분기되므로 일반 판매/경매를 모두 처리한다.
+export async function uploadProductImage(file: File, sortOrder: number) {
+  return uploadAuctionImage(file, sortOrder);
+}
+
+export async function getProductCategories(): Promise<AuctionCategory[]> {
+  return getAuctionCategories();
+}
+
+export async function deleteProductImage(imageId: number) {
+  return deleteAuctionImage(imageId);
+}
+
+export async function saveProductDraft(draft: AuctionRegisterDraft) {
+  return saveAuctionDraft(draft);
+}
+
+export async function recommendProductCategory(
+  draft: Pick<AuctionRegisterDraft, "name" | "description">,
+) {
+  return recommendAuctionCategory(draft);
+}
+
+export async function recommendProductPrice(
+  draft: Pick<AuctionRegisterDraft, "name" | "description" | "saleType">,
+) {
+  return recommendAuctionPrice(draft);
+}
+
+export async function registerProduct(draft: AuctionRegisterDraft) {
+  return registerAuction(draft);
 }

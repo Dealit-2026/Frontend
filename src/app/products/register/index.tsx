@@ -5,8 +5,8 @@ import { Camera, ChevronLeft, Sparkles, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 import type {
-  AuctionCategory,
   AuctionFormValues,
+  ProductCategory,
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
@@ -17,7 +17,7 @@ export interface RegisterScreenViewProps {
   showLoadDraftModal: boolean;
   saleType: SaleType;
   name: string;
-  categories: AuctionCategory[];
+  categories: ProductCategory[];
   selectedPrimaryCategoryId: number | null;
   selectedSecondaryCategoryId: number | null;
   selectedTertiaryCategoryId: number | null;
@@ -329,12 +329,14 @@ export default function RegisterScreenView({
             <div className="flex bg-gray-50 p-1 rounded-2xl">
               <button
                 onClick={() => onSaleTypeChange("regular")}
+                disabled={isEditMode}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "regular" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 일반 판매
               </button>
               <button
                 onClick={() => onSaleTypeChange("auction")}
+                disabled={isEditMode}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "auction" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 Dealit

@@ -35,7 +35,8 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
-import RegisterScreen from '../../../products/register/RegisterScreen';
+import AuctionRegisterScreen from '../../../products/register/AuctionRegisterScreen';
+import RegularRegisterScreen from '../../../products/register/RegularRegisterScreen';
 
 export default function SalesManagementScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
   const [products, setProducts] = useState([
@@ -57,12 +58,14 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
   const filteredProducts = products.filter(p => filter === 'all' || p.type === filter);
 
   if (editingItem) {
+    const RegisterComponent =
+      editingItem.type === 'auction' ? AuctionRegisterScreen : RegularRegisterScreen;
+
     return (
-      <RegisterScreen 
+      <RegisterComponent 
         onBack={() => setEditingItem(null)} 
         onComplete={() => setEditingItem(null)} 
         themeColor={themeColor} 
-        mode={editingItem.type} 
         initialData={editingItem} 
       />
     );

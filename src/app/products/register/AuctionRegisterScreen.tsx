@@ -1,0 +1,51 @@
+"use client";
+
+import type { ComponentProps } from "react";
+
+import RegisterScreen from "./RegisterScreen";
+import {
+  deleteAuctionImage,
+  getAuctionCategories,
+  recommendAuctionPrice,
+  registerAuction,
+  saveAuctionDraft,
+  uploadAuctionImage,
+} from "@/services/auction/register/service";
+import {
+  deleteRegularProductImage,
+  getRegularProductCategories,
+  recommendRegularProductPrice,
+  registerRegularProduct,
+  saveRegularProductDraft,
+  uploadRegularProductImage,
+} from "@/services/product/register/service";
+
+type RegisterScreenProps = ComponentProps<typeof RegisterScreen>;
+
+export default function AuctionRegisterScreen(props: Omit<RegisterScreenProps, "servicesByType">) {
+  return (
+    <RegisterScreen
+      {...props}
+      mode="auction"
+      servicesByType={{
+        regular: {
+          getCategories: getRegularProductCategories,
+          uploadImage: uploadRegularProductImage,
+          deleteImage: deleteRegularProductImage,
+          saveDraft: saveRegularProductDraft,
+          recommendPrice: ({ name, description }) =>
+            recommendRegularProductPrice({ name, description }),
+          register: registerRegularProduct,
+        },
+        auction: {
+          getCategories: getAuctionCategories,
+          uploadImage: uploadAuctionImage,
+          deleteImage: deleteAuctionImage,
+          saveDraft: saveAuctionDraft,
+          recommendPrice: recommendAuctionPrice,
+          register: registerAuction,
+        },
+      }}
+    />
+  );
+}
