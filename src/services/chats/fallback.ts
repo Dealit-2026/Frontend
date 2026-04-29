@@ -160,7 +160,7 @@ export function createFallbackMarkReadResponse(
 
 export function createFallbackUnreadCountResponse(): GetUnreadCountResponse {
   return {
-    unreadCount: 0,
+    totalUnreadCount: 0,
     updatedAt: new Date().toISOString(),
   };
 }

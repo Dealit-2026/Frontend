@@ -21,7 +21,6 @@ const CHAT_API_PREFIX = "/api/v1/chats";
  * - HTTP 요청/응답만 담당
  * - 데이터 가공/도메인 판단은 service.ts에서 처리
  */
-
 function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("accessToken");
@@ -139,7 +138,7 @@ export async function deleteChatMessage(messageId: number): Promise<void> {
   }
 }
 
-/** 6) 채팅방 읽음 처리 (200 + JSON) */
+/** 6) 채팅방 읽음 처리 */
 export async function patchChatRoomRead(
   roomId: number,
 ): Promise<MarkChatRoomAsReadResponse> {

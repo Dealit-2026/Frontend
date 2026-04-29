@@ -202,11 +202,23 @@ export async function markChatRoomAsRead(
 /** 전체 안읽음 개수 조회 */
 export async function fetchTotalUnreadCount() {
   try {
-    return await chatsApi.getUnreadCount();
+    const resp = await chatsApi.getUnreadCount();
+
+    const total =
+      (resp as any).totalUnreadCount ?? (resp as any).unreadCount ?? 0;
+
+    return {
+      unreadCount: total,
+      updatedAt: (resp as any).updatedAt,
+    };
   } catch (error) {
     console.warn("fetchTotalUnreadCount fallback:", error);
 
-    return createFallbackUnreadCountResponse();
+    const fb = createFallbackUnreadCountResponse();
+    return {
+      unreadCount: (fb as any).totalUnreadCount ?? (fb as any).unreadCount ?? 0,
+      updatedAt: fb.updatedAt,
+    };
   }
 }
 

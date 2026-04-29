@@ -86,7 +86,10 @@ export interface ChatRoomListItemResponse {
   roomId: number;
   chatType: ChatRoomType;
   product: Pick<ChatRoomProduct, "productId" | "name" | "thumbnailUrl">;
-  opponent: Pick<ChatRoomParticipant, "userId" | "nickname" | "profileImageUrl">;
+  opponent: Pick<
+    ChatRoomParticipant,
+    "userId" | "nickname" | "profileImageUrl"
+  >;
   lastMessage: ChatRoomLastMessage | null;
   unreadCount: number;
   updatedAt: string;
@@ -145,20 +148,15 @@ export interface SendChatMessageResponse {
   sentAt: string;
 }
 
-export interface DeleteChatMessageResponse {
-  message: string;
-  messageId: number;
-  timestamp: string;
-}
-
 export interface ReportChatMessageRequest {
   reason: string;
 }
 
 export interface ReportChatMessageResponse {
+  reportId: number;
   messageId: number;
-  reported: boolean;
-  timestamp: string;
+  reason: string;
+  reportedAt: string;
 }
 
 /* =========================
@@ -172,7 +170,7 @@ export interface MarkChatRoomAsReadResponse {
 }
 
 export interface GetUnreadCountResponse {
-  unreadCount: number;
+  totalUnreadCount: number;
   updatedAt: string;
 }
 
