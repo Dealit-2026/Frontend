@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import type {
   AuctionFormValues,
+  ProductCategory,
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
@@ -16,6 +17,10 @@ export interface RegisterScreenViewProps {
   showLoadDraftModal: boolean;
   saleType: SaleType;
   name: string;
+  categories: ProductCategory[];
+  selectedPrimaryCategoryId: number | null;
+  selectedSecondaryCategoryId: number | null;
+  selectedTertiaryCategoryId: number | null;
   categoryName: string;
   price: string;
   description: string;
@@ -32,21 +37,25 @@ export interface RegisterScreenViewProps {
   deletingImageIds: number[];
   isSavingDraft: boolean;
   isSubmitting: boolean;
+  isLoadingCategories: boolean;
+  categoryLoadError: string | null;
+  showCategoryError: boolean;
+  isRegisterDisabled: boolean;
   onBack: () => void;
   onOpenDraftModal: () => void;
   onCloseDraftModal: () => void;
   onCloseLoadDraftModal: () => void;
   onNameChange: (value: string) => void;
-  onCategoryNameChange: (value: string) => void;
+  onPrimaryCategoryChange: (value: string) => void;
+  onSecondaryCategoryChange: (value: string) => void;
+  onTertiaryCategoryChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onSaleTypeChange: (value: SaleType) => void;
   onPriceChange: (value: string) => void;
-  onAuctionStartChange: (value: string) => void;
   onAuctionDurationChange: (value: string) => void;
   onImageButtonClick: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (sortOrder: number) => void;
-  onRecommendCategory: () => void;
   onRecommendPrice: () => void;
   onSaveDraft: () => void;
   onDiscardDraft: () => void;
@@ -62,6 +71,10 @@ export default function RegisterScreenView({
   showLoadDraftModal,
   saleType,
   name,
+  categories,
+  selectedPrimaryCategoryId,
+  selectedSecondaryCategoryId,
+  selectedTertiaryCategoryId,
   categoryName,
   price,
   description,
@@ -74,21 +87,25 @@ export default function RegisterScreenView({
   deletingImageIds,
   isSavingDraft,
   isSubmitting,
+  isLoadingCategories,
+  categoryLoadError,
+  showCategoryError,
+  isRegisterDisabled,
   onBack,
   onOpenDraftModal,
   onCloseDraftModal,
   onCloseLoadDraftModal,
   onNameChange,
-  onCategoryNameChange,
+  onPrimaryCategoryChange,
+  onSecondaryCategoryChange,
+  onTertiaryCategoryChange,
   onDescriptionChange,
   onSaleTypeChange,
   onPriceChange,
-  onAuctionStartChange,
   onAuctionDurationChange,
   onImageButtonClick,
   onImageUpload,
   onRemoveImage,
-  onRecommendCategory,
   onRecommendPrice,
   onSaveDraft,
   onDiscardDraft,
@@ -97,6 +114,15 @@ export default function RegisterScreenView({
   formatDisplayPrice,
   formatAuctionSchedule,
 }: RegisterScreenViewProps) {
+  const primaryCategories = categories;
+  const secondaryCategories =
+    primaryCategories.find((category) => category.id === selectedPrimaryCategoryId)
+      ?.children ?? [];
+  const tertiaryCategories =
+    secondaryCategories.find(
+      (category) => category.id === selectedSecondaryCategoryId,
+    )?.children ?? [];
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
       <input
@@ -184,23 +210,94 @@ export default function RegisterScreenView({
           </div>
 
           <div className="space-y-2">
-            <div className="relative border-b border-gray-200">
-              <input
-                type="text"
-                placeholder="카테고리"
-                value={categoryName}
-                onChange={(event) => onCategoryNameChange(event.target.value)}
-                className="w-full py-2 pr-16 text-base font-medium outline-none placeholder-gray-400"
-              />
-              <button
-                type="button"
-                onClick={onRecommendCategory}
-                className="absolute right-0 top-1/2 -translate-y-1/2 text-[10px] flex items-center"
-                style={{ color: themeColor }}
-              >
-                <Sparkles size={10} className="mr-1" fill="currentColor" /> AI
-                추천
-              </button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-bold text-base">카테고리</h3>
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled="true"
+                  className="text-[10px] flex items-center text-gray-300 cursor-not-allowed"
+                >
+                  <Sparkles size={10} className="mr-1" /> AI 추천
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                <select
+                  value={selectedPrimaryCategoryId ?? ""}
+                  onChange={(event) => onPrimaryCategoryChange(event.target.value)}
+                  disabled={isLoadingCategories}
+                  className="h-12 rounded-2xl border border-gray-200 bg-white px-4 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">1차 카테고리 선택</option>
+                  {primaryCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.nameKo}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedSecondaryCategoryId ?? ""}
+                  onChange={(event) => onSecondaryCategoryChange(event.target.value)}
+                  disabled={!selectedPrimaryCategoryId || isLoadingCategories}
+                  className="h-12 rounded-2xl border border-gray-200 bg-white px-4 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">2차 카테고리 선택</option>
+                  {secondaryCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.nameKo}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedTertiaryCategoryId ?? ""}
+                  onChange={(event) => onTertiaryCategoryChange(event.target.value)}
+                  disabled={!selectedSecondaryCategoryId || isLoadingCategories}
+                  className="h-12 rounded-2xl border border-gray-200 bg-white px-4 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">3차 카테고리 선택</option>
+                  {tertiaryCategories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.nameKo}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                {selectedTertiaryCategoryId ? (
+                  <p className="text-xs font-medium text-gray-500">
+                    선택됨: {categoryName}
+                  </p>
+                ) : categoryName ? (
+                  <p className="text-xs font-medium text-gray-400">
+                    선택 중: {categoryName}
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400">
+                    3차 카테고리까지 선택해야 등록할 수 있습니다.
+                  </p>
+                )}
+                {isLoadingCategories && (
+                  <p className="text-xs text-gray-400">
+                    카테고리 목록을 불러오는 중입니다.
+                  </p>
+                )}
+                {!isLoadingCategories && !categoryLoadError && (
+                  <p className="text-xs text-gray-400">
+                    AI 추천 기능은 준비 중입니다.
+                  </p>
+                )}
+                {categoryLoadError && (
+                  <p className="text-xs font-medium text-red-500">
+                    {categoryLoadError}
+                  </p>
+                )}
+                {showCategoryError && !categoryLoadError && !isLoadingCategories && (
+                  <p className="text-xs font-medium text-red-500">
+                    3차 카테고리까지 모두 선택해 주세요.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -230,12 +327,14 @@ export default function RegisterScreenView({
             <div className="flex bg-gray-50 p-1 rounded-2xl">
               <button
                 onClick={() => onSaleTypeChange("regular")}
+                disabled={isEditMode}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "regular" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 일반 판매
               </button>
               <button
                 onClick={() => onSaleTypeChange("auction")}
+                disabled={isEditMode}
                 className={`flex-1 py-1.5 text-sm font-bold rounded-xl transition-all ${saleType === "auction" ? "bg-white shadow-md text-gray-900" : "text-gray-300"} ${isEditMode ? "opacity-50 cursor-not-allowed" : ""}`}
               >
                 Dealit
@@ -292,21 +391,10 @@ export default function RegisterScreenView({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3">
                   <label className="space-y-2">
                     <span className="text-xs text-gray-500 font-medium">
-                      시작 일시
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={auction.startsAt}
-                      onChange={(event) => onAuctionStartChange(event.target.value)}
-                      className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
-                    />
-                  </label>
-                  <label className="space-y-2">
-                    <span className="text-xs text-gray-500 font-medium">
-                      진행 기간
+                      경매 기간
                     </span>
                     <select
                       value={auction.durationDays}
@@ -341,9 +429,9 @@ export default function RegisterScreenView({
       <div className="shrink-0 p-4 bg-gradient-to-t from-white via-white to-transparent border-t border-gray-100/80">
         <button
           onClick={onRegister}
-          disabled={isSubmitting}
-          className="w-full h-12 text-white font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.98]"
-          style={{ backgroundColor: themeColor }}
+          disabled={isRegisterDisabled}
+          className="w-full h-12 text-white font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.98] disabled:bg-gray-300 disabled:shadow-none disabled:active:scale-100"
+          style={isRegisterDisabled ? undefined : { backgroundColor: themeColor }}
         >
           {isSubmitting ? "등록 중..." : isEditMode ? "수정 완료" : "등록 완료"}
         </button>

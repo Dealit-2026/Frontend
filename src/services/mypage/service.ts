@@ -1,5 +1,11 @@
+import {
+  createLocationFormFromSavedLocation,
+  getLocationDisplayName,
+} from "@/services/location/service";
+import type { LocationFormValues } from "@/services/location/types";
 import * as mypageApi from "@/services/mypage/api";
 import type {
+  MyProfileEditViewModel,
   MyPageProfileViewModel,
   MyProfileFormValues,
   MyProfileResponse,
@@ -7,25 +13,44 @@ import type {
   UpdateMyProfileRequest,
 } from "@/services/mypage/types";
 
-const DEFAULT_PROFILE_IMAGE = "https://picsum.photos/seed/me/200/200";
+const PROFILE_IMAGE_PATH_PATTERN = /^\/profile\/images\//;
 
-// TODO(mypage-api): Remove fallback after the profile API is connected.
-const fallbackProfile: MyProfileResponse = {
-  id: 1,
-  nickname: "\ube44\ub4dc\ub9c8\uc2a4\ud130",
-  email: "bidmaster@example.com",
-  bio: "\uc548\ub155\ud558\uc138\uc694. \uc88b\uc740 \uac70\ub798 \ubd80\ud0c1\ub4dc\ub824\uc694.",
-  profileImageUrl: DEFAULT_PROFILE_IMAGE,
-  location: "\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac15\ub0a8\uad6c",
-  rating: 4.8,
-  warningCount: 0,
-  biddingCount: 3,
-  sellingCount: 1,
-  wishlistCount: 12,
-};
+function resolveProfileImageUrl(profileImageUrl: string | null) {
+  if (!profileImageUrl) {
+    return "";
+  }
+
+  if (/^(data:|blob:)/.test(profileImageUrl)) {
+    return profileImageUrl;
+  }
+
+  if (/^https?:\/\//.test(profileImageUrl)) {
+    try {
+      const url = new URL(profileImageUrl);
+
+      if (
+        PROFILE_IMAGE_PATH_PATTERN.test(url.pathname) &&
+        ["localhost", "127.0.0.1"].includes(url.hostname)
+      ) {
+        return `${url.pathname}${url.search}`;
+      }
+    } catch {
+      return profileImageUrl;
+    }
+
+    return profileImageUrl;
+  }
+
+  if (PROFILE_IMAGE_PATH_PATTERN.test(profileImageUrl)) {
+    return profileImageUrl;
+  }
+
+  return profileImageUrl;
+}
 
 export function createDefaultProfileForm(): MyProfileFormValues {
   return {
+    name: "",
     nickname: "",
     bio: "",
     profileImageUrl: null,
@@ -33,13 +58,19 @@ export function createDefaultProfileForm(): MyProfileFormValues {
   };
 }
 
+function normalizeOptionalText(value: string) {
+  const trimmedValue = value.trim();
+  return trimmedValue === "" ? null : trimmedValue;
+}
+
 export function normalizeProfileForm(
   profile: MyProfileResponse,
 ): MyProfileFormValues {
   return {
+    name: profile.name ?? "",
     nickname: profile.nickname ?? "",
     bio: profile.bio ?? "",
-    profileImageUrl: profile.profileImageUrl ?? null,
+    profileImageUrl: resolveProfileImageUrl(profile.profileImageUrl) || null,
     location: profile.location ?? "",
   };
 }
@@ -48,18 +79,33 @@ export function buildUpdateMyProfileRequest(
   form: MyProfileFormValues,
 ): UpdateMyProfileRequest {
   return {
+    name: normalizeOptionalText(form.name),
     nickname: form.nickname.trim(),
     bio: form.bio.trim(),
-    profileImageUrl: form.profileImageUrl,
-    location: form.location.trim(),
   };
 }
 
 export function buildUpdateMyLocationRequest(
-  location: string,
+  locationForm: LocationFormValues,
 ): UpdateMyLocationRequest {
   return {
-    location: location.trim(),
+    location: getLocationDisplayName(locationForm),
+    postalCode: normalizeOptionalText(locationForm.postalCode),
+    roadAddress: normalizeOptionalText(locationForm.roadAddress),
+    jibunAddress: normalizeOptionalText(locationForm.jibunAddress),
+    detailAddress: normalizeOptionalText(locationForm.detailAddress),
+    latitude: locationForm.latitude,
+    longitude: locationForm.longitude,
+    locationSource: locationForm.locationSource,
+  };
+}
+
+export function toMyProfileEditViewModel(
+  profile: MyProfileResponse,
+): MyProfileEditViewModel {
+  return {
+    form: normalizeProfileForm(profile),
+    verified: profile.verified,
   };
 }
 
@@ -68,10 +114,11 @@ export function toMyPageProfileViewModel(
 ): MyPageProfileViewModel {
   return {
     id: profile.id,
+    name: profile.name || "",
     nickname: profile.nickname || "\uc774\ub984 \uc5c6\uc74c",
     email: profile.email,
     bio: profile.bio ?? "",
-    profileImageUrl: profile.profileImageUrl || DEFAULT_PROFILE_IMAGE,
+    profileImageUrl: resolveProfileImageUrl(profile.profileImageUrl),
     location: profile.location || "\uc9c0\uc5ed \ubbf8\uc124\uc815",
     ratingLabel: `\ud3c9\uc810 ${profile.rating.toFixed(1)}`,
     warningLabel: `\uacbd\uace0 ${profile.warningCount}\ud68c`,
@@ -82,48 +129,33 @@ export function toMyPageProfileViewModel(
 }
 
 export async function fetchMyPageProfile() {
-  try {
-    return toMyPageProfileViewModel(await mypageApi.getMyProfile());
-  } catch {
-    return toMyPageProfileViewModel(fallbackProfile);
-  }
+  return toMyPageProfileViewModel(await mypageApi.getMyProfile());
 }
 
 export async function fetchMyProfileForm() {
-  try {
-    return normalizeProfileForm(await mypageApi.getMyProfile());
-  } catch {
-    return normalizeProfileForm(fallbackProfile);
-  }
+  return toMyProfileEditViewModel(await mypageApi.getMyProfile());
+}
+
+export async function fetchMyLocationForm() {
+  return createLocationFormFromSavedLocation(await mypageApi.getMyLocation());
 }
 
 export async function uploadMyProfileImage(file: File) {
-  try {
-    return await mypageApi.uploadProfileImage(file);
-  } catch {
-    return {
-      profileImageUrl: URL.createObjectURL(file),
-    };
-  }
+  const uploadedImage = await mypageApi.uploadProfileImage(file);
+
+  return {
+    ...uploadedImage,
+    profileImageUrl: resolveProfileImageUrl(uploadedImage.profileImageUrl),
+  };
 }
 
 export async function saveMyProfile(form: MyProfileFormValues) {
-  try {
-    const updatedProfile = await mypageApi.updateMyProfile(
-      buildUpdateMyProfileRequest(form),
-    );
-    return toMyPageProfileViewModel(updatedProfile);
-  } catch {
-    return toMyPageProfileViewModel(fallbackProfile);
-  }
+  const updatedProfile = await mypageApi.updateMyProfile(
+    buildUpdateMyProfileRequest(form),
+  );
+  return toMyPageProfileViewModel(updatedProfile);
 }
 
-export async function saveMyLocation(location: string) {
-  try {
-    return await mypageApi.updateMyLocation(buildUpdateMyLocationRequest(location));
-  } catch {
-    return {
-      location: fallbackProfile.location ?? "",
-    };
-  }
+export async function saveMyLocation(locationForm: LocationFormValues) {
+  return mypageApi.updateMyLocation(buildUpdateMyLocationRequest(locationForm));
 }

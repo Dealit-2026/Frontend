@@ -1,4 +1,10 @@
+import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
 import {
+  getAuthorizationHeaders,
+  handleUnauthorizedAccess,
+} from "@/services/auth/service";
+import {
+  AuctionCategory,
   CreateAuctionRequest,
   CreateAuctionResponse,
   DeleteAuctionImageResponse,
@@ -14,9 +20,38 @@ import {
 // api.ts는 HTTP 호출만 담당한다.
 // 숫자 변환, 폼 가공, 기본값 생성은 service.ts에서 처리한다.
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
 const AUCTION_API_BASE = `${API_BASE_URL}/api/v1/auction`;
+
+async function throwProtectedApiError(
+  response: Response,
+  fallbackMessage: string,
+) {
+  if (response.status === 401) {
+    handleUnauthorizedAccess();
+  }
+
+  throw new ApiRequestError(
+    await getApiErrorMessage(response, fallbackMessage),
+    response.status,
+  );
+}
+
+export async function getAuctionCategories(): Promise<AuctionCategory[]> {
+  const response = await fetch(`${AUCTION_API_BASE}/categories`, {
+    method: "GET",
+    headers: getAuthorizationHeaders(),
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(
+      response,
+      "카테고리 목록을 불러오지 못했습니다.",
+    );
+  }
+
+  return response.json();
+}
 
 // 1. 상품 이미지 업로드.
 // 카메라 클릭 후 선택한 File을 multipart/form-data로 서버에 전송한다.
@@ -29,11 +64,12 @@ export async function uploadAuctionImage(
 
   const response = await fetch(`${AUCTION_API_BASE}/image`, {
     method: "POST",
+    headers: getAuthorizationHeaders(),
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to upload auction image: ${response.status}`);
+    await throwProtectedApiError(response, "상품 이미지 업로드에 실패했습니다.");
   }
 
   return response.json();
@@ -44,10 +80,11 @@ export async function deleteAuctionImage(
 ): Promise<DeleteAuctionImageResponse> {
   const response = await fetch(`${AUCTION_API_BASE}/image/${imageId}`, {
     method: "DELETE",
+    headers: getAuthorizationHeaders(),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to delete auction image: ${response.status}`);
+    await throwProtectedApiError(response, "상품 이미지 삭제에 실패했습니다.");
   }
 
   return response.json();
@@ -62,12 +99,13 @@ export async function saveAuctionDraft(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to save auction draft: ${response.status}`);
+    await throwProtectedApiError(response, "임시저장에 실패했습니다.");
   }
 
   return response.json();
@@ -82,12 +120,13 @@ export async function recommendAuctionCategory(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to recommend auction category: ${response.status}`);
+    await throwProtectedApiError(response, "카테고리 추천에 실패했습니다.");
   }
 
   return response.json();
@@ -102,12 +141,13 @@ export async function recommendAuctionPrice(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to recommend auction price: ${response.status}`);
+    await throwProtectedApiError(response, "가격 추천에 실패했습니다.");
   }
 
   return response.json();
@@ -122,12 +162,13 @@ export async function postAuction(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
     },
     body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to create auction: ${response.status}`);
+    await throwProtectedApiError(response, "상품 등록에 실패했습니다.");
   }
 
   return response.json();

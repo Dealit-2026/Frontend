@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import MyPageScreen from "./index";
+import { clearAuthToken } from "@/services/auth/service";
 
 export default function MyPage() {
   const router = useRouter();
@@ -21,7 +22,10 @@ export default function MyPage() {
       onPurchaseHistoryClick={() => router.push("/mypage/purchase-history")}
       onSalesHistoryClick={() => router.push("/mypage/sales-history")}
       onBiddingClick={() => router.push("/mypage/my-bids")}
-      onLogout={() => router.push("/")}
+      onLogout={() => {
+        clearAuthToken();
+        router.push("/login");
+      }}
     />
   );
 }
