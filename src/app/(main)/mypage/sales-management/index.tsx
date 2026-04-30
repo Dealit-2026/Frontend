@@ -38,11 +38,21 @@ import { ExploreIcon } from '../../../../components/common/ExploreIcon';
 import AuctionRegisterScreen from '../../../products/register/AuctionRegisterScreen';
 import RegularRegisterScreen from '../../../products/register/RegularRegisterScreen';
 
+type ManagedProduct = {
+  id: number;
+  name: string;
+  type: 'regular' | 'auction';
+  status: string;
+  price: string;
+  img: string;
+  description: string;
+  category: string;
+  bidders?: number;
+};
+
 export default function SalesManagementScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
-  const [products, setProducts] = useState([
+  const [products, setProducts] = useState<ManagedProduct[]>([
     { id: 1, name: '아이폰 14 Pro', type: 'regular', status: '판매 중', price: '850,000원', img: 'https://picsum.photos/seed/p1/200/200', description: '거의 새것입니다. 풀박스입니다.', category: '전자기기' },
-    { id: 2, name: '맥북 에어 M2', type: 'auction', status: '경매 중', price: '1,200,000원', img: 'https://picsum.photos/seed/p2/200/200', description: '배터리 사이클 10회 미만입니다.', category: '전자기기', bidders: 3 },
-    { id: 3, name: '에어팟 프로 2세대', type: 'auction', status: '경매 중', price: '200,000원', img: 'https://picsum.photos/seed/p3/200/200', description: '미개봉 새상품입니다.', category: '전자기기', bidders: 0 },
   ]);
   const [filter, setFilter] = useState<'all' | 'regular' | 'auction'>('all');
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);

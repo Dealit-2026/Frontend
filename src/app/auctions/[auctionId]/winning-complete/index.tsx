@@ -58,39 +58,14 @@ export default function WinningBidCompletionScreen({ onBack, onPaymentClick, the
         
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black">축하합니다!</h2>
-          <p className="text-gray-500">맥북 에어 M2 경매에 최종 낙찰되었습니다.</p>
+          <p className="text-gray-500">낙찰된 경매 상품이 없습니다.</p>
         </div>
 
-        <div className="w-full bg-gray-50 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200">
-              <img src="https://picsum.photos/seed/p2/200/200" alt="Product" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-400">최종 낙찰가</p>
-              <p className="text-xl font-black">₩1,250,000</p>
-            </div>
-          </div>
-          <div className="h-px bg-gray-200"></div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">판매자</span>
-              <span className="font-bold">맥매니아</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">거래 방식</span>
-              <span className="font-bold">직거래 / 택배</span>
-            </div>
-          </div>
+        <div className="w-full rounded-3xl border border-dashed border-gray-200 p-8 text-center text-sm font-medium text-gray-400">
+          낙찰 완료 데이터가 없습니다
         </div>
 
         <div className="w-full space-y-3">
-          <button 
-            onClick={onPaymentClick}
-            className="w-full h-16 bg-black text-white font-bold rounded-2xl text-lg shadow-lg"
-          >
-            결제하러 가기
-          </button>
           <button 
             onClick={onBack}
             className="w-full h-16 bg-gray-100 text-gray-500 font-bold rounded-2xl"

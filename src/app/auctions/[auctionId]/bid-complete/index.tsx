@@ -56,6 +56,8 @@ export default function BidPlacementCompleteScreen({
   themeColor: string; 
   key?: string 
 }) {
+  const hasBidData = productName.trim().length > 0 && bidAmount > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -77,32 +79,38 @@ export default function BidPlacementCompleteScreen({
           <p className="text-gray-500">성공적으로 입찰이 접수되었습니다.</p>
         </div>
 
-        <div className="w-full bg-gray-50 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200">
-              <img src={`https://picsum.photos/seed/${productId}/200/200`} alt="Product" className="w-full h-full object-cover" />
+        {hasBidData ? (
+          <div className="w-full bg-gray-50 rounded-3xl p-6 space-y-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200">
+                <img src={`https://picsum.photos/seed/${productId}/200/200`} alt="Product" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400">내 입찰가</p>
+                <p className="text-xl font-black">₩{bidAmount.toLocaleString()}</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-400">내 입찰가</p>
-              <p className="text-xl font-black">₩{bidAmount.toLocaleString()}</p>
+            <div className="h-px bg-gray-200"></div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">상품명</span>
+                <span className="font-bold truncate max-w-[180px]">{productName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">판매자</span>
+                <span className="font-bold">{sellerName}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">남은 시간</span>
+                <span className="font-bold text-red-500">{remainingTime}</span>
+              </div>
             </div>
           </div>
-          <div className="h-px bg-gray-200"></div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">상품명</span>
-              <span className="font-bold truncate max-w-[180px]">{productName}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">판매자</span>
-              <span className="font-bold">{sellerName}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">남은 시간</span>
-              <span className="font-bold text-red-500">{remainingTime}</span>
-            </div>
+        ) : (
+          <div className="w-full rounded-3xl border border-dashed border-gray-200 p-8 text-center text-sm font-medium text-gray-400">
+            입찰 완료 데이터가 없습니다
           </div>
-        </div>
+        )}
 
         <div className="w-full space-y-3 pt-4">
           <button 
@@ -111,12 +119,14 @@ export default function BidPlacementCompleteScreen({
           >
             다른 상품 둘러보기
           </button>
-          <button 
-            onClick={onProductDetail}
-            className="w-full h-16 bg-gray-100 text-gray-900 font-bold rounded-2xl active:scale-[0.98] transition-all"
-          >
-            상품 상세보기
-          </button>
+          {hasBidData && (
+            <button 
+              onClick={onProductDetail}
+              className="w-full h-16 bg-gray-100 text-gray-900 font-bold rounded-2xl active:scale-[0.98] transition-all"
+            >
+              상품 상세보기
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

@@ -59,11 +59,8 @@ export default function NotificationScreen({
   const [activeTab, setActiveTab] = useState('전체');
   const [notifications, setNotifications] = useState([
     { type: 'chat', title: '채팅 알림', desc: '[이경석] 아이폰 14 Pro ~ 내용의 채팅이 도착했습니다', time: '5분 전', unread: true, targetId: 1 },
-    { type: 'bid_outbid', title: '입찰 추월 알림', desc: '에어팟 프로 경매에서 다른 사용자가 더 높은 금액을 제시했습니다.', time: '10분 전', unread: true, targetId: 101 },
-    { type: 'bid_win', title: '낙찰 알림', desc: '축하합니다! 맥북 에어 M2 경매에 낙찰되었습니다.', time: '30분 전', unread: true, targetId: 102 },
     { type: 'payment', title: '결제 알림', desc: '아이폰 14 Pro 결제가 완료되었습니다. 영수증을 확인하세요.', time: '2시간 전', unread: false, targetId: 201 },
     { type: 'review', title: '리뷰 알림', desc: '판매자가 리뷰를 남겼습니다. 리뷰를 확인해보세요.', time: '1일 전', unread: false, targetId: 301 },
-    { type: 'deadline', title: '경매 마감 임박 🔥', desc: '찜한 상품의 경매가 1시간 후 종료됩니다.', time: '2일 전', unread: false, targetId: 103 },
   ]);
 
   const markAllAsRead = () => {
