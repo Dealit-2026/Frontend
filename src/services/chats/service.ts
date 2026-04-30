@@ -84,7 +84,7 @@ function toMessageVM(message: {
   };
 }
 
-function toChatRoomListItemVM(
+export function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
   return {

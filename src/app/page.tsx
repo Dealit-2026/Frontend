@@ -80,6 +80,7 @@ import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
 import { fetchMyProfileForm, saveMyLocation } from "@/services/mypage/service";
+import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
@@ -126,7 +127,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex justify-center px-4 font-sans text-[#141414]">
+    <EventStreamProvider enabled={currentScreen !== "login"}>
+      <div className="min-h-screen bg-white flex justify-center px-4 font-sans text-[#141414]">
       <div className="w-full max-w-[720px] mx-auto bg-white overflow-hidden relative flex flex-col shrink-0">
         <AnimatePresence mode="wait">
           {currentScreen === "login" && (
@@ -579,6 +581,7 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+      </div>
+    </EventStreamProvider>
   );
 }
