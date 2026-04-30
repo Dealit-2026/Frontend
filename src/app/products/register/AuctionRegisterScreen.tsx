@@ -9,6 +9,7 @@ import {
   recommendAuctionPrice,
   registerAuction,
   saveAuctionDraft,
+  updateAuction,
   uploadAuctionImage,
 } from "@/services/auction/register/service";
 import {
@@ -47,6 +48,8 @@ export default function AuctionRegisterScreen(
           saveDraft: saveAuctionDraft,
           recommendPrice: recommendAuctionPrice,
           register: registerAuction,
+          update: (draft, initialData) =>
+            updateAuction(initialData.auctionId, draft),
         },
       }}
     />

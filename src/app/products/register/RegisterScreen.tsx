@@ -38,6 +38,10 @@ export interface RegisterScreenServices {
   uploadImage: (file: File, sortOrder: number) => Promise<ProductImagePayload>;
   deleteImage: (imageId: number) => Promise<unknown>;
   saveDraft: (draft: AuctionRegisterDraft) => Promise<unknown>;
+  update?: (
+    draft: AuctionRegisterDraft,
+    initialData: NonNullable<RegisterScreenProps["initialData"]>,
+  ) => Promise<unknown>;
   recommendPrice: (draft: {
     name: string;
     description: string;
@@ -145,6 +149,11 @@ export default function RegisterScreen({
   const [pendingCategoryId, setPendingCategoryId] = useState<number | null>(
     initialData?.categoryId ?? null,
   );
+  const initialPriceValue = initialData?.price
+    ? initialData.price.replace(/[^0-9]/g, "")
+    : initialData?.startPrice != null
+      ? String(initialData.startPrice).replace(/[^0-9]/g, "")
+      : "";
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [selectedPrimaryCategoryId, setSelectedPrimaryCategoryId] = useState<
     number | null
@@ -154,17 +163,27 @@ export default function RegisterScreen({
   const [selectedTertiaryCategoryId, setSelectedTertiaryCategoryId] = useState<
     number | null
   >(null);
-  const [price, setPrice] = useState(
-    initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
-  );
+  const [price, setPrice] = useState(initialPriceValue);
   const [description, setDescription] = useState(initialData?.description || "");
   const [location, setLocation] = useState(initialData?.location || "");
   const [images, setImages] = useState<ProductImagePayload[]>(
     normalizeInitialImages(initialData),
   );
-  const [auction, setAuction] = useState<AuctionFormValues>(
-    createDefaultAuctionForm(),
-  );
+  const [auction, setAuction] = useState<AuctionFormValues>(() => {
+    const defaultAuction = createDefaultAuctionForm();
+    const durationDays =
+      initialData?.auction?.durationDays ??
+      initialData?.auctionDurationDays ??
+      defaultAuction.durationDays;
+
+    return {
+      ...defaultAuction,
+      ...initialData?.auction,
+      startPrice: initialPriceValue,
+      bidUnit: calculateBidUnit(initialPriceValue),
+      durationDays,
+    };
+  });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -382,12 +401,26 @@ export default function RegisterScreen({
     setIsSubmitting(true);
 
     try {
-      await currentServices.register(draft);
+      if (isEditMode) {
+        if (!currentServices.update) {
+          showErrorMessage("상품 수정 기능을 사용할 수 없습니다.");
+          return;
+        }
+
+        await currentServices.update(draft, initialData);
+      } else {
+        await currentServices.register(draft);
+      }
+
       localStorage.removeItem("product_draft");
       handleComplete();
     } catch (error) {
-      console.error("Failed to register auction", error);
-      showErrorMessage("상품 등록에 실패했습니다. 입력값과 서버 상태를 확인해 주세요.");
+      console.error("Failed to submit product", error);
+      showErrorMessage(
+        isEditMode
+          ? "상품 수정에 실패했습니다. 입력값과 서버 상태를 확인해 주세요."
+          : "상품 등록에 실패했습니다. 입력값과 서버 상태를 확인해 주세요.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -472,6 +505,18 @@ export default function RegisterScreen({
     );
 
     if (!targetImage) {
+      return;
+    }
+
+    if (isEditMode) {
+      setImages((currentImages) =>
+        currentImages
+          .filter((image) => image.sortOrder !== targetSortOrder)
+          .map((image, index) => ({
+            ...image,
+            sortOrder: index + 1,
+          })),
+      );
       return;
     }
 
