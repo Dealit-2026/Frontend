@@ -1,4 +1,5 @@
 // src/services/chats/api.ts
+import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
 import type {
   CreateChatRoomRequest,
   CreateChatRoomResponse,
@@ -54,7 +55,10 @@ function toQueryString(
 
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    throw new ApiRequestError(
+      await getApiErrorMessage(response, `HTTP ${response.status} ${response.statusText}`),
+      response.status,
+    );
   }
   return response.json() as Promise<T>;
 }

@@ -60,7 +60,6 @@ export interface ChatRoomLastMessage {
 
 export interface CreateChatRoomRequest {
   productId: number;
-  receiverId: number;
 }
 
 export interface CreateChatRoomResponse {
@@ -180,6 +179,7 @@ export interface GetUnreadCountResponse {
 
 export interface ChatRoomListItemVM {
   id: number;
+  productId: number;
   name: string;
   productName: string;
   productTypeLabel: "Deal it!" | "일반 판매";

@@ -9,8 +9,8 @@ export default function TermsPage() {
 
   return (
     <TermsAgreementScreen
-      onBack={() => router.back()}
-      onNext={() => router.push("/phone-auth")}
+      onBack={() => router.push("/email-auth")}
+      onNext={() => router.push("/region-setup")}
     />
   );
 }

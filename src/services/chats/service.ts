@@ -3,7 +3,6 @@ import * as chatsApi from "./api";
 import {
   createFallbackChatRoomsResponse,
   createFallbackChatRoomDetailResult,
-  createFallbackCreateChatRoomResponse,
   createFallbackMarkReadResponse,
   createFallbackRoom,
   createFallbackUnreadCountResponse,
@@ -84,11 +83,12 @@ function toMessageVM(message: {
   };
 }
 
-function toChatRoomListItemVM(
+export function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
   return {
     id: item.roomId,
+    productId: item.product.productId,
     name: item.opponent.nickname,
     productName: item.product.name,
     productTypeLabel: toProductTypeLabel(item.chatType),
@@ -129,15 +129,14 @@ export async function fetchChatRooms(request: GetChatRoomsRequest = {}) {
   }
 }
 
+export async function findExistingChatRoomByProductId(productId: number) {
+  const response = await chatsApi.getChatRooms({ page: 0, size: 100 });
+  return response.content.find((room) => room.product.productId === productId);
+}
+
 /** 생성 */
 export async function createChatRoom(request: CreateChatRoomRequest) {
-  try {
-    return await chatsApi.postChatRoom(request);
-  } catch (error) {
-    console.warn("createChatRoom failed:", error);
-
-    return createFallbackCreateChatRoomResponse(request);
-  }
+  return chatsApi.postChatRoom(request);
 }
 
 /** 메시지 조회 */
