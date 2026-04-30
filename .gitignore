@@ -3,6 +3,7 @@ build/
 dist/
 coverage/
 .next/
+.next.broken/
 .idea/
 tsconfig.tsbuildinfo
 .DS_Store

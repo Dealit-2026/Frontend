@@ -151,8 +151,12 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
 import React, { useEffect, useMemo, useState } from "react";
 import { MessageCircle, Search, X } from "lucide-react";
 
-import { fetchChatRooms } from "../../services/chats/service";
+import {
+  fetchChatRooms,
+  toChatRoomListItemVM,
+} from "../../services/chats/service";
 import type { ChatRoomListItemVM } from "../../services/chats/types";
+import { useEventStream } from "../../services/events/EventStreamProvider";
 
 interface ChatListScreenProps {
   themeColor: string;
@@ -163,6 +167,7 @@ export default function ChatListScreen({
   themeColor,
   onChatClick,
 }: ChatListScreenProps) {
+  const { latestChatRoomEvent } = useEventStream();
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -198,6 +203,17 @@ export default function ChatListScreen({
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!latestChatRoomEvent) return;
+
+    const updatedRoom = toChatRoomListItemVM(latestChatRoomEvent.room);
+
+    setChats((prev) => [
+      updatedRoom,
+      ...prev.filter((chat) => chat.id !== updatedRoom.id),
+    ]);
+  }, [latestChatRoomEvent]);
 
   const filteredChats = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

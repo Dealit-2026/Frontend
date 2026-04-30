@@ -3,7 +3,6 @@ import * as chatsApi from "./api";
 import {
   createFallbackChatRoomsResponse,
   createFallbackChatRoomDetailResult,
-  createFallbackCreateChatRoomResponse,
   createFallbackMarkReadResponse,
   createFallbackRoom,
   createFallbackUnreadCountResponse,
@@ -84,11 +83,12 @@ function toMessageVM(message: {
   };
 }
 
-function toChatRoomListItemVM(
+export function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
   return {
     id: item.roomId,
+    productId: item.product.productId,
     name: item.opponent.nickname,
     productName: item.product.name,
     productTypeLabel: toProductTypeLabel(item.chatType),
@@ -129,15 +129,14 @@ export async function fetchChatRooms(request: GetChatRoomsRequest = {}) {
   }
 }
 
+export async function findExistingChatRoomByProductId(productId: number) {
+  const response = await chatsApi.getChatRooms({ page: 0, size: 100 });
+  return response.content.find((room) => room.product.productId === productId);
+}
+
 /** 생성 */
 export async function createChatRoom(request: CreateChatRoomRequest) {
-  try {
-    return await chatsApi.postChatRoom(request);
-  } catch (error) {
-    console.warn("createChatRoom failed:", error);
-
-    return createFallbackCreateChatRoomResponse(request);
-  }
+  return chatsApi.postChatRoom(request);
 }
 
 /** 메시지 조회 */
@@ -202,11 +201,23 @@ export async function markChatRoomAsRead(
 /** 전체 안읽음 개수 조회 */
 export async function fetchTotalUnreadCount() {
   try {
-    return await chatsApi.getUnreadCount();
+    const resp = await chatsApi.getUnreadCount();
+
+    const total =
+      (resp as any).totalUnreadCount ?? (resp as any).unreadCount ?? 0;
+
+    return {
+      unreadCount: total,
+      updatedAt: (resp as any).updatedAt,
+    };
   } catch (error) {
     console.warn("fetchTotalUnreadCount fallback:", error);
 
-    return createFallbackUnreadCountResponse();
+    const fb = createFallbackUnreadCountResponse();
+    return {
+      unreadCount: (fb as any).totalUnreadCount ?? (fb as any).unreadCount ?? 0,
+      updatedAt: fb.updatedAt,
+    };
   }
 }
 

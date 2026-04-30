@@ -63,6 +63,7 @@ export function createFallbackChatRooms(): ChatRoomListItemVM[] {
   return [
     {
       id: 1,
+      productId: 1,
       name: "이경석",
       productName: "아이폰 14 Pro 256GB",
       productTypeLabel: "Deal it!",
@@ -132,7 +133,7 @@ export function createFallbackCreateChatRoomResponse(
         role: "BUYER",
       },
       {
-        userId: request.receiverId,
+        userId: 2,
         nickname: "상대방",
         role: "SELLER",
       },
@@ -160,7 +161,7 @@ export function createFallbackMarkReadResponse(
 
 export function createFallbackUnreadCountResponse(): GetUnreadCountResponse {
   return {
-    unreadCount: 0,
+    totalUnreadCount: 0,
     updatedAt: new Date().toISOString(),
   };
 }

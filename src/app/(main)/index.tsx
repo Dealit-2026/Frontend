@@ -42,6 +42,7 @@ import RegularRegisterScreen from '../products/register/RegularRegisterScreen';
 import ChatListScreen from '../chats';
 import MyPageScreen from './mypage';
 import TabButton from '../../components/common/bottom-navigation/TabButton';
+import { useEventStream } from '../../services/events/EventStreamProvider';
 
 export default function MainLayout({ 
   activeTab, 
@@ -95,6 +96,7 @@ export default function MainLayout({
   profileRefreshKey?: number;
   key?: string;
 }) {
+  const { chatUnreadCount } = useEventStream();
   const [lastTab, setLastTab] = useState<Tab>(activeTab === 'register' ? 'home' : activeTab);
   const RegisterComponent =
     themeMode === 'auction' ? AuctionRegisterScreen : RegularRegisterScreen;
@@ -179,7 +181,7 @@ export default function MainLayout({
           <TabButton active={activeTab === 'home'} icon={<Home size={24} />} label="홈" onClick={() => onTabChange('home')} activeColor={themeColor} />
           <TabButton active={activeTab === 'search'} icon={<ExploreIcon size={30} />} label="탐색" onClick={() => onTabChange('search')} activeColor={themeColor} />
           <TabButton active={(activeTab as any) === 'register'} icon={<PlusCircle size={24} />} label="등록" onClick={() => onTabChange('register')} activeColor={themeColor} />
-          <TabButton active={activeTab === 'chat'} icon={<MessageCircle size={24} />} label="채팅" onClick={() => onTabChange('chat')} activeColor={themeColor} />
+          <TabButton active={activeTab === 'chat'} icon={<MessageCircle size={24} />} label="채팅" onClick={() => onTabChange('chat')} activeColor={themeColor} badgeCount={chatUnreadCount} />
           <TabButton active={activeTab === 'mypage'} icon={<User size={24} />} label="MY" onClick={() => onTabChange('mypage')} activeColor={themeColor} />
         </div>
       )}

@@ -6,13 +6,16 @@ import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
 import {
+  createChatRoom,
   fetchChatMessages,
   markChatRoomAsRead,
+  sendChatMessage,
 } from "../../../services/chats/service";
 import type { ChatMessageVM } from "../../../services/chats/types";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
+  draftProductId?: number | null;
   onBack?: () => void;
   onProductClick?: (id: number) => void;
   themeColor: string;
@@ -20,6 +23,7 @@ interface ChatRoomScreenProps {
 
 export default function ChatRoomScreen({
   chatId,
+  draftProductId = null,
   onBack,
   onProductClick,
   themeColor,
@@ -34,10 +38,22 @@ export default function ChatRoomScreen({
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ChatMessageVM[]>([]);
+  const [draftMessage, setDraftMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useEffect(() => {
     const roomId = chatId;
-    if (roomId == null) return;
+    if (roomId == null) {
+      setIsLoading(false);
+      setIsError(false);
+      setRoomName("채팅방");
+      setProductId(draftProductId ?? 0);
+      setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
+      setProductImageUrl(null);
+      setMessages([]);
+      return;
+    }
 
     let mounted = true;
 
@@ -79,7 +95,7 @@ export default function ChatRoomScreen({
     return () => {
       mounted = false;
     };
-  }, [chatId]);
+  }, [chatId, draftProductId]);
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort(
@@ -111,6 +127,61 @@ export default function ChatRoomScreen({
       return;
     }
     router.push(`/products/${id}`);
+  };
+
+  const handleSendMessage = async () => {
+    let roomId = chatId;
+    const content = draftMessage.trim();
+
+    if (!content || isSending) return;
+    if (roomId == null && !draftProductId) return;
+
+    try {
+      setIsSending(true);
+      setSendError(null);
+
+      if (roomId == null && draftProductId) {
+        const room = await createChatRoom({ productId: draftProductId });
+        roomId = room.roomId;
+        setRoomName(
+          room.participants.find((participant) => participant.role === "SELLER")
+            ?.nickname ?? "채팅방",
+        );
+        setProductId(room.product.productId);
+        setProductName(room.product.name ?? `상품 #${room.product.productId}`);
+        setProductImageUrl(room.product.thumbnailUrl ?? null);
+      }
+
+      if (roomId == null) return;
+
+      const response = await sendChatMessage(roomId, {
+        messageType: "TEXT",
+        content,
+      });
+
+      const nextMessage: ChatMessageVM = {
+        messageId: response.messageId,
+        senderId: response.senderId,
+        senderNickname: "나",
+        senderType: "ME",
+        messageType: response.messageType,
+        content: response.content,
+        isRead: response.isRead,
+        sentAt: response.sentAt,
+      };
+
+      setMessages((prev) => [...prev, nextMessage]);
+      setDraftMessage("");
+
+      if (chatId == null) {
+        router.replace(`/chats/${roomId}`);
+      }
+    } catch (error) {
+      console.error("Failed to send chat message:", error);
+      setSendError("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -220,13 +291,36 @@ export default function ChatRoomScreen({
             type="text"
             placeholder="메시지를 입력하세요"
             className="flex-1 bg-transparent outline-none text-sm"
-            disabled
+            value={draftMessage}
+            onChange={(e) => {
+              setDraftMessage(e.target.value);
+              if (sendError) setSendError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleSendMessage();
+              }
+            }}
+            disabled={isSending || (chatId == null && !draftProductId)}
           />
         </div>
-        <button className="p-3 bg-black text-white rounded-xl" disabled>
+        <button
+          className="p-3 bg-black text-white rounded-xl disabled:opacity-50"
+          disabled={
+            isSending ||
+            (chatId == null && !draftProductId) ||
+            draftMessage.trim().length === 0
+          }
+          onClick={() => void handleSendMessage()}
+          aria-label="메시지 전송"
+        >
           <Send size={20} />
         </button>
       </div>
+      {sendError && (
+        <div className="px-4 pb-3 text-xs text-red-500">{sendError}</div>
+      )}
     </motion.div>
   );
 }

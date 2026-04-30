@@ -373,6 +373,11 @@ export default function RegisterScreen({
       return;
     }
 
+    if (!location.trim()) {
+      showErrorMessage("거래 위치를 설정해 주세요.");
+      return;
+    }
+
     if (images.length === 0) {
       showErrorMessage("상품 이미지를 1장 이상 등록해 주세요.");
       return;
