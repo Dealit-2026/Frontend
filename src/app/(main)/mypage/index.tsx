@@ -16,7 +16,10 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
-import { fetchMyPageProfile } from "@/services/mypage/service";
+import {
+  fetchMyPageProfile,
+  fetchMySellingAuctionCount,
+} from "@/services/mypage/service";
 import type { MyPageProfileViewModel } from "@/services/mypage/types";
 
 interface MyPageScreenProps {
@@ -53,6 +56,9 @@ export default function MyPageScreen({
   refreshKey = 0,
 }: MyPageScreenProps) {
   const [profile, setProfile] = useState<MyPageProfileViewModel | null>(null);
+  const [sellingAuctionCount, setSellingAuctionCount] = useState<number | null>(
+    null,
+  );
   const [profileErrorMessage, setProfileErrorMessage] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -75,10 +81,25 @@ export default function MyPageScreen({
         }
       });
 
+    fetchMySellingAuctionCount()
+      .then((nextCount) => {
+        if (!ignore) {
+          setSellingAuctionCount(nextCount);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch selling auction count", error);
+        if (!ignore) {
+          setSellingAuctionCount(null);
+        }
+      });
+
     return () => {
       ignore = true;
     };
   }, [refreshKey]);
+
+  const sellingCount = sellingAuctionCount ?? profile?.sellingCount ?? 0;
 
   const menus = [
     { icon: <ShoppingBag size={20} />, label: "구매 내역", onClick: onPurchaseHistoryClick },
@@ -175,7 +196,7 @@ export default function MyPageScreen({
             className="flex flex-col items-center space-y-1"
           >
             <span className="text-xs text-gray-400">판매 중</span>
-            <span className="font-bold text-lg">{profile?.sellingCount ?? 0}</span>
+            <span className="font-bold text-lg">{sellingCount}</span>
           </button>
           <div className="w-px h-8 bg-gray-200" />
           <button onClick={onWishlistClick} className="flex flex-col items-center space-y-1">

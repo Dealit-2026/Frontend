@@ -42,10 +42,8 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
   const [searchQuery, setSearchQuery] = useState('');
 
   const chats = [
-    { id: 1, name: '이경석', product: '아이폰 14 Pro 256GB', type: 'auction', msg: '네, 직거래 가능합니다', time: '5분 전', unread: 2, img: 'https://picsum.photos/seed/user1/100/100' },
     { id: 2, name: '이동녕', product: '맥북 프로 16인치', type: 'regular', msg: '직거래 안됩니다...', time: '1시간 전', unread: 0, img: 'https://picsum.photos/seed/user2/100/100' },
     { id: 3, name: '이다윤', product: '에어팟 프로 2세대', type: 'regular', msg: '입금 확인했습니다', time: '3시간 전', unread: 1, img: 'https://picsum.photos/seed/user3/100/100' },
-    { id: 4, name: '김준현', product: '애플워치 울트라', type: 'auction', msg: '맥북 언제 와요?', time: '1일 전', unread: 0, img: 'https://picsum.photos/seed/user4/100/100' },
   ];
 
   const filteredChats = chats.filter(chat => {

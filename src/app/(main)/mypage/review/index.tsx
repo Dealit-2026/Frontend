@@ -52,18 +52,6 @@ export default function ReviewScreen({ onBack, themeColor }: { onBack: () => voi
       date: '2024.03.20'
     },
     { 
-      id: 2, 
-      name: '맥북 에어 M2', 
-      type: 'auction', 
-      category: 'received', 
-      status: '거래 완료', 
-      img: 'https://picsum.photos/seed/p2/200/200',
-      content: '매너가 아주 좋으신 분입니다. 기분 좋은 거래였어요!',
-      rating: 5,
-      date: '2024.03.18',
-      author: '낙찰자A'
-    },
-    { 
       id: 3, 
       name: '에어팟 프로', 
       type: 'regular', 
@@ -73,18 +61,6 @@ export default function ReviewScreen({ onBack, themeColor }: { onBack: () => voi
       content: '배송이 조금 늦었지만 상품은 만족합니다.',
       rating: 4,
       date: '2024.03.15'
-    },
-    { 
-      id: 4, 
-      name: '갤럭시 워치 6', 
-      type: 'auction', 
-      category: 'received', 
-      status: '거래 완료', 
-      img: 'https://picsum.photos/seed/p4/200/200',
-      content: '빠른 입금 감사합니다. 잘 사용하세요!',
-      rating: 5,
-      date: '2024.03.10',
-      author: '입찰자B'
     },
   ].filter(r => r.category === mode);
 
@@ -155,9 +131,6 @@ export default function ReviewScreen({ onBack, themeColor }: { onBack: () => voi
                 <p className="text-sm text-gray-600 leading-relaxed">
                   {item.content}
                 </p>
-                {item.author && (
-                  <p className="text-[11px] text-gray-400 mt-2 text-right">- {item.author}</p>
-                )}
               </div>
             </div>
           ))

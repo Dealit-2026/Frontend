@@ -37,21 +37,104 @@ import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
 import AuctionRegisterScreen from '../../../products/register/AuctionRegisterScreen';
 import RegularRegisterScreen from '../../../products/register/RegularRegisterScreen';
+import {
+  fetchAuctionEditInitialData,
+  fetchMySellingAuctions,
+  removeMySellingAuction,
+} from '../../../../services/mypage/service';
+import type { MySellingAuctionViewModel } from '../../../../services/mypage/types';
+
+type ManagedProduct =
+  | MySellingAuctionViewModel
+  | {
+      id: number;
+      name: string;
+      type: 'regular';
+      status: string;
+      price: string;
+      img: string | null;
+      description: string;
+      category: string;
+      categoryId: number | null;
+      canEdit: boolean;
+      canDelete: boolean;
+    };
 
 export default function SalesManagementScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
-  const [products, setProducts] = useState([
-    { id: 1, name: '아이폰 14 Pro', type: 'regular', status: '판매 중', price: '850,000원', img: 'https://picsum.photos/seed/p1/200/200', description: '거의 새것입니다. 풀박스입니다.', category: '전자기기' },
-    { id: 2, name: '맥북 에어 M2', type: 'auction', status: '경매 중', price: '1,200,000원', img: 'https://picsum.photos/seed/p2/200/200', description: '배터리 사이클 10회 미만입니다.', category: '전자기기', bidders: 3 },
-    { id: 3, name: '에어팟 프로 2세대', type: 'auction', status: '경매 중', price: '200,000원', img: 'https://picsum.photos/seed/p3/200/200', description: '미개봉 새상품입니다.', category: '전자기기', bidders: 0 },
-  ]);
+  const [products, setProducts] = useState<ManagedProduct[]>([]);
   const [filter, setFilter] = useState<'all' | 'regular' | 'auction'>('all');
   const [itemToDelete, setItemToDelete] = useState<number | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [editingAuctionId, setEditingAuctionId] = useState<number | null>(null);
 
-  const handleDeleteConfirm = () => {
-    if (itemToDelete !== null) {
+  const loadSellingAuctions = async () => {
+    setIsLoading(true);
+    setIsError(false);
+
+    try {
+      const response = await fetchMySellingAuctions();
+      setProducts(response.content);
+    } catch (error) {
+      console.error('Failed to load selling auctions', error);
+      setIsError(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadSellingAuctions();
+  }, []);
+
+  const handleEditClick = async (item: ManagedProduct) => {
+    if (item.type !== 'auction' || !item.canEdit) {
+      return;
+    }
+
+    setEditingAuctionId(item.auctionId);
+
+    try {
+      const editInitialData = await fetchAuctionEditInitialData(item.auctionId);
+
+      if (!editInitialData.canEdit) {
+        window.alert('입찰자가 있어 수정할 수 없습니다.');
+        return;
+      }
+
+      setEditingItem(editInitialData);
+    } catch (error) {
+      console.error('Failed to load auction edit detail', error);
+      window.alert('경매 수정 정보를 불러오지 못했습니다.');
+    } finally {
+      setEditingAuctionId(null);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (itemToDelete === null) {
+      return;
+    }
+
+    const targetItem = products.find(p => p.id === itemToDelete);
+    if (!targetItem || targetItem.type !== 'auction') {
+      setItemToDelete(null);
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await removeMySellingAuction(targetItem.auctionId);
       setProducts(products.filter(p => p.id !== itemToDelete));
       setItemToDelete(null);
+    } catch (error) {
+      console.error('Failed to delete selling auction', error);
+      window.alert('경매 상품 삭제에 실패했습니다.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -64,7 +147,10 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
     return (
       <RegisterComponent 
         onBack={() => setEditingItem(null)} 
-        onComplete={() => setEditingItem(null)} 
+        onComplete={() => {
+          setEditingItem(null);
+          void loadSellingAuctions();
+        }} 
         themeColor={themeColor} 
         initialData={editingItem} 
       />
@@ -105,12 +191,34 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-        {filteredProducts.length > 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
+            <ShoppingBag size={48} className="opacity-20" />
+            <p className="text-sm font-medium">판매 중인 경매 상품을 불러오는 중입니다</p>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-3">
+            <ShoppingBag size={48} className="opacity-20" />
+            <p className="text-sm font-medium">판매 중인 경매 상품을 불러오지 못했습니다</p>
+            <button
+              onClick={() => void loadSellingAuctions()}
+              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs font-bold text-gray-600 transition-colors"
+            >
+              다시 시도
+            </button>
+          </div>
+        ) : filteredProducts.length > 0 ? (
           filteredProducts.map((item) => (
             <div key={item.id} className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4">
               <div className="flex items-center space-x-4">
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
-                  <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                  {item.img ? (
+                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <ImageIcon size={28} />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center space-x-2">
@@ -131,13 +239,14 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
                 </div>
               </div>
               <div className="flex space-x-2">
-                {item.type === 'regular' || (item.type === 'auction' && item.bidders === 0) ? (
+                {item.canEdit && item.canDelete ? (
                   <>
                     <button 
-                      onClick={() => setEditingItem(item)}
-                      className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-xs font-bold transition-colors"
+                      onClick={() => void handleEditClick(item)}
+                      disabled={item.type === 'auction' && editingAuctionId === item.auctionId}
+                      className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 rounded-xl text-xs font-bold transition-colors"
                     >
-                      수정
+                      {item.type === 'auction' && editingAuctionId === item.auctionId ? '불러오는 중...' : '수정'}
                     </button>
                     <button 
                       onClick={() => setItemToDelete(item.id)}
@@ -183,12 +292,14 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
               <div className="flex space-x-3">
                 <button 
                   onClick={handleDeleteConfirm}
-                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 disabled:opacity-60 transition-colors"
                 >
-                  예
+                  {isDeleting ? '삭제 중...' : '예'}
                 </button>
                 <button 
                   onClick={() => setItemToDelete(null)}
+                  disabled={isDeleting}
                   className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
                 >
                   아니오

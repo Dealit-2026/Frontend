@@ -55,6 +55,9 @@ export default function ProductListItem({
 }) {
   const [isLiked, setIsLiked] = useState(initialLiked);
   const [showConfirm, setShowConfirm] = useState(false);
+  if (mode === 'auction') {
+    return null;
+  }
   
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -85,7 +88,7 @@ export default function ProductListItem({
               />
             </button>
           </div>
-          <p className="text-xs text-gray-500 font-medium">{mode === 'auction' ? '현재가' : '판매가'} <span className="text-sm font-bold text-black ml-1">₩1,200,000</span></p>
+          <p className="text-xs text-gray-500 font-medium">판매가 <span className="text-sm font-bold text-black ml-1">₩1,200,000</span></p>
           <div className="flex items-center space-x-3 text-[10px] text-gray-400 font-medium">
             <div className="flex items-center space-x-1">
               <Heart size={10} />
@@ -95,12 +98,6 @@ export default function ProductListItem({
               <MessageCircle size={10} />
               <span>12</span>
             </div>
-            {mode === 'auction' && (
-              <div className="flex items-center space-x-1 font-bold" style={{ color: themeColor }}>
-                <Clock size={10} />
-                <span>2시간 35분 남음</span>
-              </div>
-            )}
           </div>
         </div>
       </div>

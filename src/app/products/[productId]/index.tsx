@@ -77,6 +77,12 @@ export default function ProductDetailScreen({
   const isAuctionScheduled = !isRegular && auctionStatus === 'AUCTION_SCHEDULED';
   const bidUnit = 10000;
   const minBidAmount = currentPrice + bidUnit;
+  const displayName = '아이폰 14 Pro 256GB 딥퍼플';
+  const displayDescription = '아이폰 14 Pro 256GB 딥퍼플 색상입니다. 구매한지 6개월 정도 되었고 항상 케이스와 필름을 부착하여 상태 매우 깨끗합니다. 배터리 효율은 98%이며 모든 기능 정상 작동합니다. 박스와 구성품 모두 포함된 풀박스 구성입니다. 직거래는 강남역 인근에서 가능하며 택배 거래 시 배송비는 별도입니다.';
+  const displayImageUrl = `https://picsum.photos/seed/${productId}/600/600`;
+  const displayCategoryName = '전자제품';
+  const displaySellerName = '판매자123';
+  const displayEndLabel = '2시간 35분 남음';
 
   const scheduledStartLabel = auctionStartAt
     ? new Intl.DateTimeFormat('ko-KR', {
@@ -93,6 +99,28 @@ export default function ProductDetailScreen({
       setInputBidAmount(currentPrice + bidUnit);
     }
   }, [showBidSheet, currentPrice]);
+
+  if (!isRegular) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="flex-1 flex flex-col bg-white"
+      >
+        <div className="h-16 flex items-center px-4 border-b border-gray-100">
+          <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <h1 className="flex-1 text-center font-bold text-lg mr-10">경매 상품</h1>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-gray-400 space-y-3">
+          <ShoppingBag size={56} className="opacity-20" />
+          <p className="text-sm font-medium">등록된 경매 상품이 없습니다</p>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -142,7 +170,13 @@ export default function ProductDetailScreen({
 
       <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
         <div className="aspect-square bg-gray-100">
-          <img src={`https://picsum.photos/seed/${productId}/600/600`} alt="Product" className="w-full h-full object-cover" />
+          {displayImageUrl ? (
+            <img src={displayImageUrl} alt={displayName} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <ImageIcon size={56} />
+            </div>
+          )}
         </div>
 
         <div className="p-6 space-y-6">
@@ -151,9 +185,9 @@ export default function ProductDetailScreen({
               <span className="px-2 py-1 text-white text-[10px] font-bold rounded" style={{ backgroundColor: themeColor }}>
                 {isRegular ? '일반 판매' : isAuctionScheduled ? '경매 예정' : '진행중'}
               </span>
-              <span className="text-xs text-gray-400">전자제품</span>
+              <span className="text-xs text-gray-400">{displayCategoryName}</span>
             </div>
-            <h2 className="text-xl font-bold">아이폰 14 Pro 256GB 딥퍼플</h2>
+            <h2 className="text-xl font-bold">{displayName}</h2>
             
             <div 
               className={`rounded-2xl p-6 space-y-2 cursor-pointer transition-transform active:scale-[0.98] ${!isRegular ? 'hover:brightness-95' : ''}`}
@@ -189,7 +223,7 @@ export default function ProductDetailScreen({
                     <span>{isAuctionScheduled ? '입찰은 시작 후 가능해요' : `입찰 ${bidCount}회`}</span>
                     <div className="flex items-center space-x-1">
                       <Clock size={12} />
-                      <span>{isAuctionScheduled ? scheduledStartLabel : '2시간 35분 남음'}</span>
+                      <span>{isAuctionScheduled ? scheduledStartLabel : displayEndLabel}</span>
                     </div>
                   </div>
                   {isAuctionScheduled && (
@@ -211,7 +245,7 @@ export default function ProductDetailScreen({
                 <img src="https://picsum.photos/seed/seller/100/100" alt="Seller" />
               </div>
               <div>
-                <p className="font-bold text-sm">판매자123</p>
+                <p className="font-bold text-sm">{displaySellerName}</p>
                 <div className="flex items-center space-x-1 text-[10px] text-gray-400">
                   <Star size={10} className="fill-yellow-400 text-yellow-400" />
                   <span>4.8 (거래 34회)</span>
@@ -238,7 +272,7 @@ export default function ProductDetailScreen({
               </div>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed pt-2">
-              아이폰 14 Pro 256GB 딥퍼플 색상입니다. 구매한지 6개월 정도 되었고 항상 케이스와 필름을 부착하여 상태 매우 깨끗합니다. 배터리 효율은 98%이며 모든 기능 정상 작동합니다. 박스와 구성품 모두 포함된 풀박스 구성입니다. 직거래는 강남역 인근에서 가능하며 택배 거래 시 배송비는 별도입니다.
+              {displayDescription}
             </p>
           </div>
         </div>
@@ -386,10 +420,10 @@ export default function ProductDetailScreen({
                         setShowBidSheet(false);
                         onBidComplete({
                           productId: productId || 0,
-                          productName: "아이폰 14 Pro 256GB 딥퍼플",
-                          sellerName: "판매자123",
+                          productName: displayName,
+                          sellerName: displaySellerName,
                           bidAmount: currentPrice + 30000,
-                          remainingTime: "2시간 35분"
+                          remainingTime: displayEndLabel
                         });
                       }}
                       className="h-12 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
@@ -403,10 +437,10 @@ export default function ProductDetailScreen({
                         setShowBidSheet(false);
                         onBidComplete({
                           productId: productId || 0,
-                          productName: "아이폰 14 Pro 256GB 딥퍼플",
-                          sellerName: "판매자123",
+                          productName: displayName,
+                          sellerName: displaySellerName,
                           bidAmount: currentPrice + 10000,
-                          remainingTime: "2시간 35분"
+                          remainingTime: displayEndLabel
                         });
                       }}
                       className="h-12 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors"
@@ -424,10 +458,10 @@ export default function ProductDetailScreen({
                     setShowBidSheet(false);
                     onBidComplete({
                       productId: productId || 0,
-                      productName: "아이폰 14 Pro 256GB 딥퍼플",
-                      sellerName: "판매자123",
+                      productName: displayName,
+                      sellerName: displaySellerName,
                       bidAmount: inputBidAmount,
-                      remainingTime: "2시간 35분"
+                      remainingTime: displayEndLabel
                     });
                   }} 
                   className={`w-full h-14 text-white font-bold rounded-xl transition-all ${inputBidAmount < minBidAmount ? 'bg-gray-300 cursor-not-allowed opacity-50' : 'shadow-lg'}`}

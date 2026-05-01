@@ -76,6 +76,16 @@ export interface AuctionCreateRequest {
   draftId: number | null;
 }
 
+export interface AuctionUpdateRequest {
+  name: string;
+  description: string;
+  categoryId: number;
+  startPrice: number;
+  auctionDurationDays: number;
+  location: string;
+  images: ProductImagePayload[];
+}
+
 // 등록 성공 직후 필요한 최소 응답.
 // 상세 페이지 렌더링 데이터는 별도 상세 조회 응답으로 분리한다.
 export interface AuctionCreateResponse {
@@ -170,6 +180,8 @@ export interface ProductDetailResponse {
 export type AuctionRegisterDraft = AuctionCreateFormValues;
 export type CreateAuctionRequest = AuctionCreateRequest;
 export type CreateAuctionResponse = AuctionCreateResponse;
+export type UpdateAuctionRequest = AuctionUpdateRequest;
+export type UpdateAuctionResponse = AuctionCreateResponse;
 export type SaveAuctionDraftRequest = SaveProductDraftRequest;
 export type SaveAuctionDraftResponse = SaveProductDraftResponse;
 

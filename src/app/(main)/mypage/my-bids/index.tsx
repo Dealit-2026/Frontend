@@ -37,38 +37,16 @@ import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
 
 export default function MyBidsScreen({ onBack, onProductClick, themeColor }: { onBack: () => void; onProductClick: (id: number) => void; themeColor: string; key?: string }) {
-  const [bids, setBids] = useState([
-    { 
-      id: 101, 
-      name: '빈티지 필름 카메라', 
-      seller: '카메라덕후', 
-      currentBid: '45,000원', 
-      myBid: '45,000원', 
-      timeLeft: '2시간 15분', 
-      img: 'https://picsum.photos/seed/cam1/200/200',
-      status: 'highest' // 내가 최고 입찰자
-    },
-    { 
-      id: 102, 
-      name: '나이키 조던 1 하이', 
-      seller: '슈즈컬렉터', 
-      currentBid: '280,000원', 
-      myBid: '250,000원', 
-      timeLeft: '45분', 
-      img: 'https://picsum.photos/seed/shoe1/200/200',
-      status: 'outbid' // 상위 입찰자 발생
-    },
-    { 
-      id: 103, 
-      name: '레트로 게임기', 
-      seller: '레트로매니아', 
-      currentBid: '12,000원', 
-      myBid: '12,000원', 
-      timeLeft: '1일 전', 
-      img: 'https://picsum.photos/seed/game1/200/200',
-      status: 'highest'
-    }
-  ]);
+  const [bids, setBids] = useState<Array<{
+    id: number;
+    name: string;
+    seller: string;
+    currentBid: string;
+    myBid: string;
+    timeLeft: string;
+    img: string;
+    status: 'highest' | 'outbid';
+  }>>([]);
 
   return (
     <motion.div
