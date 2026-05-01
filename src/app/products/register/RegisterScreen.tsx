@@ -508,18 +508,6 @@ export default function RegisterScreen({
       return;
     }
 
-    if (isEditMode) {
-      setImages((currentImages) =>
-        currentImages
-          .filter((image) => image.sortOrder !== targetSortOrder)
-          .map((image, index) => ({
-            ...image,
-            sortOrder: index + 1,
-          })),
-      );
-      return;
-    }
-
     if (targetImage.imageId > 0) {
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
