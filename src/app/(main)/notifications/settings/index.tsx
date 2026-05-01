@@ -35,6 +35,9 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
+import { getAuthorizationHeaders } from '../../../../services/auth/service';
+import { registerFcmToken } from '../../../../services/notifications/api';
+import { requestFcmToken } from '../../../../services/notifications/firebase';
 
 export default function NotificationSettingsScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
   const [settings, setSettings] = useState({
@@ -49,10 +52,44 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
   });
 
   const [retention, setRetention] = useState('30일');
+  const [pushStatus, setPushStatus] = useState<'idle' | 'connecting' | 'connected' | 'blocked' | 'failed'>('idle');
 
   const toggle = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
   };
+
+  const connectPushNotification = async () => {
+    try {
+      setPushStatus('connecting');
+
+      const token = await requestFcmToken();
+
+      if (!token) {
+        setPushStatus('blocked');
+        return;
+      }
+
+      await registerFcmToken(
+        {
+          token,
+          platform: 'web',
+        },
+        getAuthorizationHeaders(),
+      );
+
+      setPushStatus('connected');
+    } catch (error) {
+      setPushStatus('failed');
+    }
+  };
+
+  const pushStatusLabel = {
+    idle: '연결 전',
+    connecting: '연결 중',
+    connected: '연결됨',
+    blocked: '권한 필요',
+    failed: '실패',
+  }[pushStatus];
 
   return (
     <motion.div
@@ -82,6 +119,21 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
               animate={{ x: settings.all ? 24 : 4 }}
               className="absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm"
             />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+          <div className="space-y-1">
+            <p className="font-bold">푸시 알림</p>
+            <p className="text-[10px] text-gray-400">{pushStatusLabel}</p>
+          </div>
+          <button
+            type="button"
+            onClick={connectPushNotification}
+            disabled={pushStatus === 'connecting'}
+            className="px-4 py-2 rounded-xl bg-black text-white text-xs font-bold disabled:opacity-50"
+          >
+            연결
           </button>
         </div>
 
