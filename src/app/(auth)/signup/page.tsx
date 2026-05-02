@@ -11,7 +11,7 @@ export default function SignupPage() {
     <SignupScreen
       showToast={() => {}}
       onBack={() => router.back()}
-      onNext={() => router.push("/region-setup")}
+      onNext={() => router.push("/email-auth")}
     />
   );
 }
