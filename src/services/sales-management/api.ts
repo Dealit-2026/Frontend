@@ -36,11 +36,14 @@ export async function getRegularSalesManagementProducts(): Promise<RegularSalesM
     cache: "no-store",
   });
 
-  if (!response.ok) {
-    await throwProtectedApiError(
-      response,
-      "일반 상품 판매 중 목록을 불러오지 못했습니다.",
-    );
+ if (response.status === 404) {
+    return {
+      content: [],
+      page: 0,
+      size: 20,
+      totalElements: 0,
+      hasNext: false,
+    };
   }
 
   return response.json();

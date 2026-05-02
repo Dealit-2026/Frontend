@@ -188,6 +188,15 @@ export default function ProductDetailScreen({
     : "정보 없음";
   const scheduledStartLabel = formatScheduleLabel(auctionStartAt);
 
+  // 새롭게 추가된 판매자 프로필용 변수 (API 연동 전 임시 데이터)
+  const displaySellerBio = "좋은 거래 부탁드려요.";
+  const displaySellerRating = "4.8";
+  const displaySellerWarning = "0회";
+  const displaySellerAddress = displayLocation;
+  const sellerRecentSales: Array<{ title: string; price: string; status: string }> = [
+    // 필요 시 여기에 더미 데이터를 추가할 수 있습니다.
+  ];
+
   useEffect(() => {
     if (regularPrice != null) {
       setCurrentPrice(regularPrice);
@@ -666,6 +675,7 @@ export default function ProductDetailScreen({
         )}
       </AnimatePresence>
 
+      {/* Seller Profile Modal */}
       <AnimatePresence>
         {showSellerProfile && (
           <>
@@ -682,25 +692,80 @@ export default function ProductDetailScreen({
               exit={{ y: "100%" }}
               className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[40px] z-50 p-8 space-y-6"
             >
-              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-2" />
+              <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-2"></div>
+
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden">
-                  <img src={displaySellerImageUrl} alt="Seller" />
+                  <img
+                    src={displaySellerImageUrl}
+                    alt="Seller"
+                  />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">{displaySellerName}</h3>
                   <p className="text-sm text-gray-500 mt-1">
-                    좋은 거래 부탁드려요.
+                    {displaySellerBio}
                   </p>
                 </div>
               </div>
-              <div className="space-y-1">
-                <span className="text-xs text-gray-400">주소지</span>
-                <p className="font-bold text-sm">{displayLocation}</p>
+
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-100">
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-400">거래 별점</span>
+                  <div className="flex items-center space-x-1">
+                    <Star
+                      size={14}
+                      className="fill-yellow-400 text-yellow-400"
+                    />
+                    <span className="font-bold">{displaySellerRating}</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-xs text-gray-400">경고 횟수</span>
+                  <div className="flex items-center space-x-1">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    <span className="font-bold">{displaySellerWarning}</span>
+                  </div>
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <span className="text-xs text-gray-400">주소지</span>
+                  <p className="font-bold text-sm">{displaySellerAddress}</p>
+                </div>
               </div>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-sm">상대 판매내역 (최근 3건)</h4>
+                <div className="space-y-2">
+                  {sellerRecentSales.length === 0 ? (
+                    <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-500">
+                      정보없음
+                    </div>
+                  ) : (
+                    sellerRecentSales.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                      >
+                        <span className="text-sm font-medium text-gray-800">
+                          {item.title}
+                        </span>
+                        <div className="text-right">
+                          <p className="text-xs font-bold">{item.price}</p>
+                          <p
+                            className={`text-[10px] ${item.status === "판매완료" ? "text-gray-400" : "text-blue-500"}`}
+                          >
+                            {item.status}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowSellerProfile(false)}
-                className="w-full h-14 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                className="w-full h-14 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-colors mt-4"
               >
                 닫기
               </button>
