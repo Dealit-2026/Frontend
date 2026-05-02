@@ -10,6 +10,15 @@ import type {
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
+import { TEST_AUCTION_DURATION_DAYS } from "@/services/auction/register/service";
+
+const AUCTION_DURATION_OPTIONS = [
+  { value: TEST_AUCTION_DURATION_DAYS, label: "20초 테스트" },
+  { value: 1, label: "1일" },
+  { value: 3, label: "3일" },
+  { value: 5, label: "5일" },
+  { value: 7, label: "7일" },
+];
 
 export interface RegisterScreenViewProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -401,9 +410,9 @@ export default function RegisterScreenView({
                       onChange={(event) => onAuctionDurationChange(event.target.value)}
                       className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
                     >
-                      {[1, 3, 5, 7].map((day) => (
-                        <option key={day} value={day}>
-                          {day}일
+                      {AUCTION_DURATION_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
                         </option>
                       ))}
                     </select>

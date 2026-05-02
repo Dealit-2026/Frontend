@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ImageIcon, ShoppingBag } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -78,6 +79,7 @@ export default function SalesManagementScreen({
   onBack,
   themeColor,
 }: SalesManagementScreenProps) {
+  const router = useRouter();
   const [products, setProducts] = useState<SalesManagementItemViewModel[]>([]);
   const [filter, setFilter] = useState<SalesManagementFilter>("all");
   const [itemToDelete, setItemToDelete] =
@@ -108,7 +110,7 @@ export default function SalesManagementScreen({
   };
 
   useEffect(() => {
-    loadProducts();
+    void loadProducts();
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -155,6 +157,14 @@ export default function SalesManagementScreen({
     } finally {
       setEditingProductId(null);
     }
+  };
+
+  const handleItemClick = (product: SalesManagementItemViewModel) => {
+    if (product.type !== "auction") {
+      return;
+    }
+
+    router.push(`/auctions/${product.auctionId ?? product.productId}`);
   };
 
   const filteredProducts = products.filter(
@@ -270,7 +280,23 @@ export default function SalesManagementScreen({
           filteredProducts.map((item) => (
             <div
               key={item.id}
-              className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4"
+              onClick={() => handleItemClick(item)}
+              role={item.type === "auction" ? "button" : undefined}
+              tabIndex={item.type === "auction" ? 0 : undefined}
+              onKeyDown={(event) => {
+                if (
+                  item.type === "auction" &&
+                  (event.key === "Enter" || event.key === " ")
+                ) {
+                  event.preventDefault();
+                  handleItemClick(item);
+                }
+              }}
+              className={`p-4 bg-white border border-gray-100 rounded-2xl space-y-4 ${
+                item.type === "auction"
+                  ? "cursor-pointer hover:border-rose-100 hover:shadow-sm transition-all"
+                  : ""
+              }`}
             >
               <div className="flex items-start space-x-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
@@ -303,7 +329,10 @@ export default function SalesManagementScreen({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => handleEditClick(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleEditClick(item);
+                  }}
                   disabled={!item.editable || editingProductId === item.id}
                   className="h-14 bg-gray-50 rounded-xl text-sm font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >
@@ -311,7 +340,10 @@ export default function SalesManagementScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setItemToDelete(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setItemToDelete(item);
+                  }}
                   disabled={!item.deletable}
                   className="h-14 bg-gray-50 rounded-xl text-sm font-bold text-red-500 transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >

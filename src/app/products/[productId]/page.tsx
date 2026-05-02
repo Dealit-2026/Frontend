@@ -36,7 +36,7 @@ export default function ProductDetailPage() {
   return (
     <ProductDetailScreen
       productId={productId}
-      onBack={() => router.back()}
+      onBack={() => router.push("/")}
       onBidStatusClick={() => router.push(`/auctions/${productId}/bidding-status`)}
       onChatClick={handleChatClick}
       onReportClick={() => router.push(`/products/${productId}/report`)}

@@ -4,6 +4,10 @@ import { useParams, useRouter } from "next/navigation";
 
 import AuctionDetailScreen from "./index";
 
+type BidCompleteData = {
+  bidAmount: number;
+};
+
 export default function AuctionDetailPage() {
   const params = useParams<{ auctionId: string }>();
   const router = useRouter();
@@ -17,7 +21,11 @@ export default function AuctionDetailPage() {
       onChatClick={() => router.push("/chats/1")}
       onReportClick={() => router.push(`/products/${auctionId}/report`)}
       onPurchaseClick={() => router.push(`/products/${auctionId}/payment`)}
-      onBidComplete={() => router.push(`/auctions/${auctionId}/bid-complete`)}
+      onBidComplete={(data: BidCompleteData) => {
+        router.replace(
+          `/auctions/${auctionId}/bid-complete?bidPrice=${data.bidAmount}`,
+        );
+      }}
       themeColor="#F64257"
       mode="auction"
       showToast={() => {}}

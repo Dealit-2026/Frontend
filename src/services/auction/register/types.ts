@@ -69,6 +69,8 @@ export interface AuctionCreateRequest {
   categoryId: number;
   price: number | null;
   startPrice: number | null;
+  bidUnit: number | null;
+  minimumBidAmount: number | null;
   auctionDurationDays: number | null;
   allowOffer: boolean;
   images: ProductImagePayload[];
@@ -81,6 +83,8 @@ export interface AuctionUpdateRequest {
   description: string;
   categoryId: number;
   startPrice: number;
+  bidUnit: number;
+  minimumBidAmount: number;
   auctionDurationDays: number;
   location: string;
   images: ProductImagePayload[];
