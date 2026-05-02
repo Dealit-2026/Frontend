@@ -45,7 +45,7 @@ export default function ProductDetailScreen({
   productId,
   productData,
   onBack,
-  onBidStatusClick,
+  onBidStatusClick = () => {},
   onChatClick,
   onReportClick,
   onPurchaseClick,
@@ -54,15 +54,15 @@ export default function ProductDetailScreen({
   auctionStatus = "AUCTION_LIVE",
   auctionStartAt,
   showToast,
-  onBidComplete,
+  onBidComplete = () => {},
 }: {
   productId: number | null;
   productData?: ProductDetailResponse;
   onBack: () => void;
-  onBidStatusClick: () => void;
+  onBidStatusClick?: () => void;
   onChatClick: () => void;
   onReportClick: () => void;
-  onBidComplete: (data: {
+  onBidComplete?: (data: {
     productId: number;
     productName: string;
     sellerName: string;

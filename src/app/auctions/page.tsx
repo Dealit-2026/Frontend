@@ -12,7 +12,7 @@ export default function AuctionsPage() {
       listType="all"
       categoryName={null}
       onBack={() => router.back()}
-      onProductClick={(id: number) => router.push(`/auctions/${id}`)}
+      onProductClick={(id: number) => router.push(`/products/${id}`)}
       onSearchClick={() => router.push("/search")}
       themeColor="#F64257"
     />

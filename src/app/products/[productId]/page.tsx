@@ -102,15 +102,11 @@ export default function ProductDetailPage() {
       productId={productId}
       productData={productData}
       onBack={() => router.back()}
-      onBidStatusClick={() =>
-        router.push(`/auctions/${productId}/bidding-status`)
-      }
       onChatClick={handleChatClick}
       onReportClick={() => router.push(`/products/${productId}/report`)}
       onPurchaseClick={() =>
         router.push(`/products/${productId}/regular-purchase`)
       }
-      onBidComplete={() => router.push(`/auctions/${productId}/bid-complete`)}
       themeColor="#98E446"
       showToast={() => {}}
     />

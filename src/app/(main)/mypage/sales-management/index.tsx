@@ -175,8 +175,8 @@ export default function SalesManagementScreen({
     console.log("상품 ID:", product.productId);
 
     if (product.type === "auction") {
-      console.log(`경매 페이지로 이동: /auctions/${product.productId}`);
-      router.push(`/auctions/${product.productId}`);
+      console.log(`상품 페이지로 이동: /products/${product.productId}`);
+      router.push(`/products/${product.productId}`);
     } else {
       console.log(`일반 상품 페이지로 이동: /products/${product.productId}`);
       router.push(`/products/${product.productId}`);
