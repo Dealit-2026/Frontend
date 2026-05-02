@@ -49,6 +49,9 @@ export interface RegisterScreenServices {
   register: (draft: AuctionRegisterDraft) => Promise<unknown>;
 }
 
+const MAX_PRICE_DIGITS = 13;
+const MAX_PRICE_VALUE = 9_999_999_999_999;
+
 function normalizeInitialImages(initialData: any): ProductImagePayload[] {
   if (!initialData) {
     return [];
@@ -155,16 +158,30 @@ export default function RegisterScreen({
     number | null
   >(null);
   const [price, setPrice] = useState(
-    initialData?.price ? initialData.price.replace(/[^0-9]/g, "") : "",
+    initialData?.price ? String(initialData.price).replace(/[^0-9]/g, "") : "",
   );
   const [description, setDescription] = useState(initialData?.description || "");
   const [location, setLocation] = useState(initialData?.location || "");
   const [images, setImages] = useState<ProductImagePayload[]>(
     normalizeInitialImages(initialData),
   );
-  const [auction, setAuction] = useState<AuctionFormValues>(
-    createDefaultAuctionForm(),
-  );
+  const [auction, setAuction] = useState<AuctionFormValues>(() => ({
+    ...createDefaultAuctionForm(),
+    ...initialData?.auction,
+    startPrice:
+      initialData?.auction?.startPrice ??
+      initialData?.startPrice ??
+      initialData?.price ??
+      "",
+    bidUnit: calculateBidUnit(
+      String(
+        initialData?.auction?.startPrice ??
+          initialData?.startPrice ??
+          initialData?.price ??
+          "",
+      ),
+    ),
+  }));
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -368,6 +385,11 @@ export default function RegisterScreen({
       return;
     }
 
+    if (Number(price) > MAX_PRICE_VALUE) {
+      showErrorMessage("가격은 9,999,999,999,999원 이하로 입력해 주세요.");
+      return;
+    }
+
     if (!description.trim()) {
       showErrorMessage("상품 설명을 입력해 주세요.");
       return;
@@ -480,7 +502,7 @@ export default function RegisterScreen({
       return;
     }
 
-    if (targetImage.imageId > 0) {
+    if (targetImage.imageId > 0 && !isEditMode) {
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
@@ -503,7 +525,7 @@ export default function RegisterScreen({
         })),
     );
 
-    if (targetImage.imageId > 0) {
+    if (targetImage.imageId > 0 && !isEditMode) {
       setDeletingImageIds((currentIds) =>
         currentIds.filter((imageId) => imageId !== targetImage.imageId),
       );
@@ -549,7 +571,7 @@ export default function RegisterScreen({
   };
 
   const handlePriceChange = (value: string) => {
-    const numericValue = sanitizeNumericInput(value);
+    const numericValue = sanitizeNumericInput(value).slice(0, MAX_PRICE_DIGITS);
     setPrice(numericValue);
 
     if (saleType === "auction") {
