@@ -36,6 +36,16 @@ export async function getRegularSalesManagementProducts(): Promise<RegularSalesM
     cache: "no-store",
   });
 
+  if (response.status === 404) {
+    return {
+      content: [],
+      page: 0,
+      size: 20,
+      totalElements: 0,
+      hasNext: false,
+    };
+  }
+
   if (!response.ok) {
     await throwProtectedApiError(
       response,
