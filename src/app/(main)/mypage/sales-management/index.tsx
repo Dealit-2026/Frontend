@@ -160,11 +160,12 @@ export default function SalesManagementScreen({
   };
 
   const handleItemClick = (product: SalesManagementItemViewModel) => {
-    if (product.type !== "auction") {
+    if (product.type === "auction") {
+      router.push(`/auctions/${product.auctionId ?? product.productId}`);
       return;
     }
 
-    router.push(`/auctions/${product.auctionId ?? product.productId}`);
+    router.push(`/products/${product.productId}`);
   };
 
   const filteredProducts = products.filter(
@@ -281,22 +282,15 @@ export default function SalesManagementScreen({
             <div
               key={item.id}
               onClick={() => handleItemClick(item)}
-              role={item.type === "auction" ? "button" : undefined}
-              tabIndex={item.type === "auction" ? 0 : undefined}
+              role="button"
+              tabIndex={0}
               onKeyDown={(event) => {
-                if (
-                  item.type === "auction" &&
-                  (event.key === "Enter" || event.key === " ")
-                ) {
+                if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
                   handleItemClick(item);
                 }
               }}
-              className={`p-4 bg-white border border-gray-100 rounded-2xl space-y-4 ${
-                item.type === "auction"
-                  ? "cursor-pointer hover:border-rose-100 hover:shadow-sm transition-all"
-                  : ""
-              }`}
+              className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4 cursor-pointer hover:border-rose-100 hover:shadow-sm transition-all"
             >
               <div className="flex items-start space-x-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
