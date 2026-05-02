@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ImageIcon, ShoppingBag } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -57,18 +58,27 @@ function getTypeLabel(type: SalesManagementItemViewModel["type"]) {
 function ProductImage({
   imageUrl,
   name,
+  onClick,
 }: {
   imageUrl: string | null;
   name: string;
+  onClick?: () => void;
 }) {
   if (imageUrl) {
     return (
-      <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+      <img
+        src={imageUrl}
+        alt={name}
+        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={onClick}
+      />
     );
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
+      onClick={onClick}
+    >
       <ImageIcon size={24} />
     </div>
   );
@@ -78,6 +88,7 @@ export default function SalesManagementScreen({
   onBack,
   themeColor,
 }: SalesManagementScreenProps) {
+  const router = useRouter();
   const [products, setProducts] = useState<SalesManagementItemViewModel[]>([]);
   const [filter, setFilter] = useState<SalesManagementFilter>("all");
   const [itemToDelete, setItemToDelete] =
@@ -154,6 +165,14 @@ export default function SalesManagementScreen({
       );
     } finally {
       setEditingProductId(null);
+    }
+  };
+
+  const handleProductImageClick = (product: SalesManagementItemViewModel) => {
+    if (product.type === "auction" && product.auctionId) {
+      router.push(`/auctions/${product.auctionId}`);
+    } else {
+      router.push(`/products/${product.productId}`);
     }
   };
 
@@ -274,7 +293,11 @@ export default function SalesManagementScreen({
             >
               <div className="flex items-start space-x-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
-                  <ProductImage imageUrl={item.imageUrl} name={item.name} />
+                  <ProductImage
+                    imageUrl={item.imageUrl}
+                    name={item.name}
+                    onClick={() => handleProductImageClick(item)}
+                  />
                 </div>
                 <div className="flex-1 min-w-0 pt-1 space-y-2">
                   <div className="flex items-center gap-2">
