@@ -45,9 +45,9 @@ export default function BidCompletePage() {
       }
       productId={auctionDetail?.productId ?? safeAuctionId}
       productImageUrl={getAuctionMainImageUrl(auctionDetail)}
-      onBack={() => router.push(`/auctions/${safeAuctionId}`)}
+      onBack={() => router.replace(`/auctions/${safeAuctionId}`)}
       onBrowseOther={() => router.push("/auctions")}
-      onProductDetail={() => router.push(`/auctions/${safeAuctionId}`)}
+      onProductDetail={() => router.replace(`/auctions/${safeAuctionId}`)}
       themeColor="#F64257"
     />
   );

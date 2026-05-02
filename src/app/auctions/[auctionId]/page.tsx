@@ -22,7 +22,7 @@ export default function AuctionDetailPage() {
       onReportClick={() => router.push(`/products/${auctionId}/report`)}
       onPurchaseClick={() => router.push(`/products/${auctionId}/payment`)}
       onBidComplete={(data: BidCompleteData) => {
-        router.push(
+        router.replace(
           `/auctions/${auctionId}/bid-complete?bidPrice=${data.bidAmount}`,
         );
       }}

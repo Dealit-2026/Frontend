@@ -47,6 +47,32 @@ import type { AuctionDetailResponse } from '@/services/auction/detail/types';
 
 type AuctionStatus = 'AUCTION_SCHEDULED' | 'AUCTION_LIVE' | 'AUCTION_ENDED' | 'ENDED';
 
+function formatAuctionRemainingTimeWithSeconds(remainingMs: number) {
+  if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
+    return '경매 종료';
+  }
+
+  const totalSeconds = Math.floor(remainingMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) {
+    return `${days}일 ${hours}시간 ${minutes}분 ${seconds}초 남음`;
+  }
+
+  if (hours > 0) {
+    return `${hours}시간 ${minutes}분 ${seconds}초 남음`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}분 ${seconds}초 남음`;
+  }
+
+  return `${seconds}초 남음`;
+}
+
 export default function ProductDetailScreen({ 
   productId, 
   onBack,
@@ -86,10 +112,20 @@ export default function ProductDetailScreen({
   const [currentPrice, setCurrentPrice] = useState(850000);
   const [bidCount, setBidCount] = useState(23);
   const [inputBidAmount, setInputBidAmount] = useState(860000);
+  const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
+  const [auctionClockOffsetMs, setAuctionClockOffsetMs] = useState(0);
   const isRegular = mode === 'regular';
   const effectiveAuctionStatus = auctionDetail?.status ?? auctionStatus;
   const isAuctionScheduled = !isRegular && effectiveAuctionStatus === 'AUCTION_SCHEDULED';
-  const isAuctionEnded = !isRegular && (effectiveAuctionStatus === 'AUCTION_ENDED' || effectiveAuctionStatus === 'ENDED');
+  const auctionRemainingMs = auctionDetail
+    ? new Date(auctionDetail.endsAt).getTime() - (currentTimeMs + auctionClockOffsetMs)
+    : Number.POSITIVE_INFINITY;
+  const hasAuctionTimeEnded = !isRegular && auctionRemainingMs <= 0;
+  const isAuctionEnded = !isRegular && (
+    effectiveAuctionStatus === 'AUCTION_ENDED' ||
+    effectiveAuctionStatus === 'ENDED' ||
+    hasAuctionTimeEnded
+  );
   const bidUnit = auctionDetail?.minimumBidAmount ?? 10000;
   const minBidAmount = auctionDetail?.minimumNextBidPrice ?? currentPrice + bidUnit;
   const displayName = auctionDetail?.name ?? '아이폰 14 Pro 256GB 딥퍼플';
@@ -102,7 +138,7 @@ export default function ProductDetailScreen({
   const displaySellerImageUrl = auctionDetail?.seller.profileImageUrl ?? 'https://picsum.photos/seed/seller/100/100';
   const displayLocation = auctionDetail?.location ?? '서울 강남구';
   const displayEndLabel = auctionDetail
-    ? getAuctionRemainingTimeLabel(auctionDetail.endsAt, auctionDetail.serverTime)
+    ? formatAuctionRemainingTimeWithSeconds(auctionRemainingMs)
     : '2시간 35분 남음';
 
   const scheduledStartLabel = auctionStartAt
@@ -122,6 +158,20 @@ export default function ProductDetailScreen({
   }, [showBidSheet, minBidAmount]);
 
   useEffect(() => {
+    if (isRegular) {
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setCurrentTimeMs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [isRegular]);
+
+  useEffect(() => {
     if (isRegular || productId == null) {
       return;
     }
@@ -138,6 +188,9 @@ export default function ProductDetailScreen({
         }
 
         setAuctionDetail(data);
+        setAuctionClockOffsetMs(
+          new Date(data.serverTime).getTime() - Date.now(),
+        );
         setCurrentPrice(getAuctionDisplayCurrentPrice(data));
         setBidCount(data.bidCount);
         setInputBidAmount(data.minimumNextBidPrice);
@@ -176,6 +229,9 @@ export default function ProductDetailScreen({
       const nextAuctionDetail = await fetchAuctionDetail(productId);
 
       setAuctionDetail(nextAuctionDetail);
+      setAuctionClockOffsetMs(
+        new Date(nextAuctionDetail.serverTime).getTime() - Date.now(),
+      );
       setCurrentPrice(getAuctionDisplayCurrentPrice(nextAuctionDetail));
       setBidCount(nextAuctionDetail.bidCount);
       setInputBidAmount(nextAuctionDetail.minimumNextBidPrice);
