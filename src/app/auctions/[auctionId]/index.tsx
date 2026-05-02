@@ -1,6 +1,6 @@
 "use client";
-import React from 'react';
-import ProductDetailScreen from '../../products/[productId]';
+
+import ProductDetailScreen from "../../products/[productId]";
 
 export default function AuctionDetailScreen(props: any) {
   return (

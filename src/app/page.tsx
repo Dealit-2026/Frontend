@@ -133,7 +133,7 @@ export default function App() {
     sellerName: string;
     bidAmount: number;
     remainingTime: string;
-    productImageUrl?: string;
+    productImageUrl?: string | null;
   } | null>(null);
 
   const showToast = (message: string) => {
@@ -489,7 +489,7 @@ export default function App() {
               bidAmount={bidData.bidAmount}
               remainingTime={bidData.remainingTime}
               productId={bidData.productId}
-              productImageUrl={bidData.productImageUrl}
+              productImageUrl={bidData.productImageUrl ?? undefined}
               onBack={() => {
                 setSelectedProductId(bidData.productId);
                 navigateTo("product_detail");

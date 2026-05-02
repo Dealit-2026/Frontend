@@ -14,8 +14,8 @@ export default function NotificationsPage() {
       onReviewClick={() => router.push("/mypage/review")}
       onReceiptClick={() => router.push("/products/1/receipt")}
       onProductClick={(id) => router.push(`/products/${id}`)}
-      onWinningBidClick={() => router.push("/auctions/1/winning-complete")}
-      onOutbidClick={() => router.push("/auctions/1/outbid")}
+      onWinningBidClick={() => router.push("/notifications")}
+      onOutbidClick={() => router.push("/notifications")}
       themeColor="#98E446"
     />
   );

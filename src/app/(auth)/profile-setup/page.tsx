@@ -11,7 +11,7 @@ export default function ProfileSetupPage() {
     <ProfileSetupScreen
       showToast={() => {}}
       onBack={() => router.back()}
-      onComplete={() => router.push("/region-setup")}
+      onComplete={() => router.push("/category-selection")}
     />
   );
 }

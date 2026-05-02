@@ -2,8 +2,8 @@ import * as salesManagementApi from "@/services/sales-management/api";
 import type {
   AuctionSalesManagementItemResponse,
   RegularSalesManagementItemResponse,
-  SalesManagementListSummary,
   SalesManagementItemViewModel,
+  SalesManagementListSummary,
   UpdateAuctionSalesManagementProductRequest,
   UpdateRegularSalesManagementProductRequest,
 } from "@/services/sales-management/types";
@@ -32,12 +32,20 @@ function getRegularStatusLabel(status: string) {
 }
 
 function getAuctionStatusLabel(status: string) {
-  if (status === "AUCTION_LIVE" || status === "ON_SALE") {
+  if (status === "ONGOING" || status === "ON_SALE" || status === "AUCTION_LIVE") {
     return "경매 진행 중";
   }
 
-  if (status === "AUCTION_SCHEDULED") {
+  if (status === "AUCTION_SCHEDULED" || status === "DRAFT") {
     return "경매 예정";
+  }
+
+  if (status === "SUCCESSFUL_BID") {
+    return "낙찰 완료";
+  }
+
+  if (status === "NO_BID") {
+    return "유찰";
   }
 
   return "경매 종료";
@@ -72,16 +80,22 @@ function toAuctionViewModel(
   item: AuctionSalesManagementItemResponse,
 ): SalesManagementItemViewModel {
   const displayPrice = Number(item.currentPrice ?? item.startPrice ?? 0);
+  const auctionStatus =
+    item.auctionStatus ??
+    item.status ??
+    (item.endAt && new Date(item.endAt).getTime() > Date.now()
+      ? "ONGOING"
+      : "ENDED");
 
   return {
-    id: `auction-${item.productId}`,
+    id: `auction-${item.auctionId}`,
     productId: item.productId,
     auctionId: item.auctionId,
     type: "auction",
     name: item.name,
     description: item.description,
-    status: item.auctionStatus,
-    statusLabel: getAuctionStatusLabel(item.auctionStatus),
+    status: auctionStatus,
+    statusLabel: getAuctionStatusLabel(auctionStatus),
     price: displayPrice,
     priceLabel: formatPrice(displayPrice),
     imageUrl: item.thumbnailUrl,

@@ -7,10 +7,15 @@ export type RegularSalesManagementStatus =
   | "ENDED";
 
 export type AuctionSalesManagementStatus =
-  | "AUCTION_SCHEDULED"
-  | "AUCTION_LIVE"
+  | "DRAFT"
+  | "ONGOING"
   | "ON_SALE"
-  | "ENDED";
+  | "AUCTION_LIVE"
+  | "AUCTION_SCHEDULED"
+  | "AUCTION_ENDED"
+  | "ENDED"
+  | "NO_BID"
+  | "SUCCESSFUL_BID";
 
 export interface RegularSalesManagementItemResponse {
   productId: number;
@@ -42,8 +47,10 @@ export interface AuctionSalesManagementItemResponse {
   description: string;
   categoryName: string | null;
   thumbnailUrl: string | null;
-  auctionStatus: AuctionSalesManagementStatus;
+  auctionStatus?: AuctionSalesManagementStatus | null;
+  status?: AuctionSalesManagementStatus | null;
   startPrice: number | null;
+  minimumBidAmount: number | null;
   currentPrice: number | null;
   minimumNextBidPrice: number | null;
   bidCount: number;
