@@ -36,7 +36,7 @@ export async function getRegularSalesManagementProducts(): Promise<RegularSalesM
     cache: "no-store",
   });
 
- if (response.status === 404) {
+  if (response.status === 404) {
     return {
       content: [],
       page: 0,
@@ -44,6 +44,13 @@ export async function getRegularSalesManagementProducts(): Promise<RegularSalesM
       totalElements: 0,
       hasNext: false,
     };
+  }
+
+  if (!response.ok) {
+    await throwProtectedApiError(
+      response,
+      "일반 상품 판매 중 목록을 불러오지 못했습니다.",
+    );
   }
 
   return response.json();
