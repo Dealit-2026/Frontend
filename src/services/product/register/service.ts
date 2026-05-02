@@ -78,8 +78,6 @@ export function buildCreateRegularProductRequest(
     saleType: "REGULAR",
     categoryId: draft.categoryId ?? 0,
     price: Number(draft.price || 0),
-    startPrice: null,
-    auctionEndAt: null,
     allowOffer: draft.allowOffer,
     images: normalizeRegularProductImagePayload(draft.images),
     location: draft.location,

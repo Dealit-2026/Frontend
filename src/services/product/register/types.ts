@@ -46,8 +46,6 @@ export interface RegularProductCreateRequest {
   saleType: RegularProductSaleType;
   categoryId: number;
   price: number;
-  startPrice: null;
-  auctionEndAt: null;
   allowOffer: boolean;
   images: RegularProductImagePayload[];
   location: string;

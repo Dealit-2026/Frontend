@@ -1,158 +1,215 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  Check, 
-  ChevronRight, 
-  User, 
-  Camera, 
-  Search, 
-  Home, 
-  PlusCircle, 
-  MessageCircle, 
-  Heart, 
-  Bell, 
-  Filter, 
-  Settings,
-  MoreVertical, 
-  Send, 
-  Star,
-  Clock,
-  ArrowUpRight,
-  X,
-  Trash2,
-  Eye,
-  Image as ImageIcon,
-  ArrowLeft,
-  TrendingUp,
-  Sparkles,
-  Menu,
-  ShoppingBag,
-  Store,
-  Receipt
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 
-import { Screen, Tab } from '../../../../types/index';
-import { ExploreIcon } from '../../../../components/common/ExploreIcon';
-import AuctionRegisterScreen from '../../../products/register/AuctionRegisterScreen';
-import RegularRegisterScreen from '../../../products/register/RegularRegisterScreen';
+import { useEffect, useState } from "react";
+import { ChevronLeft, ImageIcon, ShoppingBag } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+
+import { getErrorMessage } from "@/services/apiError";
 import {
-  fetchAuctionEditInitialData,
-  fetchMySellingAuctions,
-  removeMySellingAuction,
-} from '../../../../services/mypage/service';
-import type { MySellingAuctionViewModel } from '../../../../services/mypage/types';
+  deleteSalesManagementProduct,
+  fetchAuctionSalesManagementEditInitialData,
+  fetchRegularSalesManagementEditInitialData,
+  fetchSalesManagementProducts,
+  updateAuctionSalesManagementProduct,
+  updateRegularSalesManagementProduct,
+} from "@/services/sales-management/service";
+import type { SalesManagementItemViewModel } from "@/services/sales-management/types";
+import RegisterScreen from "../../../products/register/RegisterScreen";
+import {
+  deleteAuctionImage,
+  getAuctionCategories,
+  recommendAuctionPrice,
+  saveAuctionDraft,
+  uploadAuctionImage,
+} from "@/services/auction/register/service";
+import {
+  deleteRegularProductImage,
+  getRegularProductCategories,
+  recommendRegularProductPrice,
+  saveRegularProductDraft,
+  uploadRegularProductImage,
+} from "@/services/product/register/service";
 
-type ManagedProduct =
-  | MySellingAuctionViewModel
-  | {
-      id: number;
-      name: string;
-      type: 'regular';
-      status: string;
-      price: string;
-      img: string | null;
-      description: string;
-      category: string;
-      categoryId: number | null;
-      canEdit: boolean;
-      canDelete: boolean;
-    };
+type SalesManagementFilter = "all" | "regular" | "auction";
 
-export default function SalesManagementScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
-  const [products, setProducts] = useState<ManagedProduct[]>([]);
-  const [filter, setFilter] = useState<'all' | 'regular' | 'auction'>('all');
-  const [itemToDelete, setItemToDelete] = useState<number | null>(null);
-  const [editingItem, setEditingItem] = useState<any>(null);
+interface SalesManagementScreenProps {
+  onBack: () => void;
+  themeColor: string;
+  key?: string;
+}
+
+function getFilterLabel(filter: SalesManagementFilter) {
+  if (filter === "regular") {
+    return "일반";
+  }
+
+  if (filter === "auction") {
+    return "경매";
+  }
+
+  return "전체";
+}
+
+function getTypeLabel(type: SalesManagementItemViewModel["type"]) {
+  return type === "auction" ? "경매" : "일반";
+}
+
+function ProductImage({
+  imageUrl,
+  name,
+}: {
+  imageUrl: string | null;
+  name: string;
+}) {
+  if (imageUrl) {
+    return (
+      <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
+      <ImageIcon size={24} />
+    </div>
+  );
+}
+
+export default function SalesManagementScreen({
+  onBack,
+  themeColor,
+}: SalesManagementScreenProps) {
+  const [products, setProducts] = useState<SalesManagementItemViewModel[]>([]);
+  const [filter, setFilter] = useState<SalesManagementFilter>("all");
+  const [itemToDelete, setItemToDelete] =
+    useState<SalesManagementItemViewModel | null>(null);
+  const [editingItem, setEditingItem] = useState<{
+    product: SalesManagementItemViewModel;
+    initialData: any;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isError, setIsError] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [editingAuctionId, setEditingAuctionId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const loadSellingAuctions = async () => {
+  const loadProducts = async () => {
     setIsLoading(true);
-    setIsError(false);
+    setErrorMessage("");
 
     try {
-      const response = await fetchMySellingAuctions();
-      setProducts(response.content);
+      setProducts(await fetchSalesManagementProducts());
     } catch (error) {
-      console.error('Failed to load selling auctions', error);
-      setIsError(true);
+      setProducts([]);
+      setErrorMessage(
+        getErrorMessage(error, "판매 중인 상품을 불러오지 못했습니다."),
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadSellingAuctions();
+    loadProducts();
   }, []);
 
-  const handleEditClick = async (item: ManagedProduct) => {
-    if (item.type !== 'auction' || !item.canEdit) {
-      return;
-    }
-
-    setEditingAuctionId(item.auctionId);
-
-    try {
-      const editInitialData = await fetchAuctionEditInitialData(item.auctionId);
-
-      if (!editInitialData.canEdit) {
-        window.alert('입찰자가 있어 수정할 수 없습니다.');
-        return;
-      }
-
-      setEditingItem(editInitialData);
-    } catch (error) {
-      console.error('Failed to load auction edit detail', error);
-      window.alert('경매 수정 정보를 불러오지 못했습니다.');
-    } finally {
-      setEditingAuctionId(null);
-    }
-  };
-
   const handleDeleteConfirm = async () => {
-    if (itemToDelete === null) {
-      return;
-    }
-
-    const targetItem = products.find(p => p.id === itemToDelete);
-    if (!targetItem || targetItem.type !== 'auction') {
-      setItemToDelete(null);
+    if (!itemToDelete || isDeleting) {
       return;
     }
 
     setIsDeleting(true);
 
     try {
-      await removeMySellingAuction(targetItem.auctionId);
-      setProducts(products.filter(p => p.id !== itemToDelete));
+      await deleteSalesManagementProduct(itemToDelete);
+      setProducts((currentProducts) =>
+        currentProducts.filter((product) => product.id !== itemToDelete.id),
+      );
       setItemToDelete(null);
     } catch (error) {
-      console.error('Failed to delete selling auction', error);
-      window.alert('경매 상품 삭제에 실패했습니다.');
+      setErrorMessage(getErrorMessage(error, "상품 삭제에 실패했습니다."));
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const filteredProducts = products.filter(p => filter === 'all' || p.type === filter);
+  const handleEditClick = async (product: SalesManagementItemViewModel) => {
+    if (!product.editable || editingProductId) {
+      return;
+    }
+
+    setEditingProductId(product.id);
+    setErrorMessage("");
+
+    try {
+      const initialData =
+        product.type === "auction"
+          ? await fetchAuctionSalesManagementEditInitialData(
+              product.auctionId ?? product.productId,
+            )
+          : await fetchRegularSalesManagementEditInitialData(product.productId);
+
+      setEditingItem({ product, initialData });
+    } catch (error) {
+      setErrorMessage(
+        getErrorMessage(error, "상품 수정 정보를 불러오지 못했습니다."),
+      );
+    } finally {
+      setEditingProductId(null);
+    }
+  };
+
+  const filteredProducts = products.filter(
+    (product) => filter === "all" || product.type === filter,
+  );
 
   if (editingItem) {
-    const RegisterComponent =
-      editingItem.type === 'auction' ? AuctionRegisterScreen : RegularRegisterScreen;
-
     return (
-      <RegisterComponent 
-        onBack={() => setEditingItem(null)} 
+      <RegisterScreen
+        onBack={() => setEditingItem(null)}
         onComplete={() => {
           setEditingItem(null);
-          void loadSellingAuctions();
-        }} 
-        themeColor={themeColor} 
-        initialData={editingItem} 
+          void loadProducts();
+        }}
+        themeColor={themeColor}
+        mode={editingItem.product.type}
+        initialData={editingItem.initialData}
+        getCategories={getAuctionCategories}
+        servicesByType={{
+          regular: {
+            getCategories: getRegularProductCategories,
+            uploadImage: uploadRegularProductImage,
+            deleteImage: deleteRegularProductImage,
+            saveDraft: saveRegularProductDraft,
+            recommendPrice: ({ name, description }) =>
+              recommendRegularProductPrice({ name, description }),
+            register: (draft) =>
+              updateRegularSalesManagementProduct(
+                editingItem.product.productId,
+                draft,
+              ),
+            update: (draft) =>
+              updateRegularSalesManagementProduct(
+                editingItem.product.productId,
+                draft,
+              ),
+          },
+          auction: {
+            getCategories: getAuctionCategories,
+            uploadImage: uploadAuctionImage,
+            deleteImage: deleteAuctionImage,
+            saveDraft: saveAuctionDraft,
+            recommendPrice: recommendAuctionPrice,
+            register: (draft) =>
+              updateAuctionSalesManagementProduct(
+                editingItem.product.auctionId ?? editingItem.product.productId,
+                draft,
+              ),
+            update: (draft) =>
+              updateAuctionSalesManagementProduct(
+                editingItem.product.auctionId ?? editingItem.product.productId,
+                draft,
+              ),
+          },
+        }}
       />
     );
   }
@@ -165,101 +222,101 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
       className="flex-1 flex flex-col relative"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
-        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+          aria-label="뒤로가기"
+        >
           <ChevronLeft size={24} />
         </button>
-        <h1 className="flex-1 text-center font-bold text-lg mr-10">판매 관리</h1>
+        <h1 className="flex-1 text-center font-bold text-lg mr-10">
+          판매 관리
+        </h1>
       </div>
 
-      {/* Filter Toggle */}
       <div className="px-6 pt-6">
         <div className="flex bg-gray-100 p-1 rounded-xl">
-          {(['all', 'regular', 'auction'] as const).map((f) => (
+          {(["all", "regular", "auction"] as const).map((nextFilter) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={nextFilter}
+              onClick={() => setFilter(nextFilter)}
               className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
-                filter === f 
-                  ? 'bg-white text-black shadow-sm' 
-                  : 'text-gray-400 hover:text-gray-600'
+                filter === nextFilter
+                  ? "bg-white text-black shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              {f === 'all' ? '전체' : f === 'regular' ? '일반' : '경매'}
+              {getFilterLabel(nextFilter)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {errorMessage && (
+          <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
+            {errorMessage}
+          </div>
+        )}
+
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
             <ShoppingBag size={48} className="opacity-20" />
-            <p className="text-sm font-medium">판매 중인 경매 상품을 불러오는 중입니다</p>
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-3">
-            <ShoppingBag size={48} className="opacity-20" />
-            <p className="text-sm font-medium">판매 중인 경매 상품을 불러오지 못했습니다</p>
-            <button
-              onClick={() => void loadSellingAuctions()}
-              className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-xs font-bold text-gray-600 transition-colors"
-            >
-              다시 시도
-            </button>
+            <p className="text-sm font-medium">
+              판매 중인 상품을 불러오는 중입니다
+            </p>
           </div>
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map((item) => (
-            <div key={item.id} className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
-                  {item.img ? (
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <ImageIcon size={28} />
-                    </div>
-                  )}
+            <div
+              key={item.id}
+              className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
+                  <ProductImage imageUrl={item.imageUrl} name={item.name} />
                 </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
-                      {item.type === 'regular' ? '일반' : '경매'}
+                <div className="flex-1 min-w-0 pt-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold px-2 py-1 bg-gray-100 rounded text-gray-500">
+                      {getTypeLabel(item.type)}
                     </span>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded">
-                      {item.status}
+                    <span className="text-[11px] font-bold px-2 py-1 bg-blue-50 text-blue-600 rounded">
+                      {item.statusLabel}
                     </span>
-                    {item.type === 'auction' && item.bidders !== undefined && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded">
+                    {item.bidders !== null && (
+                      <span className="text-[11px] font-bold px-2 py-1 bg-purple-50 text-purple-600 rounded">
                         입찰 {item.bidders}명
                       </span>
                     )}
                   </div>
-                  <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                  <p className="font-black text-sm">{item.price}</p>
+                  <h4 className="font-bold text-base truncate">{item.name}</h4>
+                  <p className="font-black text-lg">{item.priceLabel}</p>
+                  {item.location && (
+                    <p className="text-[11px] text-gray-400 truncate">
+                      {item.category} · {item.location}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="flex space-x-2">
-                {item.canEdit && item.canDelete ? (
-                  <>
-                    <button 
-                      onClick={() => void handleEditClick(item)}
-                      disabled={item.type === 'auction' && editingAuctionId === item.auctionId}
-                      className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 disabled:opacity-60 rounded-xl text-xs font-bold transition-colors"
-                    >
-                      {item.type === 'auction' && editingAuctionId === item.auctionId ? '불러오는 중...' : '수정'}
-                    </button>
-                    <button 
-                      onClick={() => setItemToDelete(item.id)}
-                      className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 rounded-xl text-xs font-bold text-red-500 transition-colors"
-                    >
-                      삭제
-                    </button>
-                  </>
-                ) : (
-                  <div className="flex-1 py-3 bg-gray-50 rounded-xl text-xs font-bold text-gray-400 text-center">
-                    입찰자가 있어 수정 및 삭제가 불가능합니다
-                  </div>
-                )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleEditClick(item)}
+                  disabled={!item.editable || editingProductId === item.id}
+                  className="h-14 bg-gray-50 rounded-xl text-sm font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
+                >
+                  {editingProductId === item.id ? "불러오는 중" : "수정"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemToDelete(item)}
+                  disabled={!item.deletable}
+                  className="h-14 bg-gray-50 rounded-xl text-sm font-bold text-red-500 transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
+                >
+                  삭제
+                </button>
               </div>
             </div>
           ))
@@ -271,11 +328,10 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
         )}
       </div>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {itemToDelete !== null && (
           <div className="absolute inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -288,21 +344,26 @@ export default function SalesManagementScreen({ onBack, themeColor }: { onBack: 
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-2xl p-6 w-full max-w-sm relative z-10 shadow-xl"
             >
-              <h3 className="text-lg font-bold text-center mb-6">삭제하겠습니까?</h3>
+              <h3 className="text-lg font-bold text-center mb-2">
+                삭제하시겠습니까?
+              </h3>
+              <p className="text-sm text-gray-400 text-center mb-6">
+                {itemToDelete.name}
+              </p>
               <div className="flex space-x-3">
-                <button 
+                <button
                   onClick={handleDeleteConfirm}
                   disabled={isDeleting}
-                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 disabled:opacity-60 transition-colors"
+                  className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors disabled:opacity-60"
                 >
-                  {isDeleting ? '삭제 중...' : '예'}
+                  {isDeleting ? "삭제 중" : "삭제"}
                 </button>
-                <button 
+                <button
                   onClick={() => setItemToDelete(null)}
                   disabled={isDeleting}
-                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-60"
                 >
-                  아니오
+                  취소
                 </button>
               </div>
             </motion.div>
