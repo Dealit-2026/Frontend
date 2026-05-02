@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import ProductDetailScreen from "./index";
@@ -24,8 +24,7 @@ export default function ProductDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        const data = await productDetailService.fetchProductDetail(productId);
-        setProductData(data);
+        setProductData(await productDetailService.fetchProductDetail(productId));
       } catch (err) {
         console.error("Failed to fetch product detail:", err);
         setError(
@@ -38,11 +37,13 @@ export default function ProductDetailPage() {
       }
     };
 
-    loadProductDetail();
+    void loadProductDetail();
   }, [productId]);
 
   const handleChatClick = async () => {
-    if (isOpeningChat) return;
+    if (isOpeningChat) {
+      return;
+    }
 
     try {
       setIsOpeningChat(true);
@@ -54,8 +55,8 @@ export default function ProductDetailPage() {
       }
 
       router.push(`/chats/new?productId=${productId}`);
-    } catch (error) {
-      console.error("Failed to open chat:", error);
+    } catch (err) {
+      console.error("Failed to open chat:", err);
       router.push(`/chats/new?productId=${productId}`);
     } finally {
       setIsOpeningChat(false);
@@ -66,7 +67,7 @@ export default function ProductDetailPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4" />
           <p className="text-gray-600">상품 정보를 불러오는 중...</p>
         </div>
       </div>
@@ -107,7 +108,14 @@ export default function ProductDetailPage() {
       onPurchaseClick={() =>
         router.push(`/products/${productId}/regular-purchase`)
       }
-      themeColor="#98E446"
+      onBidStatusClick={() =>
+        router.push(`/auctions/${productId}/bidding-status`)
+      }
+      onBidComplete={(data) =>
+        router.push(`/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`)
+      }
+      themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
+      mode={productData.saleType === "AUCTION" ? "auction" : "regular"}
       showToast={() => {}}
     />
   );

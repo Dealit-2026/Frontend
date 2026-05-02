@@ -15,6 +15,8 @@ import type {
   UploadAuctionImageResponse,
 } from "@/services/auction/register/types";
 
+export const TEST_AUCTION_DURATION_DAYS = 20 / 86400;
+
 // 화면 초기 렌더링용 기본 폼 상태를 만든다.
 // page.tsx는 이 값을 그대로 useState 초기값으로 사용하면 된다.
 export function createDefaultAuctionForm(): AuctionFormValues {
@@ -88,6 +90,10 @@ export function updateAuctionDuration(
 
 // 경매 기간 표시용 문자열 생성.
 export function formatAuctionSchedule(auction: AuctionFormValues) {
+  if (auction.durationDays === TEST_AUCTION_DURATION_DAYS) {
+    return "20초 동안 진행";
+  }
+
   return `${auction.durationDays}일 동안 진행`;
 }
 
@@ -166,6 +172,10 @@ export function buildCreateAuctionRequest(
       draft.saleType === "auction"
         ? Number(draft.startPrice || draft.auction.startPrice || 0)
         : null,
+    bidUnit:
+      draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
+    minimumBidAmount:
+      draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
     auctionDurationDays:
       draft.saleType === "auction" ? draft.auction.durationDays : null,
     allowOffer: draft.allowOffer,
@@ -183,6 +193,8 @@ export function buildUpdateAuctionRequest(
     description: draft.description,
     categoryId: draft.categoryId ?? 0,
     startPrice: Number(draft.startPrice || draft.auction.startPrice || 0),
+    bidUnit: Number(draft.auction.bidUnit || 0),
+    minimumBidAmount: Number(draft.auction.bidUnit || 0),
     auctionDurationDays: draft.auction.durationDays,
     location: draft.location,
     images: normalizeImagePayload(draft.images),

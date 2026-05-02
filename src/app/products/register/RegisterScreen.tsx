@@ -21,7 +21,8 @@ import type {
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
-import { fetchMyProfileForm } from "@/services/mypage/service";
+import { getLocationDisplayName } from "@/services/location/service";
+import { fetchMyLocationForm } from "@/services/mypage/service";
 
 export interface RegisterScreenProps {
   onBack?: () => void;
@@ -260,16 +261,16 @@ export default function RegisterScreen({
 
     let isMounted = true;
 
-    fetchMyProfileForm()
-      .then((profileEditData) => {
+    fetchMyLocationForm()
+      .then((locationForm) => {
         if (!isMounted || hasLoadedDraftRef.current || location) {
           return;
         }
 
-        setLocation(profileEditData.form.location);
+        setLocation(getLocationDisplayName(locationForm));
       })
       .catch((error) => {
-        console.error("Failed to fetch profile form", error);
+        console.error("Failed to fetch my location", error);
       });
 
     return () => {

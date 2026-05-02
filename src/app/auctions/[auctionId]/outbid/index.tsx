@@ -1,0 +1,60 @@
+"use client";
+
+import { ArrowUpRight, ChevronLeft } from "lucide-react";
+import { motion } from "motion/react";
+
+export default function OutbidNotificationScreen({
+  onBack,
+}: {
+  onBack: () => void;
+  onProductClick: (id: number) => void;
+  themeColor: string;
+  key?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      className="flex-1 flex flex-col bg-white"
+    >
+      <div className="h-16 flex items-center px-4 border-b border-gray-100">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="flex-1 text-center font-bold text-lg mr-10">
+          입찰 추월 알림
+        </h1>
+      </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar p-8 flex flex-col items-center justify-center space-y-8">
+        <div className="w-24 h-24 bg-orange-50 text-orange-500 rounded-full flex items-center justify-center">
+          <ArrowUpRight size={48} />
+        </div>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-black text-orange-500">
+            입찰이 추월되었습니다!
+          </h2>
+          <p className="text-gray-500">입찰 추월된 경매 상품이 없습니다.</p>
+        </div>
+
+        <div className="w-full rounded-3xl border border-dashed border-gray-200 p-8 text-center text-sm font-medium text-gray-400">
+          입찰 추월 데이터가 없습니다
+        </div>
+
+        <div className="w-full space-y-3">
+          <button
+            onClick={onBack}
+            className="w-full h-16 bg-gray-100 text-gray-500 font-bold rounded-2xl"
+          >
+            포기하기
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}

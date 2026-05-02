@@ -164,6 +164,7 @@ function formatWon(value: number) {
 
 export function toMySellingAuctionViewModel(
   auction: MySellingAuctionItemResponse,
+  sellerLocation = "",
 ): MySellingAuctionViewModel {
   const displayPrice = auction.currentPrice || auction.startPrice;
 
@@ -178,6 +179,7 @@ export function toMySellingAuctionViewModel(
     description: auction.description,
     category: auction.categoryName,
     categoryId: auction.categoryId ?? null,
+    location: sellerLocation,
     bidders: auction.bidderCount,
     bidCount: auction.bidCount,
     canEdit: auction.canEdit,
@@ -232,11 +234,17 @@ export async function fetchMyPageProfile() {
 }
 
 export async function fetchMySellingAuctions(page = 0, size = 20) {
-  const response = await mypageApi.getMySellingAuctions(page, size);
+  const [response, profile] = await Promise.all([
+    mypageApi.getMySellingAuctions(page, size),
+    mypageApi.getMyProfile(),
+  ]);
+  const sellerLocation = profile.location ?? "";
 
   return {
     ...response,
-    content: response.content.map(toMySellingAuctionViewModel),
+    content: response.content.map((auction) =>
+      toMySellingAuctionViewModel(auction, sellerLocation),
+    ),
   };
 }
 

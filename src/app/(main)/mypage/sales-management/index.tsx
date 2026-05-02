@@ -58,28 +58,18 @@ function getTypeLabel(type: SalesManagementItemViewModel["type"]) {
 function ProductImage({
   imageUrl,
   name,
-  onClick,
 }: {
   imageUrl: string | null;
   name: string;
-  onClick?: () => void;
 }) {
   if (imageUrl) {
     return (
-      <img
-        src={imageUrl}
-        alt={name}
-        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-        onClick={onClick}
-      />
+      <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
     );
   }
 
   return (
-    <div
-      className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
-      onClick={onClick}
-    >
+    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300">
       <ImageIcon size={24} />
     </div>
   );
@@ -120,7 +110,7 @@ export default function SalesManagementScreen({
   };
 
   useEffect(() => {
-    loadProducts();
+    void loadProducts();
   }, []);
 
   const handleDeleteConfirm = async () => {
@@ -169,18 +159,12 @@ export default function SalesManagementScreen({
     }
   };
 
-  const handleProductImageClick = (product: SalesManagementItemViewModel) => {
-    console.log("이미지 클릭됨:", product);
-    console.log("상품 타입:", product.type);
-    console.log("상품 ID:", product.productId);
-
-    if (product.type === "auction") {
-      console.log(`상품 페이지로 이동: /products/${product.productId}`);
-      router.push(`/products/${product.productId}`);
-    } else {
-      console.log(`일반 상품 페이지로 이동: /products/${product.productId}`);
-      router.push(`/products/${product.productId}`);
+  const handleItemClick = (product: SalesManagementItemViewModel) => {
+    if (product.type !== "auction") {
+      return;
     }
+
+    router.push(`/auctions/${product.auctionId ?? product.productId}`);
   };
 
   const filteredProducts = products.filter(
@@ -296,15 +280,27 @@ export default function SalesManagementScreen({
           filteredProducts.map((item) => (
             <div
               key={item.id}
-              className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4"
+              onClick={() => handleItemClick(item)}
+              role={item.type === "auction" ? "button" : undefined}
+              tabIndex={item.type === "auction" ? 0 : undefined}
+              onKeyDown={(event) => {
+                if (
+                  item.type === "auction" &&
+                  (event.key === "Enter" || event.key === " ")
+                ) {
+                  event.preventDefault();
+                  handleItemClick(item);
+                }
+              }}
+              className={`p-4 bg-white border border-gray-100 rounded-2xl space-y-4 ${
+                item.type === "auction"
+                  ? "cursor-pointer hover:border-rose-100 hover:shadow-sm transition-all"
+                  : ""
+              }`}
             >
               <div className="flex items-start space-x-4">
                 <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
-                  <ProductImage
-                    imageUrl={item.imageUrl}
-                    name={item.name}
-                    onClick={() => handleProductImageClick(item)}
-                  />
+                  <ProductImage imageUrl={item.imageUrl} name={item.name} />
                 </div>
                 <div className="flex-1 min-w-0 pt-1 space-y-2">
                   <div className="flex items-center gap-2">
@@ -333,7 +329,10 @@ export default function SalesManagementScreen({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => handleEditClick(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleEditClick(item);
+                  }}
                   disabled={!item.editable || editingProductId === item.id}
                   className="h-14 bg-gray-50 rounded-xl text-sm font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >
@@ -341,7 +340,10 @@ export default function SalesManagementScreen({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setItemToDelete(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setItemToDelete(item);
+                  }}
                   disabled={!item.deletable}
                   className="h-14 bg-gray-50 rounded-xl text-sm font-bold text-red-500 transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >

@@ -60,6 +60,7 @@ import ChatListScreen from "./chats";
 import MyPageScreen from "./(main)/mypage";
 import ProductDetailScreen from "./products/[productId]";
 import ReportScreen from "./products/[productId]/report";
+import BiddingStatusScreen from "./auctions/[auctionId]/bidding-status";
 import NotificationScreen from "./(main)/notifications";
 import ReviewScreen from "./(main)/mypage/review";
 import ReceiptScreen from "./products/[productId]/receipt";
@@ -71,6 +72,9 @@ import SalesHistoryScreen from "./(main)/mypage/sales-history";
 import AccountManagementScreen from "./(main)/mypage/account-management";
 import NotificationSettingsScreen from "./(main)/notifications/settings";
 import ChatRoomScreen from "./chats/[roomId]";
+import BidPlacementCompleteScreen from "./auctions/[auctionId]/bid-complete";
+import WinningBidCompletionScreen from "./auctions/[auctionId]/winning-complete";
+import OutbidNotificationScreen from "./auctions/[auctionId]/outbid";
 import MyBidsScreen from "./(main)/mypage/my-bids";
 import SalesManagementScreen from "./(main)/mypage/sales-management";
 import { getErrorMessage } from "@/services/apiError";
@@ -123,6 +127,14 @@ export default function App() {
     message: "",
     visible: false,
   });
+  const [bidData, setBidData] = useState<{
+    productId: number;
+    productName: string;
+    sellerName: string;
+    bidAmount: number;
+    remainingTime: string;
+    productImageUrl?: string | null;
+  } | null>(null);
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -469,6 +481,30 @@ export default function App() {
               }}
             />
           )}
+          {currentScreen === "bid_placement_complete" && bidData && (
+            <BidPlacementCompleteScreen
+              key="bid_placement_complete"
+              productName={bidData.productName}
+              sellerName={bidData.sellerName}
+              bidAmount={bidData.bidAmount}
+              remainingTime={bidData.remainingTime}
+              productId={bidData.productId}
+              productImageUrl={bidData.productImageUrl ?? undefined}
+              onBack={() => {
+                setSelectedProductId(bidData.productId);
+                navigateTo("product_detail");
+              }}
+              onBrowseOther={() => {
+                setCurrentTab("home");
+                navigateTo("main");
+              }}
+              onProductDetail={() => {
+                setSelectedProductId(bidData.productId);
+                navigateTo("product_detail");
+              }}
+              themeColor={themeColor}
+            />
+          )}
           {currentScreen === "wishlist" && (
             <WishlistScreen
               key="wishlist"
@@ -510,7 +546,12 @@ export default function App() {
               key="product_detail"
               productId={selectedProductId}
               onBack={() => navigateTo("main")}
+              onBidStatusClick={() => navigateTo("bidding_status")}
               onReportClick={() => navigateTo("report")}
+              onBidComplete={(data) => {
+                setBidData(data);
+                navigateTo("bid_placement_complete");
+              }}
               onPurchaseClick={() => navigateTo("regular_purchase")}
               onChatClick={() => {
                 setSelectedChatId(1);
@@ -529,6 +570,14 @@ export default function App() {
               onComplete={() => navigateTo("receipt")}
               themeColor={themeColor}
               showToast={showToast}
+            />
+          )}
+          {currentScreen === "bidding_status" && (
+            <BiddingStatusScreen
+              key="bidding_status"
+              auctionId={selectedProductId}
+              onBack={() => navigateTo("product_detail")}
+              themeColor={themeColor}
             />
           )}
           {currentScreen === "report" && (
@@ -551,9 +600,25 @@ export default function App() {
               onReviewClick={() => navigateTo("review")}
               onReceiptClick={() => navigateTo("receipt")}
               onProductClick={navigateToProduct}
-              onWinningBidClick={() => navigateTo("notifications")}
-              onOutbidClick={() => navigateTo("notifications")}
+              onWinningBidClick={() => navigateTo("winning_bid_completion")}
+              onOutbidClick={() => navigateTo("outbid_notification")}
               themeColor={themeColor}
+            />
+          )}
+          {currentScreen === "winning_bid_completion" && (
+            <WinningBidCompletionScreen
+              key="winning_bid_completion"
+              onBack={() => navigateTo("notifications")}
+              onPaymentClick={() => navigateTo("payment")}
+              themeColor="#F64257"
+            />
+          )}
+          {currentScreen === "outbid_notification" && (
+            <OutbidNotificationScreen
+              key="outbid_notification"
+              onBack={() => navigateTo("notifications")}
+              onProductClick={navigateToProduct}
+              themeColor="#F64257"
             />
           )}
           {currentScreen === "notification_settings" && (

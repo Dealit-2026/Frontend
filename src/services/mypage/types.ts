@@ -92,6 +92,7 @@ export interface MySellingAuctionViewModel {
   description: string;
   category: string;
   categoryId: number | null;
+  location: string;
   bidders: number;
   bidCount: number;
   canEdit: boolean;
