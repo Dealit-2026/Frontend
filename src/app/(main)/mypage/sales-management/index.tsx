@@ -170,9 +170,15 @@ export default function SalesManagementScreen({
   };
 
   const handleProductImageClick = (product: SalesManagementItemViewModel) => {
-    if (product.type === "auction" && product.auctionId) {
-      router.push(`/auctions/${product.auctionId}`);
+    console.log("이미지 클릭됨:", product);
+    console.log("상품 타입:", product.type);
+    console.log("상품 ID:", product.productId);
+
+    if (product.type === "auction") {
+      console.log(`경매 페이지로 이동: /auctions/${product.productId}`);
+      router.push(`/auctions/${product.productId}`);
     } else {
+      console.log(`일반 상품 페이지로 이동: /products/${product.productId}`);
       router.push(`/products/${product.productId}`);
     }
   };

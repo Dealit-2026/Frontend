@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import {
   ChevronLeft,
   Check,
@@ -239,11 +240,15 @@ export default function ProductDetailScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-        <div className="aspect-square bg-gray-100">
+        <div className="aspect-square bg-gray-100 relative">
           {displayImageUrl ? (
-            <img
+            <Image
               src={displayImageUrl}
               alt={displayName}
+              width={800}
+              height={800}
+              priority
+              unoptimized
               className="w-full h-full object-cover"
             />
           ) : (
