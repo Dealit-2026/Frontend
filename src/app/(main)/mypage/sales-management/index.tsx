@@ -76,7 +76,8 @@ function ProductImage({
   }
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
+    <div
+      className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-300 cursor-pointer hover:bg-gray-200 transition-colors"
       onClick={onClick}
     >
       <ImageIcon size={24} />
