@@ -252,7 +252,7 @@ export default function SalesManagementScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {errorMessage && (
           <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
             {errorMessage}
@@ -262,7 +262,9 @@ export default function SalesManagementScreen({
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
             <ShoppingBag size={48} className="opacity-20" />
-            <p className="text-sm font-medium">판매 중인 상품을 불러오는 중입니다</p>
+            <p className="text-sm font-medium">
+              판매 중인 상품을 불러오는 중입니다
+            </p>
           </div>
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map((item) => (
@@ -270,50 +272,40 @@ export default function SalesManagementScreen({
               key={item.id}
               className="p-4 bg-white border border-gray-100 rounded-2xl space-y-4"
             >
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
+              <div className="flex items-start space-x-4">
+                <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 shrink-0">
                   <ProductImage imageUrl={item.imageUrl} name={item.name} />
                 </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
+                <div className="flex-1 min-w-0 pt-1 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold px-2 py-1 bg-gray-100 rounded text-gray-500">
                       {getTypeLabel(item.type)}
                     </span>
-                    <span
-                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
-                      style={{
-                        backgroundColor: `${themeColor}22`,
-                        color: "#3C6B12",
-                      }}
-                    >
+                    <span className="text-[11px] font-bold px-2 py-1 bg-blue-50 text-blue-600 rounded">
                       {item.statusLabel}
                     </span>
                     {item.bidders !== null && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
+                      <span className="text-[11px] font-bold px-2 py-1 bg-purple-50 text-purple-600 rounded">
                         입찰 {item.bidders}명
                       </span>
                     )}
-                    {item.bidderCount !== null && item.bidderCount > 0 && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 rounded text-gray-500">
-                        참여 {item.bidderCount}명
-                      </span>
-                    )}
                   </div>
-                  <h4 className="font-bold text-sm truncate">{item.name}</h4>
-                  <p className="font-black text-sm">{item.priceLabel}</p>
-                  <p className="text-[11px] text-gray-400 truncate">
-                    {item.location
-                      ? `${item.category} · ${item.location}`
-                      : item.category}
-                  </p>
+                  <h4 className="font-bold text-base truncate">{item.name}</h4>
+                  <p className="font-black text-lg">{item.priceLabel}</p>
+                  {item.location && (
+                    <p className="text-[11px] text-gray-400 truncate">
+                      {item.category} · {item.location}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="flex space-x-2">
+
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => handleEditClick(item)}
                   disabled={!item.editable || editingProductId === item.id}
-                  className="flex-1 py-3 bg-gray-50 rounded-xl text-xs font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
+                  className="h-14 bg-gray-50 rounded-xl text-sm font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >
                   {editingProductId === item.id ? "불러오는 중" : "수정"}
                 </button>
@@ -321,7 +313,7 @@ export default function SalesManagementScreen({
                   type="button"
                   onClick={() => setItemToDelete(item)}
                   disabled={!item.deletable}
-                  className="flex-1 py-3 bg-gray-50 rounded-xl text-xs font-bold text-red-500 transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
+                  className="h-14 bg-gray-50 rounded-xl text-sm font-bold text-red-500 transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >
                   삭제
                 </button>
