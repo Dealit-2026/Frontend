@@ -53,6 +53,9 @@ export interface RegisterScreenServices {
   register: (draft: AuctionRegisterDraft) => Promise<unknown>;
 }
 
+const MAX_PRICE_DIGITS = 13;
+const MAX_PRICE_VALUE = 9_999_999_999_999;
+
 function normalizeInitialImages(initialData: any): ProductImagePayload[] {
   if (!initialData) {
     return [];
@@ -226,6 +229,14 @@ export default function RegisterScreen({
     showCategoryError &&
     (!isCategorySelectionComplete || !!categoryLoadError || isLoadingCategories);
 
+  const getEffectiveImages = () => {
+    if (images.length > 0) {
+      return images;
+    }
+
+    return isEditMode ? normalizeInitialImages(initialData) : images;
+  };
+
   const showErrorMessage = (message: string) => {
     if (typeof window !== "undefined") {
       window.alert(message);
@@ -328,7 +339,7 @@ export default function RegisterScreen({
       price,
       startPrice: price,
       description,
-      images,
+      images: getEffectiveImages(),
       categoryId,
       allowOffer: false,
       location,
@@ -387,6 +398,11 @@ export default function RegisterScreen({
       return;
     }
 
+    if (Number(price) > MAX_PRICE_VALUE) {
+      showErrorMessage("가격은 9,999,999,999,999원 이하로 입력해 주세요.");
+      return;
+    }
+
     if (!description.trim()) {
       showErrorMessage("상품 설명을 입력해 주세요.");
       return;
@@ -397,7 +413,7 @@ export default function RegisterScreen({
       return;
     }
 
-    if (images.length === 0) {
+    if (getEffectiveImages().length === 0) {
       showErrorMessage("상품 이미지를 1장 이상 등록해 주세요.");
       return;
     }
@@ -513,7 +529,7 @@ export default function RegisterScreen({
       return;
     }
 
-    if (targetImage.imageId > 0) {
+    if (targetImage.imageId > 0 && !isEditMode) {
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
@@ -536,7 +552,7 @@ export default function RegisterScreen({
         })),
     );
 
-    if (targetImage.imageId > 0) {
+    if (targetImage.imageId > 0 && !isEditMode) {
       setDeletingImageIds((currentIds) =>
         currentIds.filter((imageId) => imageId !== targetImage.imageId),
       );
@@ -582,7 +598,7 @@ export default function RegisterScreen({
   };
 
   const handlePriceChange = (value: string) => {
-    const numericValue = sanitizeNumericInput(value);
+    const numericValue = sanitizeNumericInput(value).slice(0, MAX_PRICE_DIGITS);
     setPrice(numericValue);
 
     if (saleType === "auction") {
