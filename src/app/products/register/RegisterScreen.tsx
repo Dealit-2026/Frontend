@@ -229,6 +229,14 @@ export default function RegisterScreen({
     showCategoryError &&
     (!isCategorySelectionComplete || !!categoryLoadError || isLoadingCategories);
 
+  const getEffectiveImages = () => {
+    if (images.length > 0) {
+      return images;
+    }
+
+    return isEditMode ? normalizeInitialImages(initialData) : images;
+  };
+
   const showErrorMessage = (message: string) => {
     if (typeof window !== "undefined") {
       window.alert(message);
@@ -331,7 +339,7 @@ export default function RegisterScreen({
       price,
       startPrice: price,
       description,
-      images,
+      images: getEffectiveImages(),
       categoryId,
       allowOffer: false,
       location,
@@ -405,7 +413,7 @@ export default function RegisterScreen({
       return;
     }
 
-    if (images.length === 0) {
+    if (getEffectiveImages().length === 0) {
       showErrorMessage("상품 이미지를 1장 이상 등록해 주세요.");
       return;
     }

@@ -186,6 +186,11 @@ export default function SalesManagementScreen({
                 editingItem.product.productId,
                 draft,
               ),
+            update: (draft) =>
+              updateRegularSalesManagementProduct(
+                editingItem.product.productId,
+                draft,
+              ),
           },
           auction: {
             getCategories: getAuctionCategories,
@@ -194,6 +199,11 @@ export default function SalesManagementScreen({
             saveDraft: saveAuctionDraft,
             recommendPrice: recommendAuctionPrice,
             register: (draft) =>
+              updateAuctionSalesManagementProduct(
+                editingItem.product.auctionId ?? editingItem.product.productId,
+                draft,
+              ),
+            update: (draft) =>
               updateAuctionSalesManagementProduct(
                 editingItem.product.auctionId ?? editingItem.product.productId,
                 draft,

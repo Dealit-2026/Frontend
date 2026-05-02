@@ -16,10 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
-import {
-  fetchMyPageProfile,
-  fetchMySellingAuctionCount,
-} from "@/services/mypage/service";
+import { fetchMyPageProfile } from "@/services/mypage/service";
 import type { MyPageProfileViewModel } from "@/services/mypage/types";
 
 interface MyPageScreenProps {
@@ -56,9 +53,6 @@ export default function MyPageScreen({
   refreshKey = 0,
 }: MyPageScreenProps) {
   const [profile, setProfile] = useState<MyPageProfileViewModel | null>(null);
-  const [sellingAuctionCount, setSellingAuctionCount] = useState<number | null>(
-    null,
-  );
   const [profileErrorMessage, setProfileErrorMessage] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -81,25 +75,12 @@ export default function MyPageScreen({
         }
       });
 
-    fetchMySellingAuctionCount()
-      .then((nextCount) => {
-        if (!ignore) {
-          setSellingAuctionCount(nextCount);
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to fetch selling auction count", error);
-        if (!ignore) {
-          setSellingAuctionCount(null);
-        }
-      });
-
     return () => {
       ignore = true;
     };
   }, [refreshKey]);
 
-  const sellingCount = sellingAuctionCount ?? profile?.sellingCount ?? 0;
+  const sellingCount = profile?.sellingCount ?? 0;
 
   const menus = [
     { icon: <ShoppingBag size={20} />, label: "구매 내역", onClick: onPurchaseHistoryClick },
