@@ -38,6 +38,10 @@ import { ExploreIcon } from '../components/ExploreIcon';
 
 export default function ProductCard({ i, mode, themeColor, onProductClick }: { i: number; mode: 'regular' | 'auction'; themeColor: string; onProductClick: (id: number) => void; key?: string | number }) {
   const [isLiked, setIsLiked] = useState(false);
+  if (mode === 'auction') {
+    return null;
+  }
+
   return (
     <div onClick={() => onProductClick(i)} className="w-[140px] shrink-0 space-y-3 cursor-pointer group">
       <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden relative">
@@ -53,23 +57,16 @@ export default function ProductCard({ i, mode, themeColor, onProductClick }: { i
         <h4 className="text-sm font-semibold truncate text-gray-800">아이폰 14 Pro</h4>
         <p className="font-bold text-base text-black">₩850,000</p>
         <div className="flex items-center space-x-2 text-[10px] text-gray-400 font-medium">
-          {mode === 'auction' ? (
+          <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-              <User size={10} />
-              <span>입찰 23</span>
+              <Heart size={10} />
+              <span>132</span>
             </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                <Heart size={10} />
-                <span>132</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <MessageCircle size={10} />
-                <span>12</span>
-              </div>
+            <div className="flex items-center space-x-1">
+              <MessageCircle size={10} />
+              <span>12</span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

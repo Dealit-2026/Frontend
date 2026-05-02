@@ -65,6 +65,8 @@ export default function HomeScreen({
     : 'https://i.ibb.co/6RrSfG14/image.png';
 
   const [currentBanner, setCurrentBanner] = useState(0);
+  const popularProductIds = mode === 'auction' ? [] : [1, 2, 3, 4];
+  const closingProductIds = mode === 'auction' ? [] : [1, 2, 3];
   const banners = mode === 'regular' ? [
     {
       title: '봄맞이 일반 판매',
@@ -217,11 +219,17 @@ export default function HomeScreen({
               </button>
             </div>
             
-            <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
-              {[1, 2, 3, 4].map((i) => (
-                <ProductCard key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
-              ))}
-            </div>
+            {popularProductIds.length > 0 ? (
+              <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
+                {popularProductIds.map((i) => (
+                  <ProductCard key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
+                등록된 경매 상품이 없습니다
+              </div>
+            )}
           </div>
 
           {/* Section 2: Hot Items / Closing Soon */}
@@ -239,11 +247,17 @@ export default function HomeScreen({
               </button>
             </div>
             
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <ProductListItem key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
-              ))}
-            </div>
+            {closingProductIds.length > 0 ? (
+              <div className="space-y-4">
+                {closingProductIds.map((i) => (
+                  <ProductListItem key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
+                마감 임박 경매 상품이 없습니다
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -4,8 +4,11 @@ import {
   handleUnauthorizedAccess,
 } from "@/services/auth/service";
 import type {
+  AuctionEditDetailResponse,
   MyLocationResponse,
   MyProfileResponse,
+  MySellingAuctionItemResponse,
+  PageResponse,
   UpdateMyLocationRequest,
   UpdateMyLocationResponse,
   UpdateMyProfileRequest,
@@ -109,6 +112,58 @@ export async function uploadProfileImage(
       response,
       "프로필 이미지 업로드에 실패했습니다.",
     );
+  }
+
+  return response.json();
+}
+
+export async function getMySellingAuctions(
+  page = 0,
+  size = 20,
+): Promise<PageResponse<MySellingAuctionItemResponse>> {
+  const searchParams = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+
+  const response = await fetch(
+    `/api/v1/mypage/auctions/selling?${searchParams.toString()}`,
+    {
+      method: "GET",
+      headers: getAuthorizationHeaders(),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "판매중 경매 목록을 불러오지 못했습니다.");
+  }
+
+  return response.json();
+}
+
+export async function deleteMySellingAuction(auctionId: number) {
+  const response = await fetch(`/api/v1/auctions/${auctionId}`, {
+    method: "DELETE",
+    headers: getAuthorizationHeaders(),
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "경매 상품 삭제에 실패했습니다.");
+  }
+}
+
+export async function getAuctionEditDetail(
+  auctionId: number,
+): Promise<AuctionEditDetailResponse> {
+  const response = await fetch(`/api/v1/auctions/${auctionId}/edit`, {
+    method: "GET",
+    headers: getAuthorizationHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "경매 수정 정보를 불러오지 못했습니다.");
   }
 
   return response.json();

@@ -9,13 +9,13 @@ export default function BidCompletePage() {
 
   return (
     <BidPlacementCompleteScreen
-      productName="아이폰 14 Pro 256GB 딥퍼플"
-      sellerName="비드마스터"
-      bidAmount={850000}
-      remainingTime="12시간 30분"
-      productId={1}
+      productName=""
+      sellerName=""
+      bidAmount={0}
+      remainingTime=""
+      productId={0}
       onBrowseOther={() => router.push("/auctions")}
-      onProductDetail={() => router.push("/auctions/1")}
+      onProductDetail={() => router.push("/auctions")}
       themeColor="#F64257"
     />
   );

@@ -6,14 +6,22 @@ import type { LocationFormValues } from "@/services/location/types";
 import * as mypageApi from "@/services/mypage/api";
 import { fetchSalesManagementCount } from "@/services/sales-management/service";
 import type {
+  AuctionEditDetailResponse,
+  AuctionEditInitialData,
   MyProfileEditViewModel,
   MyPageProfileViewModel,
   MyProfileFormValues,
   MyProfileResponse,
+  MySellingAuctionItemResponse,
+  MySellingAuctionViewModel,
   UpdateMyLocationRequest,
   UpdateMyProfileRequest,
 } from "@/services/mypage/types";
+import { calculateBidUnit } from "@/services/auction/register/service";
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:8080";
 const PROFILE_IMAGE_PATH_PATTERN = /^\/profile\/images\//;
 
 function resolveProfileImageUrl(profileImageUrl: string | null) {
@@ -47,6 +55,26 @@ function resolveProfileImageUrl(profileImageUrl: string | null) {
   }
 
   return profileImageUrl;
+}
+
+function resolveBackendImageUrl(imageUrl: string | null) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (/^(data:|blob:)/.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  if (/^https?:\/\//.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${API_BASE_URL}${imageUrl}`;
+  }
+
+  return imageUrl;
 }
 
 export function createDefaultProfileForm(): MyProfileFormValues {
@@ -130,6 +158,69 @@ export function toMyPageProfileViewModel(
   };
 }
 
+function formatWon(value: number) {
+  return `${value.toLocaleString()}\uc6d0`;
+}
+
+export function toMySellingAuctionViewModel(
+  auction: MySellingAuctionItemResponse,
+): MySellingAuctionViewModel {
+  const displayPrice = auction.currentPrice || auction.startPrice;
+
+  return {
+    id: auction.productId,
+    auctionId: auction.auctionId,
+    name: auction.name,
+    type: "auction",
+    status: "\uacbd\ub9e4 \uc911",
+    price: formatWon(displayPrice),
+    img: resolveBackendImageUrl(auction.thumbnailUrl),
+    description: auction.description,
+    category: auction.categoryName,
+    categoryId: auction.categoryId ?? null,
+    bidders: auction.bidderCount,
+    bidCount: auction.bidCount,
+    canEdit: auction.canEdit,
+    canDelete: auction.canDelete,
+    startPrice: auction.startPrice,
+    currentPrice: auction.currentPrice,
+    minimumNextBidPrice: auction.minimumNextBidPrice,
+    startAt: auction.startAt,
+    endAt: auction.endAt,
+  };
+}
+
+export function toAuctionEditInitialData(
+  detail: AuctionEditDetailResponse,
+): AuctionEditInitialData {
+  const startPrice = String(detail.startPrice);
+
+  return {
+    productId: detail.productId,
+    auctionId: detail.auctionId,
+    type: "auction",
+    name: detail.name,
+    description: detail.description,
+    categoryId: detail.categoryId,
+    categoryName: detail.categoryName,
+    location: detail.location,
+    price: startPrice,
+    startPrice,
+    auctionDurationDays: detail.auctionDurationDays,
+    images: detail.images.map((image) => ({
+      imageId: image.imageId,
+      imageUrl: resolveBackendImageUrl(image.imageUrl) ?? image.imageUrl,
+      sortOrder: image.sortOrder,
+    })),
+    canEdit: detail.canEdit,
+    auction: {
+      startPrice,
+      bidUnit: calculateBidUnit(startPrice),
+      durationDays: detail.auctionDurationDays,
+    },
+  };
+}
+
 export async function fetchMyPageProfile() {
   const profile = await mypageApi.getMyProfile();
 
@@ -138,6 +229,26 @@ export async function fetchMyPageProfile() {
   } catch {
     return toMyPageProfileViewModel(profile);
   }
+}
+
+export async function fetchMySellingAuctions(page = 0, size = 20) {
+  const response = await mypageApi.getMySellingAuctions(page, size);
+
+  return {
+    ...response,
+    content: response.content.map(toMySellingAuctionViewModel),
+  };
+}
+
+export async function fetchMySellingAuctionCount() {
+  const response = await mypageApi.getMySellingAuctions(0, 1);
+  return response.totalElements;
+}
+
+export async function fetchAuctionEditInitialData(auctionId: number) {
+  return toAuctionEditInitialData(
+    await mypageApi.getAuctionEditDetail(auctionId),
+  );
 }
 
 export async function fetchMyProfileForm() {
@@ -166,4 +277,8 @@ export async function saveMyProfile(form: MyProfileFormValues) {
 
 export async function saveMyLocation(locationForm: LocationFormValues) {
   return mypageApi.updateMyLocation(buildUpdateMyLocationRequest(locationForm));
+}
+
+export async function removeMySellingAuction(auctionId: number) {
+  return mypageApi.deleteMySellingAuction(auctionId);
 }

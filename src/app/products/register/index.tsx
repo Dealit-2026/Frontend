@@ -433,7 +433,13 @@ export default function RegisterScreenView({
           className="w-full h-12 text-white font-bold rounded-2xl text-base shadow-lg transition-all active:scale-[0.98] disabled:bg-gray-300 disabled:shadow-none disabled:active:scale-100"
           style={isRegisterDisabled ? undefined : { backgroundColor: themeColor }}
         >
-          {isSubmitting ? "등록 중..." : isEditMode ? "수정 완료" : "등록 완료"}
+          {isSubmitting
+            ? isEditMode
+              ? "수정 중..."
+              : "등록 중..."
+            : isEditMode
+              ? "수정 완료"
+              : "등록 완료"}
         </button>
       </div>
 

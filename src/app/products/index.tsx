@@ -39,6 +39,7 @@ import ProductListItem from '../../components/product/ProductListItem';
 
 export default function ProductListScreen({ listType, categoryName, onBack, onProductClick, onSearchClick, themeColor, mode }: { listType: 'all' | 'closing_soon' | 'recent'; categoryName: string | null; onBack: () => void; onProductClick: (id: number) => void; onSearchClick: () => void; themeColor: string; mode: 'regular' | 'auction'; key?: string | number }) {
   const title = categoryName || (listType === 'all' ? '전체 목록' : (listType === 'recent' ? '최근 본 상품' : (mode === 'regular' ? '핫한 상품' : '마감 임박 상품')));
+  const itemIds = mode === 'auction' ? [] : [1, 2, 3, 4, 5, 6, 7, 8];
 
   return (
     <motion.div
@@ -61,9 +62,16 @@ export default function ProductListScreen({ listType, categoryName, onBack, onPr
         </button>
       </div>
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
-        {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-          <ProductListItem key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
-        ))}
+        {itemIds.length > 0 ? (
+          itemIds.map((i) => (
+            <ProductListItem key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
+            <ShoppingBag size={48} className="opacity-20" />
+            <p className="text-sm font-medium">등록된 경매 상품이 없습니다</p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

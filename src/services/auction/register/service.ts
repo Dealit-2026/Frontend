@@ -11,6 +11,7 @@ import type {
   RecommendPriceRequest,
   SaleType,
   SaveAuctionDraftRequest,
+  UpdateAuctionRequest,
   UploadAuctionImageResponse,
 } from "@/services/auction/register/types";
 
@@ -174,6 +175,20 @@ export function buildCreateAuctionRequest(
   };
 }
 
+export function buildUpdateAuctionRequest(
+  draft: AuctionRegisterDraft,
+): UpdateAuctionRequest {
+  return {
+    name: draft.name,
+    description: draft.description,
+    categoryId: draft.categoryId ?? 0,
+    startPrice: Number(draft.startPrice || draft.auction.startPrice || 0),
+    auctionDurationDays: draft.auction.durationDays,
+    location: draft.location,
+    images: normalizeImagePayload(draft.images),
+  };
+}
+
 // 임시저장은 등록 요청과 거의 같은 payload를 사용한다.
 // service에서 request를 재사용하면 page.tsx가 두 DTO 차이를 신경 쓰지 않아도 된다.
 export function buildSaveAuctionDraftRequest(
@@ -245,6 +260,13 @@ export async function recommendAuctionPrice(
 // 페이지에서 바로 API를 호출하지 않도록 service에서 조립 후 위임한다.
 export async function registerAuction(draft: AuctionRegisterDraft) {
   return auctionApi.postAuction(buildCreateAuctionRequest(draft));
+}
+
+export async function updateAuction(
+  auctionId: number,
+  draft: AuctionRegisterDraft,
+) {
+  return auctionApi.patchAuction(auctionId, buildUpdateAuctionRequest(draft));
 }
 
 // 공용 등록 화면에서 사용하는 상품 등록용 함수명.

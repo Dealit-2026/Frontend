@@ -14,6 +14,8 @@ import {
   RecommendPriceResponse,
   SaveAuctionDraftRequest,
   SaveAuctionDraftResponse,
+  UpdateAuctionRequest,
+  UpdateAuctionResponse,
   UploadAuctionImageResponse,
 } from "@/services/auction/register/types";
 
@@ -169,6 +171,26 @@ export async function postAuction(
 
   if (!response.ok) {
     await throwProtectedApiError(response, "상품 등록에 실패했습니다.");
+  }
+
+  return response.json();
+}
+
+export async function patchAuction(
+  auctionId: number,
+  payload: UpdateAuctionRequest,
+): Promise<UpdateAuctionResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "경매 상품 수정에 실패했습니다.");
   }
 
   return response.json();

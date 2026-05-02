@@ -58,39 +58,14 @@ export default function OutbidNotificationScreen({ onBack, onProductClick, theme
         
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-black text-orange-500">입찰이 추월되었습니다!</h2>
-          <p className="text-gray-500">에어팟 프로 경매에서 다른 사용자가<br />더 높은 금액을 제시했습니다.</p>
+          <p className="text-gray-500">입찰 추월된 경매 상품이 없습니다.</p>
         </div>
 
-        <div className="w-full bg-gray-50 rounded-3xl p-6 space-y-4">
-          <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200">
-              <img src="https://picsum.photos/seed/p3/200/200" alt="Product" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-400">현재 최고가</p>
-              <p className="text-xl font-black text-red-500">₩185,000</p>
-            </div>
-          </div>
-          <div className="h-px bg-gray-200"></div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">내 입찰가</span>
-              <span className="font-bold">₩180,000</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-400">남은 시간</span>
-              <span className="font-bold text-red-500">12분 45초</span>
-            </div>
-          </div>
+        <div className="w-full rounded-3xl border border-dashed border-gray-200 p-8 text-center text-sm font-medium text-gray-400">
+          입찰 추월 데이터가 없습니다
         </div>
 
         <div className="w-full space-y-3">
-          <button 
-            onClick={() => onProductClick(101)}
-            className="w-full h-16 bg-black text-white font-bold rounded-2xl text-lg shadow-lg"
-          >
-            재입찰하러 가기
-          </button>
           <button 
             onClick={onBack}
             className="w-full h-16 bg-gray-100 text-gray-500 font-bold rounded-2xl"
