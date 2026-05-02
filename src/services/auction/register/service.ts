@@ -166,6 +166,10 @@ export function buildCreateAuctionRequest(
       draft.saleType === "auction"
         ? Number(draft.startPrice || draft.auction.startPrice || 0)
         : null,
+    bidUnit:
+      draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
+    minimumBidAmount:
+      draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
     auctionDurationDays:
       draft.saleType === "auction" ? draft.auction.durationDays : null,
     allowOffer: draft.allowOffer,
@@ -183,6 +187,8 @@ export function buildUpdateAuctionRequest(
     description: draft.description,
     categoryId: draft.categoryId ?? 0,
     startPrice: Number(draft.startPrice || draft.auction.startPrice || 0),
+    bidUnit: Number(draft.auction.bidUnit || 0),
+    minimumBidAmount: Number(draft.auction.bidUnit || 0),
     auctionDurationDays: draft.auction.durationDays,
     location: draft.location,
     images: normalizeImagePayload(draft.images),

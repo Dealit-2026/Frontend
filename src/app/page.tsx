@@ -133,6 +133,7 @@ export default function App() {
     sellerName: string;
     bidAmount: number;
     remainingTime: string;
+    productImageUrl?: string;
   } | null>(null);
 
   const showToast = (message: string) => {
@@ -488,6 +489,11 @@ export default function App() {
               bidAmount={bidData.bidAmount}
               remainingTime={bidData.remainingTime}
               productId={bidData.productId}
+              productImageUrl={bidData.productImageUrl}
+              onBack={() => {
+                setSelectedProductId(bidData.productId);
+                navigateTo("product_detail");
+              }}
               onBrowseOther={() => {
                 setCurrentTab("home");
                 navigateTo("main");
@@ -569,6 +575,7 @@ export default function App() {
           {currentScreen === "bidding_status" && (
             <BiddingStatusScreen
               key="bidding_status"
+              auctionId={selectedProductId}
               onBack={() => navigateTo("product_detail")}
               themeColor={themeColor}
             />

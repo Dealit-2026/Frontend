@@ -42,6 +42,8 @@ export default function BidPlacementCompleteScreen({
   bidAmount, 
   remainingTime, 
   productId,
+  productImageUrl,
+  onBack,
   onBrowseOther, 
   onProductDetail, 
   themeColor 
@@ -51,6 +53,8 @@ export default function BidPlacementCompleteScreen({
   bidAmount: number; 
   remainingTime: string; 
   productId: number;
+  productImageUrl?: string;
+  onBack: () => void;
   onBrowseOther: () => void; 
   onProductDetail: () => void; 
   themeColor: string; 
@@ -66,7 +70,10 @@ export default function BidPlacementCompleteScreen({
       className="flex-1 flex flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
-        <h1 className="flex-1 text-center font-bold text-lg">입찰 완료</h1>
+        <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+          <ChevronLeft size={24} />
+        </button>
+        <h1 className="flex-1 text-center font-bold text-lg mr-10">입찰 완료</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-8 flex flex-col items-center justify-center space-y-8">
@@ -83,7 +90,11 @@ export default function BidPlacementCompleteScreen({
           <div className="w-full bg-gray-50 rounded-3xl p-6 space-y-4">
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200">
-                <img src={`https://picsum.photos/seed/${productId}/200/200`} alt="Product" className="w-full h-full object-cover" />
+                {productImageUrl ? (
+                  <img src={productImageUrl} alt={productName} className="w-full h-full object-cover" />
+                ) : (
+                  <img src={`https://picsum.photos/seed/${productId}/200/200`} alt={productName} className="w-full h-full object-cover" />
+                )}
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-400">내 입찰가</p>

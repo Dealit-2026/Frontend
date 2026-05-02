@@ -35,8 +35,17 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../types/index';
 import { ExploreIcon } from '../../../components/common/ExploreIcon';
+import { getErrorMessage } from '@/services/apiError';
+import {
+  fetchAuctionDetail,
+  getAuctionDisplayCurrentPrice,
+  getAuctionMainImageUrl,
+  getAuctionRemainingTimeLabel,
+  placeAuctionBid,
+} from '@/services/auction/detail/service';
+import type { AuctionDetailResponse } from '@/services/auction/detail/types';
 
-type AuctionStatus = 'AUCTION_SCHEDULED' | 'AUCTION_LIVE' | 'ENDED';
+type AuctionStatus = 'AUCTION_SCHEDULED' | 'AUCTION_LIVE' | 'AUCTION_ENDED' | 'ENDED';
 
 export default function ProductDetailScreen({ 
   productId, 
@@ -57,7 +66,7 @@ export default function ProductDetailScreen({
   onBidStatusClick: () => void;
   onChatClick: () => void;
   onReportClick: () => void;
-  onBidComplete: (data: { productId: number; productName: string; sellerName: string; bidAmount: number; remainingTime: string }) => void;
+  onBidComplete: (data: { productId: number; productName: string; sellerName: string; bidAmount: number; remainingTime: string; productImageUrl?: string }) => void;
   onPurchaseClick?: () => void;
   themeColor: string;
   mode: 'regular' | 'auction';
@@ -70,19 +79,31 @@ export default function ProductDetailScreen({
   const [isLiked, setIsLiked] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showSellerProfile, setShowSellerProfile] = useState(false);
+  const [auctionDetail, setAuctionDetail] = useState<AuctionDetailResponse | null>(null);
+  const [isAuctionLoading, setIsAuctionLoading] = useState(false);
+  const [isBidSubmitting, setIsBidSubmitting] = useState(false);
+  const [auctionErrorMessage, setAuctionErrorMessage] = useState("");
   const [currentPrice, setCurrentPrice] = useState(850000);
   const [bidCount, setBidCount] = useState(23);
   const [inputBidAmount, setInputBidAmount] = useState(860000);
   const isRegular = mode === 'regular';
-  const isAuctionScheduled = !isRegular && auctionStatus === 'AUCTION_SCHEDULED';
-  const bidUnit = 10000;
-  const minBidAmount = currentPrice + bidUnit;
-  const displayName = '아이폰 14 Pro 256GB 딥퍼플';
-  const displayDescription = '아이폰 14 Pro 256GB 딥퍼플 색상입니다. 구매한지 6개월 정도 되었고 항상 케이스와 필름을 부착하여 상태 매우 깨끗합니다. 배터리 효율은 98%이며 모든 기능 정상 작동합니다. 박스와 구성품 모두 포함된 풀박스 구성입니다. 직거래는 강남역 인근에서 가능하며 택배 거래 시 배송비는 별도입니다.';
-  const displayImageUrl = `https://picsum.photos/seed/${productId}/600/600`;
-  const displayCategoryName = '전자제품';
-  const displaySellerName = '판매자123';
-  const displayEndLabel = '2시간 35분 남음';
+  const effectiveAuctionStatus = auctionDetail?.status ?? auctionStatus;
+  const isAuctionScheduled = !isRegular && effectiveAuctionStatus === 'AUCTION_SCHEDULED';
+  const isAuctionEnded = !isRegular && (effectiveAuctionStatus === 'AUCTION_ENDED' || effectiveAuctionStatus === 'ENDED');
+  const bidUnit = auctionDetail?.minimumBidAmount ?? 10000;
+  const minBidAmount = auctionDetail?.minimumNextBidPrice ?? currentPrice + bidUnit;
+  const displayName = auctionDetail?.name ?? '아이폰 14 Pro 256GB 딥퍼플';
+  const displayDescription = auctionDetail?.description ?? '아이폰 14 Pro 256GB 딥퍼플 색상입니다. 구매한지 6개월 정도 되었고 항상 케이스와 필름을 부착하여 상태 매우 깨끗합니다. 배터리 효율은 98%이며 모든 기능 정상 작동합니다. 박스와 구성품 모두 포함된 풀박스 구성입니다. 직거래는 강남역 인근에서 가능하며 택배 거래 시 배송비는 별도입니다.';
+  const displayImageUrl = !isRegular
+    ? getAuctionMainImageUrl(auctionDetail)
+    : `https://picsum.photos/seed/${productId}/600/600`;
+  const displayCategoryName = auctionDetail?.categoryName ?? '전자제품';
+  const displaySellerName = auctionDetail?.seller.nickname ?? '판매자123';
+  const displaySellerImageUrl = auctionDetail?.seller.profileImageUrl ?? 'https://picsum.photos/seed/seller/100/100';
+  const displayLocation = auctionDetail?.location ?? '서울 강남구';
+  const displayEndLabel = auctionDetail
+    ? getAuctionRemainingTimeLabel(auctionDetail.endsAt, auctionDetail.serverTime)
+    : '2시간 35분 남음';
 
   const scheduledStartLabel = auctionStartAt
     ? new Intl.DateTimeFormat('ko-KR', {
@@ -96,11 +117,88 @@ export default function ProductDetailScreen({
 
   useEffect(() => {
     if (showBidSheet) {
-      setInputBidAmount(currentPrice + bidUnit);
+      setInputBidAmount(minBidAmount);
     }
-  }, [showBidSheet, currentPrice]);
+  }, [showBidSheet, minBidAmount]);
 
-  if (!isRegular) {
+  useEffect(() => {
+    if (isRegular || productId == null) {
+      return;
+    }
+
+    let ignore = false;
+
+    setIsAuctionLoading(true);
+    setAuctionErrorMessage("");
+
+    fetchAuctionDetail(productId)
+      .then((data) => {
+        if (ignore) {
+          return;
+        }
+
+        setAuctionDetail(data);
+        setCurrentPrice(getAuctionDisplayCurrentPrice(data));
+        setBidCount(data.bidCount);
+        setInputBidAmount(data.minimumNextBidPrice);
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setAuctionErrorMessage(
+            getErrorMessage(error, "경매 상품 정보를 불러오지 못했습니다."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsAuctionLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isRegular, productId]);
+
+  const handleBidSubmit = async (bidPrice: number) => {
+    if (isRegular || productId == null || isBidSubmitting) {
+      return;
+    }
+
+    if (bidPrice < minBidAmount) {
+      showToast(`최소 입찰가는 ${minBidAmount.toLocaleString()}원입니다.`);
+      return;
+    }
+
+    try {
+      setIsBidSubmitting(true);
+      await placeAuctionBid(productId, bidPrice);
+      const nextAuctionDetail = await fetchAuctionDetail(productId);
+
+      setAuctionDetail(nextAuctionDetail);
+      setCurrentPrice(getAuctionDisplayCurrentPrice(nextAuctionDetail));
+      setBidCount(nextAuctionDetail.bidCount);
+      setInputBidAmount(nextAuctionDetail.minimumNextBidPrice);
+      setShowBidSheet(false);
+      onBidComplete({
+        productId: productId || 0,
+        productName: nextAuctionDetail.name,
+        sellerName: nextAuctionDetail.seller.nickname,
+        bidAmount: bidPrice,
+        remainingTime: getAuctionRemainingTimeLabel(
+          nextAuctionDetail.endsAt,
+          nextAuctionDetail.serverTime,
+        ),
+        productImageUrl: getAuctionMainImageUrl(nextAuctionDetail),
+      });
+    } catch (error) {
+      showToast(getErrorMessage(error, "입찰에 실패했습니다."));
+    } finally {
+      setIsBidSubmitting(false);
+    }
+  };
+
+  if (!isRegular && isAuctionLoading) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -116,7 +214,29 @@ export default function ProductDetailScreen({
         </div>
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-gray-400 space-y-3">
           <ShoppingBag size={56} className="opacity-20" />
-          <p className="text-sm font-medium">등록된 경매 상품이 없습니다</p>
+          <p className="text-sm font-medium">경매 상품 정보를 불러오는 중입니다</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!isRegular && auctionErrorMessage) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        className="flex-1 flex flex-col bg-white"
+      >
+        <div className="h-16 flex items-center px-4 border-b border-gray-100">
+          <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <ChevronLeft size={24} />
+          </button>
+          <h1 className="flex-1 text-center font-bold text-lg mr-10">경매 상품</h1>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-gray-400 space-y-3 text-center">
+          <ShoppingBag size={56} className="opacity-20" />
+          <p className="text-sm font-medium">{auctionErrorMessage}</p>
         </div>
       </motion.div>
     );
@@ -183,7 +303,7 @@ export default function ProductDetailScreen({
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <span className="px-2 py-1 text-white text-[10px] font-bold rounded" style={{ backgroundColor: themeColor }}>
-                {isRegular ? '일반 판매' : isAuctionScheduled ? '경매 예정' : '진행중'}
+                {isRegular ? '일반 판매' : isAuctionEnded ? '경매 종료' : isAuctionScheduled ? '경매 예정' : '진행중'}
               </span>
               <span className="text-xs text-gray-400">{displayCategoryName}</span>
             </div>
@@ -192,13 +312,13 @@ export default function ProductDetailScreen({
             <div 
               className={`rounded-2xl p-6 space-y-2 cursor-pointer transition-transform active:scale-[0.98] ${!isRegular ? 'hover:brightness-95' : ''}`}
               style={{ backgroundColor: `${themeColor}10` }}
-              onClick={() => !isRegular && !isAuctionScheduled && onBidStatusClick()}
+              onClick={() => !isRegular && !isAuctionScheduled && !isAuctionEnded && onBidStatusClick()}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium" style={{ color: themeColor }}>{isRegular ? '판매가' : '현재가'}</span>
                 <div className="flex items-center space-x-1">
                   <span className="text-2xl font-bold" style={{ color: themeColor }}>₩{currentPrice.toLocaleString()}</span>
-                  {!isRegular && !isAuctionScheduled && <ChevronRight size={20} style={{ color: themeColor }} />}
+                  {!isRegular && !isAuctionScheduled && !isAuctionEnded && <ChevronRight size={20} style={{ color: themeColor }} />}
                 </div>
               </div>
               
@@ -226,9 +346,9 @@ export default function ProductDetailScreen({
                       <span>{isAuctionScheduled ? scheduledStartLabel : displayEndLabel}</span>
                     </div>
                   </div>
-                  {isAuctionScheduled && (
+                  {(isAuctionScheduled || isAuctionEnded) && (
                     <p className="text-xs font-medium pt-1" style={{ color: themeColor }}>
-                      아직 시작 전인 경매입니다. 시작 시간 이후 참여할 수 있어요.
+                      {isAuctionScheduled ? '아직 시작 전인 경매입니다. 시작 시간 이후 참여할 수 있어요.' : '종료된 경매입니다.'}
                     </p>
                   )}
                 </>
@@ -242,7 +362,7 @@ export default function ProductDetailScreen({
           >
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden">
-                <img src="https://picsum.photos/seed/seller/100/100" alt="Seller" />
+                <img src={displaySellerImageUrl} alt="Seller" />
               </div>
               <div>
                 <p className="font-bold text-sm">{displaySellerName}</p>
@@ -264,7 +384,7 @@ export default function ProductDetailScreen({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">거래지역</span>
-                <span>서울 강남구</span>
+                <span>{displayLocation}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">배송비</span>
@@ -305,18 +425,18 @@ export default function ProductDetailScreen({
               <MessageCircle size={24} />
             </button>
             <button 
-              onClick={() => !isAuctionScheduled && setShowBidSheet(true)} 
-              disabled={isAuctionScheduled}
+              onClick={() => !isAuctionScheduled && !isAuctionEnded && setShowBidSheet(true)} 
+              disabled={isAuctionScheduled || isAuctionEnded}
               className={`flex-1 h-14 font-bold rounded-xl transition-colors ${
-                isAuctionScheduled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-white shadow-lg'
+                isAuctionScheduled || isAuctionEnded ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-white shadow-lg'
               }`} 
               style={
-                isAuctionScheduled
+                isAuctionScheduled || isAuctionEnded
                   ? undefined
                   : ({ backgroundColor: themeColor, '--tw-shadow-color': `${themeColor}40` } as React.CSSProperties)
               }
             >
-              {isAuctionScheduled ? '입찰은 시작 후 가능해요' : '입찰하기'}
+              {isAuctionEnded ? '경매 종료' : isAuctionScheduled ? '입찰은 시작 후 가능해요' : '입찰하기'}
             </button>
           </>
         )}
@@ -349,7 +469,7 @@ export default function ProductDetailScreen({
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">입찰 단위</span>
-                    <span className="font-bold">₩10,000</span>
+                    <span className="font-bold">₩{bidUnit.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -414,60 +534,29 @@ export default function ProductDetailScreen({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button 
-                      onClick={() => {
-                        setCurrentPrice(prev => prev + 30000);
-                        setBidCount(prev => prev + 1);
-                        setShowBidSheet(false);
-                        onBidComplete({
-                          productId: productId || 0,
-                          productName: displayName,
-                          sellerName: displaySellerName,
-                          bidAmount: currentPrice + 30000,
-                          remainingTime: displayEndLabel
-                        });
-                      }}
+                      onClick={() => handleBidSubmit(currentPrice + 30000)}
+                      disabled={isBidSubmitting || currentPrice + 30000 < minBidAmount}
                       className="h-12 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors"
                     >
                       ₩{(currentPrice + 30000).toLocaleString()} (빠른 낙찰)
                     </button>
                     <button 
-                      onClick={() => {
-                        setCurrentPrice(prev => prev + 10000);
-                        setBidCount(prev => prev + 1);
-                        setShowBidSheet(false);
-                        onBidComplete({
-                          productId: productId || 0,
-                          productName: displayName,
-                          sellerName: displaySellerName,
-                          bidAmount: currentPrice + 10000,
-                          remainingTime: displayEndLabel
-                        });
-                      }}
+                      onClick={() => handleBidSubmit(minBidAmount)}
+                      disabled={isBidSubmitting}
                       className="h-12 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors"
                     >
-                      ₩{(currentPrice + 10000).toLocaleString()} (최소 입찰)
+                      ₩{minBidAmount.toLocaleString()} (최소 입찰)
                     </button>
                   </div>
                 </div>
 
                 <button 
-                  disabled={inputBidAmount < minBidAmount}
-                  onClick={() => {
-                    setCurrentPrice(inputBidAmount);
-                    setBidCount(prev => prev + 1);
-                    setShowBidSheet(false);
-                    onBidComplete({
-                      productId: productId || 0,
-                      productName: displayName,
-                      sellerName: displaySellerName,
-                      bidAmount: inputBidAmount,
-                      remainingTime: displayEndLabel
-                    });
-                  }} 
+                  disabled={isBidSubmitting || inputBidAmount < minBidAmount}
+                  onClick={() => handleBidSubmit(inputBidAmount)} 
                   className={`w-full h-14 text-white font-bold rounded-xl transition-all ${inputBidAmount < minBidAmount ? 'bg-gray-300 cursor-not-allowed opacity-50' : 'shadow-lg'}`}
                   style={{ backgroundColor: inputBidAmount < minBidAmount ? undefined : themeColor }}
                 >
-                  입찰하기
+                  {isBidSubmitting ? '입찰 중...' : '입찰하기'}
                 </button>
               </div>
             </motion.div>
@@ -496,10 +585,10 @@ export default function ProductDetailScreen({
               
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden">
-                  <img src="https://picsum.photos/seed/seller/100/100" alt="Seller" />
+                  <img src={displaySellerImageUrl} alt="Seller" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">판매자123</h3>
+                  <h3 className="text-xl font-bold">{displaySellerName}</h3>
                   <p className="text-sm text-gray-500 mt-1">안녕하세요! 좋은 물건 많이 팝니다.</p>
                 </div>
               </div>

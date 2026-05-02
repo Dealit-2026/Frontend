@@ -35,8 +35,17 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
+import { getErrorMessage } from '@/services/apiError';
+import {
+  fetchAuctionDetail,
+  getAuctionDisplayCurrentPrice,
+} from '@/services/auction/detail/service';
+import type { AuctionDetailResponse } from '@/services/auction/detail/types';
 
-export default function BiddingStatusScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
+export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: { auctionId: number | null; onBack: () => void; themeColor: string; key?: string }) {
+  const [auctionDetail, setAuctionDetail] = useState<AuctionDetailResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const bids: Array<{
     user: string;
     price: string;
@@ -44,6 +53,43 @@ export default function BiddingStatusScreen({ onBack, themeColor }: { onBack: ()
     active: boolean;
     img: string;
   }> = [];
+  const currentDisplayPrice = getAuctionDisplayCurrentPrice(auctionDetail);
+  const bidCount = auctionDetail?.bidCount ?? 0;
+  const priceHelperText = bidCount > 0 ? "현재 최고 입찰가" : "입찰 기록 없음";
+
+  useEffect(() => {
+    if (auctionId == null) {
+      return;
+    }
+
+    let ignore = false;
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    fetchAuctionDetail(auctionId)
+      .then((data) => {
+        if (!ignore) {
+          setAuctionDetail(data);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setErrorMessage(
+            getErrorMessage(error, "입찰 현황을 불러오지 못했습니다."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [auctionId]);
 
   return (
     <motion.div
@@ -64,11 +110,15 @@ export default function BiddingStatusScreen({ onBack, themeColor }: { onBack: ()
         <div className="p-6 bg-gray-50/50 border-b border-gray-50">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm text-gray-500 font-medium">현재 최고가</span>
-            <span className="text-xs text-gray-400">총 0회 입찰</span>
+            <span className="text-xs text-gray-400">총 {bidCount}회 입찰</span>
           </div>
           <div className="flex items-baseline space-x-2">
-            <span className="text-3xl font-black" style={{ color: themeColor }}>₩0</span>
-            <span className="text-xs font-bold text-gray-400 flex items-center">입찰 기록 없음</span>
+            <span className="text-3xl font-black" style={{ color: themeColor }}>
+              {isLoading ? "불러오는 중" : `₩${currentDisplayPrice.toLocaleString()}`}
+            </span>
+            <span className="text-xs font-bold text-gray-400 flex items-center">
+              {errorMessage || priceHelperText}
+            </span>
           </div>
         </div>
 
