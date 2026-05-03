@@ -20,7 +20,8 @@ export function ForegroundNotificationListener() {
       const body = payload.notification?.body || "";
       const options: NotificationOptions = {
         body,
-        icon: "/favicon.ico",
+        icon: "/dealit-logo.svg",
+        badge: "/dealit-logo.svg",
         data: payload.data || {},
       };
 

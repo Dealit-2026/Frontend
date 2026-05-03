@@ -18,7 +18,8 @@ messaging.onBackgroundMessage((payload) => {
   const title = notification.title || "Dealit";
   const options = {
     body: notification.body || "",
-    icon: "/favicon.ico",
+    icon: "/dealit-logo.svg",
+    badge: "/dealit-logo.svg",
     data: payload.data || {},
   };
 
