@@ -1,4 +1,5 @@
 import * as salesManagementApi from "@/services/sales-management/api";
+import * as mypageApi from "@/services/mypage/api";
 import type {
   AuctionSalesManagementItemResponse,
   RegularSalesManagementItemResponse,
@@ -78,6 +79,7 @@ function toRegularViewModel(
 
 function toAuctionViewModel(
   item: AuctionSalesManagementItemResponse,
+  sellerLocation = "",
 ): SalesManagementItemViewModel {
   const displayPrice = Number(item.currentPrice ?? item.startPrice ?? 0);
   const auctionStatus =
@@ -100,7 +102,7 @@ function toAuctionViewModel(
     priceLabel: formatPrice(displayPrice),
     imageUrl: item.thumbnailUrl,
     category: item.categoryName ?? DEFAULT_CATEGORY_LABEL,
-    location: null,
+    location: item.location ?? sellerLocation,
     bidders: item.bidCount,
     bidderCount: item.bidderCount,
     editable: item.canEdit,
@@ -130,10 +132,12 @@ function excludeAuctionProductsFromRegularList(
 export async function fetchSalesManagementProducts(): Promise<
   SalesManagementItemViewModel[]
 > {
-  const [regularProducts, auctionProducts] = await Promise.all([
+  const [regularProducts, auctionProducts, profile] = await Promise.all([
     salesManagementApi.getRegularSalesManagementProducts(),
     salesManagementApi.getAuctionSalesManagementProducts(),
+    mypageApi.getMyProfile().catch(() => null),
   ]);
+  const sellerLocation = profile?.location ?? "";
   const visibleRegularProducts = excludeAuctionProductsFromRegularList(
     regularProducts.content,
     auctionProducts.content,
@@ -141,7 +145,9 @@ export async function fetchSalesManagementProducts(): Promise<
 
   return [
     ...visibleRegularProducts.map(toRegularViewModel),
-    ...auctionProducts.content.map(toAuctionViewModel),
+    ...auctionProducts.content.map((product) =>
+      toAuctionViewModel(product, sellerLocation),
+    ),
   ].sort(
     (a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

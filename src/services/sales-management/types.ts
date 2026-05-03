@@ -46,6 +46,7 @@ export interface AuctionSalesManagementItemResponse {
   name: string;
   description: string;
   categoryName: string | null;
+  location?: string | null;
   thumbnailUrl: string | null;
   auctionStatus?: AuctionSalesManagementStatus | null;
   status?: AuctionSalesManagementStatus | null;
