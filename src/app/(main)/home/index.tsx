@@ -35,8 +35,10 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../types/index';
 import { ExploreIcon } from '../../../components/common/ExploreIcon';
-import ProductCard from '../../../components/product/ProductCard';
 import ProductListItem from '../../../components/product/ProductListItem';
+import { getErrorMessage } from "@/services/apiError";
+import { fetchPopularRegularProducts } from "@/services/product/popular/service";
+import type { PopularProductItemViewModel } from "@/services/product/popular/types";
 
 export default function HomeScreen({ 
   onProductClick, 
@@ -65,7 +67,11 @@ export default function HomeScreen({
     : 'https://i.ibb.co/6RrSfG14/image.png';
 
   const [currentBanner, setCurrentBanner] = useState(0);
-  const popularProductIds = mode === 'auction' ? [] : [1, 2, 3, 4];
+  const [popularProducts, setPopularProducts] = useState<
+    PopularProductItemViewModel[]
+  >([]);
+  const [isPopularLoading, setIsPopularLoading] = useState(false);
+  const [popularErrorMessage, setPopularErrorMessage] = useState("");
   const closingProductIds = mode === 'auction' ? [] : [1, 2, 3];
   const banners = mode === 'regular' ? [
     {
@@ -107,6 +113,44 @@ export default function HomeScreen({
     }, 5000);
     return () => clearInterval(timer);
   }, [banners.length]);
+
+  useEffect(() => {
+    if (mode !== "regular") {
+      setPopularProducts([]);
+      setPopularErrorMessage("");
+      setIsPopularLoading(false);
+      return;
+    }
+
+    let ignore = false;
+
+    setIsPopularLoading(true);
+    setPopularErrorMessage("");
+
+    fetchPopularRegularProducts(10)
+      .then((products) => {
+        if (!ignore) {
+          setPopularProducts(products);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setPopularProducts([]);
+          setPopularErrorMessage(
+            getErrorMessage(error, "실시간 인기 상품을 불러오지 못했습니다."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsPopularLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [mode]);
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -219,10 +263,69 @@ export default function HomeScreen({
               </button>
             </div>
             
-            {popularProductIds.length > 0 ? (
+            {mode !== "regular" ? (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
+                등록된 경매 상품이 없습니다
+              </div>
+            ) : isPopularLoading ? (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
+                실시간 인기 상품을 불러오는 중입니다
+              </div>
+            ) : popularErrorMessage ? (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-red-100 bg-red-50 px-4 text-center text-sm font-medium text-red-500">
+                {popularErrorMessage}
+              </div>
+            ) : popularProducts.length > 0 ? (
               <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
-                {popularProductIds.map((i) => (
-                  <ProductCard key={i} i={i} mode={mode} themeColor={themeColor} onProductClick={onProductClick} />
+                {popularProducts.map((product) => (
+                  <div
+                    key={product.productId}
+                    onClick={() => onProductClick(product.productId)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onProductClick(product.productId);
+                      }
+                    }}
+                    className="w-[140px] shrink-0 space-y-3 cursor-pointer group"
+                  >
+                    <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden relative">
+                      {product.thumbnailUrl ? (
+                        <img
+                          src={product.thumbnailUrl}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <ImageIcon size={28} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold truncate text-gray-800">
+                        {product.name}
+                      </h4>
+                      <p className="font-bold text-base text-black">
+                        {product.priceLabel}
+                      </p>
+                      <p className="text-[10px] text-gray-400 font-medium truncate">
+                        {product.categoryName} · {product.location}
+                      </p>
+                      <div className="flex items-center space-x-2 text-[10px] text-gray-400 font-medium">
+                        <div className="flex items-center space-x-1">
+                          <Eye size={10} />
+                          <span>{product.viewCount}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <TrendingUp size={10} />
+                          <span>{product.popularScore.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : (

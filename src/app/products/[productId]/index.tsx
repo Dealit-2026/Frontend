@@ -26,6 +26,11 @@ import {
 import type { AuctionDetailResponse } from "@/services/auction/detail/types";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
+import {
+  addRegularWishlist,
+  fetchRegularWishlist,
+  removeRegularWishlist,
+} from "@/services/wishlist/service";
 
 type AuctionStatus =
   | "AUCTION_SCHEDULED"
@@ -115,6 +120,7 @@ export default function ProductDetailScreen({
   const [isLiked, setIsLiked] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showSellerProfile, setShowSellerProfile] = useState(false);
+  const [isWishlistSubmitting, setIsWishlistSubmitting] = useState(false);
   const [auctionDetail, setAuctionDetail] =
     useState<AuctionDetailResponse | null>(null);
   const [isAuctionLoading, setIsAuctionLoading] = useState(false);
@@ -180,6 +186,7 @@ export default function ProductDetailScreen({
   const resolvedFavoriteCount = productData
     ? productDetailService.getFavoriteCount(productData)
     : 0;
+  const [favoriteCount, setFavoriteCount] = useState(resolvedFavoriteCount);
   const resolvedChatCount = productData
     ? productDetailService.getChatCount(productData)
     : 0;
@@ -203,6 +210,35 @@ export default function ProductDetailScreen({
       setInputBidAmount(regularPrice + 10000);
     }
   }, [regularPrice]);
+
+  useEffect(() => {
+    setFavoriteCount(resolvedFavoriteCount);
+  }, [resolvedFavoriteCount]);
+
+  useEffect(() => {
+    if (!isRegular || productId == null) {
+      setIsLiked(false);
+      return;
+    }
+
+    let ignore = false;
+
+    fetchRegularWishlist()
+      .then((items) => {
+        if (!ignore) {
+          setIsLiked(items.some((item) => item.productId === productId));
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setIsLiked(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isRegular, productId]);
 
   useEffect(() => {
     if (showBidSheet) {
@@ -306,6 +342,33 @@ export default function ProductDetailScreen({
     }
   };
 
+  const handleWishlistClick = async () => {
+    if (!isRegular || productId == null || isWishlistSubmitting) {
+      return;
+    }
+
+    if (!productData?.canFavorite && !isLiked) {
+      showToast("찜할 수 없는 상품입니다.");
+      return;
+    }
+
+    setIsWishlistSubmitting(true);
+
+    try {
+      const result = isLiked
+        ? await removeRegularWishlist(productId)
+        : await addRegularWishlist(productId);
+
+      setIsLiked(result.liked);
+      setFavoriteCount(result.favoriteCount);
+      showToast(result.liked ? "찜 목록에 추가했습니다." : "찜을 취소했습니다.");
+    } catch (error) {
+      showToast(getErrorMessage(error, "찜 처리에 실패했습니다."));
+    } finally {
+      setIsWishlistSubmitting(false);
+    }
+  };
+
   if (!isRegular && (isAuctionLoading || auctionErrorMessage)) {
     return (
       <motion.div
@@ -350,21 +413,20 @@ export default function ProductDetailScreen({
           <ChevronLeft size={24} />
         </button>
         <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setIsLiked(!isLiked);
-              if (!isLiked) {
-                showToast("관심 목록에 추가되었습니다.");
-              }
-            }}
-            className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm"
-          >
-            <Heart
-              size={20}
-              fill={isLiked ? "#FF3B30" : "none"}
-              color={isLiked ? "#FF3B30" : "currentColor"}
-            />
-          </button>
+          {isRegular && (
+            <button
+              onClick={handleWishlistClick}
+              disabled={isWishlistSubmitting}
+              className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
+              aria-label={isLiked ? "찜 취소" : "찜 추가"}
+            >
+              <Heart
+                size={20}
+                fill={isLiked ? "#FF3B30" : "none"}
+                color={isLiked ? "#FF3B30" : "currentColor"}
+              />
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
@@ -469,7 +531,7 @@ export default function ProductDetailScreen({
                   </div>
                   <div className="flex items-center space-x-1">
                     <Heart size={12} />
-                    <span>찜 {resolvedFavoriteCount + (isLiked ? 1 : 0)}</span>
+                    <span>찜 {favoriteCount}</span>
                   </div>
                 </div>
               ) : (

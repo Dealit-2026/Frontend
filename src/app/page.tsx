@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   Check,
@@ -101,6 +102,7 @@ import {
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 
 export default function App() {
+  const router = useRouter();
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [emailAuthMode, setEmailAuthMode] = useState<"signup" | "profile">(
     "signup",
@@ -148,8 +150,7 @@ export default function App() {
   };
 
   const navigateToProduct = (id: number) => {
-    setSelectedProductId(id);
-    setCurrentScreen("product_detail");
+    router.push(`/products/${id}`);
   };
 
   const handleLocationPostcodeSearch = async () => {
