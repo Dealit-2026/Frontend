@@ -16,6 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
+import DealitMoneyPanel from "@/components/wallet/DealitMoneyPanel";
 import { fetchMyPageProfile } from "@/services/mypage/service";
 import type { MyPageProfileViewModel } from "@/services/mypage/types";
 
@@ -185,6 +186,8 @@ export default function MyPageScreen({
             <span className="font-bold text-lg">{profile?.wishlistCount ?? 0}</span>
           </button>
         </div>
+
+        <DealitMoneyPanel />
 
         <div className="space-y-2">
           {menus.map((menu) => (
