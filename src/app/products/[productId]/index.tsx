@@ -24,6 +24,7 @@ import {
   placeAuctionBid,
 } from "@/services/auction/detail/service";
 import type { AuctionDetailResponse } from "@/services/auction/detail/types";
+import { fetchCurrentMember } from "@/services/auth/service";
 import { useEventStream } from "@/services/events/EventStreamProvider";
 import type { AuctionEventStreamEvent } from "@/services/events/types";
 import * as productDetailService from "@/services/product/productDetail/service";
@@ -134,6 +135,7 @@ export default function ProductDetailScreen({
   const [auctionErrorMessage, setAuctionErrorMessage] = useState("");
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [auctionClockOffsetMs, setAuctionClockOffsetMs] = useState(0);
+  const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
   const { latestAuctionEvent } = useEventStream();
   const showToastRef = useRef(showToast);
 
@@ -164,6 +166,10 @@ export default function ProductDetailScreen({
       effectiveAuctionStatus === "NO_BID" ||
       effectiveAuctionStatus === "SUCCESSFUL_BID" ||
       hasAuctionTimeEnded);
+  const isAuctionOwner =
+    !isRegular &&
+    currentMemberId != null &&
+    auctionDetail?.seller.memberId === currentMemberId;
   const bidUnit = auctionDetail?.minimumBidAmount ?? 10000;
   const minBidAmount =
     auctionDetail?.minimumNextBidPrice ?? currentPrice + bidUnit;
@@ -286,6 +292,30 @@ export default function ProductDetailScreen({
   }, [isRegular, productId]);
 
   useEffect(() => {
+    if (isRegular) {
+      return;
+    }
+
+    let ignore = false;
+
+    fetchCurrentMember()
+      .then((member) => {
+        if (!ignore) {
+          setCurrentMemberId(member.memberId);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setCurrentMemberId(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isRegular]);
+
+  useEffect(() => {
     if (isRegular || !isAuctionEventForProduct(latestAuctionEvent, productId)) {
       return;
     }
@@ -352,6 +382,11 @@ export default function ProductDetailScreen({
 
   const handleBidSubmit = async (bidPrice: number) => {
     if (isRegular || productId == null || isBidSubmitting) {
+      return;
+    }
+
+    if (isAuctionOwner) {
+      showToast("자신이 등록한 경매에는 입찰할 수 없습니다.");
       return;
     }
 
@@ -650,17 +685,17 @@ export default function ProductDetailScreen({
           </button>
         ) : (
           <button
-            onClick={() =>
-              !isAuctionScheduled && !isAuctionEnded && setShowBidSheet(true)
+          onClick={() =>
+              !isAuctionScheduled && !isAuctionEnded && !isAuctionOwner && setShowBidSheet(true)
             }
-            disabled={isAuctionScheduled || isAuctionEnded}
+            disabled={isAuctionScheduled || isAuctionEnded || isAuctionOwner}
             className={`flex-1 h-14 font-bold rounded-xl transition-colors ${
-              isAuctionScheduled || isAuctionEnded
+              isAuctionScheduled || isAuctionEnded || isAuctionOwner
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "text-white shadow-lg"
             }`}
             style={
-              isAuctionScheduled || isAuctionEnded
+              isAuctionScheduled || isAuctionEnded || isAuctionOwner
                 ? undefined
                 : ({ backgroundColor: themeColor } as React.CSSProperties)
             }
@@ -669,6 +704,8 @@ export default function ProductDetailScreen({
               ? "경매 종료"
               : isAuctionScheduled
                 ? "입찰은 시작 후 가능해요"
+                : isAuctionOwner
+                  ? "내 경매입니다"
                 : "입찰하기"}
           </button>
         )}
