@@ -22,6 +22,7 @@ export interface SignUpRequest {
   password: string;
   email: string | null;
   name: string | null;
+  interestCategoryIds: number[];
 }
 
 export interface SignUpResponse {
@@ -72,6 +73,7 @@ export interface SignUpFormValues {
   confirmPassword: string;
   email: string;
   name: string;
+  interestCategoryIds: number[];
 }
 
 export interface AuthResult<T> {

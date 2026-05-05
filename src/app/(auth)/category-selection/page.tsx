@@ -11,8 +11,6 @@ export default function CategorySelectionPage() {
     <CategorySelectionScreen
       onBack={() => router.back()}
       onComplete={() => router.push("/")}
-      onNavigateLogin={() => router.push("/login")}
-      showSkip
     />
   );
 }

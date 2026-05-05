@@ -160,6 +160,7 @@ export function createDefaultSignUpForm(): SignUpFormValues {
     confirmPassword: "",
     email: "",
     name: "",
+    interestCategoryIds: [],
   };
 }
 
@@ -211,6 +212,7 @@ export function buildSignUpRequest(form: SignUpFormValues): SignUpRequest {
     password: form.password,
     email: normalizedEmail === "" ? null : normalizedEmail,
     name: form.name.trim() || null,
+    interestCategoryIds: form.interestCategoryIds,
   };
 }
 
