@@ -29,6 +29,11 @@ import { useEventStream } from "@/services/events/EventStreamProvider";
 import type { AuctionEventStreamEvent } from "@/services/events/types";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
+import {
+  addRegularWishlist,
+  fetchRegularWishlist,
+  removeRegularWishlist,
+} from "@/services/wishlist/service";
 
 type AuctionStatus =
   | "AUCTION_SCHEDULED"
@@ -128,6 +133,7 @@ export default function ProductDetailScreen({
   const [isLiked, setIsLiked] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showSellerProfile, setShowSellerProfile] = useState(false);
+  const [isWishlistSubmitting, setIsWishlistSubmitting] = useState(false);
   const [auctionDetail, setAuctionDetail] =
     useState<AuctionDetailResponse | null>(null);
   const [isAuctionLoading, setIsAuctionLoading] = useState(false);
@@ -139,8 +145,7 @@ export default function ProductDetailScreen({
   const { latestAuctionEvent } = useEventStream();
   const showToastRef = useRef(showToast);
 
-  const resolvedMode =
-    productData?.saleType === "AUCTION" ? "auction" : mode;
+  const resolvedMode = productData?.saleType === "AUCTION" ? "auction" : mode;
   const isRegular = resolvedMode === "regular";
   const regularPrice = productData
     ? productDetailService.getProductPrice(productData)
@@ -174,14 +179,15 @@ export default function ProductDetailScreen({
   const minBidAmount =
     auctionDetail?.minimumNextBidPrice ?? currentPrice + bidUnit;
 
-  const displayName = auctionDetail?.name ?? productData?.name ?? "상품 정보 없음";
+  const displayName =
+    auctionDetail?.name ?? productData?.name ?? "상품 정보 없음";
   const displayDescription =
     auctionDetail?.description ??
     productData?.description ??
     "상품 설명이 없습니다.";
   const displayImageUrl = !isRegular
     ? getAuctionMainImageUrl(auctionDetail)
-    : productData?.imageUrls?.[0] ?? null;
+    : (productData?.imageUrls?.[0] ?? null);
   const displayCategoryName =
     auctionDetail?.categoryName ??
     productData?.category?.nameKo ??
@@ -192,9 +198,12 @@ export default function ProductDetailScreen({
     "판매자 정보 없음";
   const displaySellerImageUrl =
     auctionDetail?.seller.profileImageUrl ??
-    "https://picsum.photos/seed/seller/100/100";
+    productData?.seller?.profileImageUrl ??
+    null;
   const displayLocation =
-    auctionDetail?.location ?? productData?.seller?.location ?? "지역 정보 없음";
+    auctionDetail?.location ??
+    productData?.seller?.location ??
+    "지역 정보 없음";
   const displayStatus = productData?.status ?? "정보 없음";
   const resolvedViewCount = productData
     ? productDetailService.getViewCount(productData)
@@ -202,6 +211,7 @@ export default function ProductDetailScreen({
   const resolvedFavoriteCount = productData
     ? productDetailService.getFavoriteCount(productData)
     : 0;
+  const [favoriteCount, setFavoriteCount] = useState(resolvedFavoriteCount);
   const resolvedChatCount = productData
     ? productDetailService.getChatCount(productData)
     : 0;
@@ -214,14 +224,25 @@ export default function ProductDetailScreen({
     showToastRef.current = showToast;
   }, [showToast]);
 
-  // 새롭게 추가된 판매자 프로필용 변수 (API 연동 전 임시 데이터)
-  const displaySellerBio = "좋은 거래 부탁드려요.";
-  const displaySellerRating = "4.8";
-  const displaySellerWarning = "0회";
+  const displaySellerBio = productData?.seller?.bio ?? "정보없음";
+  const displaySellerRating =
+    productData?.seller?.rating == null
+      ? "정보없음"
+      : productData.seller.rating.toFixed(1);
+  const displaySellerWarning =
+    productData?.seller?.warningCount == null
+      ? "정보없음"
+      : `${productData.seller.warningCount}회`;
   const displaySellerAddress = displayLocation;
-  const sellerRecentSales: Array<{ title: string; price: string; status: string }> = [
-    // 필요 시 여기에 더미 데이터를 추가할 수 있습니다.
-  ];
+  const sellerRecentSales = productData?.seller?.recentSales ?? [];
+
+  function formatSellerRecentSalePrice(price?: number | null) {
+    if (price == null) {
+      return "정보없음";
+    }
+
+    return `${price.toLocaleString()}원`;
+  }
 
   useEffect(() => {
     if (regularPrice != null) {
@@ -229,6 +250,35 @@ export default function ProductDetailScreen({
       setInputBidAmount(regularPrice + 10000);
     }
   }, [regularPrice]);
+
+  useEffect(() => {
+    setFavoriteCount(resolvedFavoriteCount);
+  }, [resolvedFavoriteCount]);
+
+  useEffect(() => {
+    if (!isRegular || productId == null) {
+      setIsLiked(false);
+      return;
+    }
+
+    let ignore = false;
+
+    fetchRegularWishlist()
+      .then((items) => {
+        if (!ignore) {
+          setIsLiked(items.some((item) => item.productId === productId));
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setIsLiked(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isRegular, productId]);
 
   useEffect(() => {
     if (showBidSheet) {
@@ -426,6 +476,35 @@ export default function ProductDetailScreen({
     }
   };
 
+  const handleWishlistClick = async () => {
+    if (!isRegular || productId == null || isWishlistSubmitting) {
+      return;
+    }
+
+    if (!productData?.canFavorite && !isLiked) {
+      showToast("찜할 수 없는 상품입니다.");
+      return;
+    }
+
+    setIsWishlistSubmitting(true);
+
+    try {
+      const result = isLiked
+        ? await removeRegularWishlist(productId)
+        : await addRegularWishlist(productId);
+
+      setIsLiked(result.liked);
+      setFavoriteCount(result.favoriteCount);
+      showToast(
+        result.liked ? "찜 목록에 추가했습니다." : "찜을 취소했습니다.",
+      );
+    } catch (error) {
+      showToast(getErrorMessage(error, "찜 처리에 실패했습니다."));
+    } finally {
+      setIsWishlistSubmitting(false);
+    }
+  };
+
   if (!isRegular && (isAuctionLoading || auctionErrorMessage)) {
     return (
       <motion.div
@@ -470,21 +549,20 @@ export default function ProductDetailScreen({
           <ChevronLeft size={24} />
         </button>
         <div className="flex space-x-2">
-          <button
-            onClick={() => {
-              setIsLiked(!isLiked);
-              if (!isLiked) {
-                showToast("관심 목록에 추가되었습니다.");
-              }
-            }}
-            className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm"
-          >
-            <Heart
-              size={20}
-              fill={isLiked ? "#FF3B30" : "none"}
-              color={isLiked ? "#FF3B30" : "currentColor"}
-            />
-          </button>
+          {isRegular && (
+            <button
+              onClick={handleWishlistClick}
+              disabled={isWishlistSubmitting}
+              className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
+              aria-label={isLiked ? "찜 취소" : "찜 추가"}
+            >
+              <Heart
+                size={20}
+                fill={isLiked ? "#FF3B30" : "none"}
+                color={isLiked ? "#FF3B30" : "currentColor"}
+              />
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}
@@ -510,15 +588,15 @@ export default function ProductDetailScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto pb-24 no-scrollbar">
-        <div className="aspect-square bg-gray-100">
+        <div className="flex w-full justify-center bg-gray-100 p-4">
           {displayImageUrl ? (
             <img
               src={displayImageUrl}
               alt={displayName}
-              className="w-full h-full object-cover"
+              className="max-w-125 max-h-125 w-full h-auto object-contain"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300">
+            <div className="flex aspect-square w-full max-w-125 items-center justify-center text-gray-300">
               <ImageIcon size={56} />
             </div>
           )}
@@ -589,7 +667,7 @@ export default function ProductDetailScreen({
                   </div>
                   <div className="flex items-center space-x-1">
                     <Heart size={12} />
-                    <span>찜 {resolvedFavoriteCount + (isLiked ? 1 : 0)}</span>
+                    <span>찜 {favoriteCount}</span>
                   </div>
                 </div>
               ) : (
@@ -630,13 +708,27 @@ export default function ProductDetailScreen({
           >
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden">
-                <img src={displaySellerImageUrl} alt="Seller" />
+                {displaySellerImageUrl ? (
+                  <img
+                    src={displaySellerImageUrl}
+                    alt="Seller"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-gray-300">
+                    <ImageIcon size={20} />
+                  </div>
+                )}
               </div>
               <div>
                 <p className="font-bold text-sm">{displaySellerName}</p>
                 <div className="flex items-center space-x-1 text-[10px] text-gray-400">
                   <Star size={10} className="fill-yellow-400 text-yellow-400" />
-                  <span>4.8 (거래 34회)</span>
+                  <span>
+                    {displaySellerRating === "정보없음"
+                      ? "정보없음"
+                      : `${displaySellerRating} (거래 ${sellerRecentSales.length}건)`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -766,7 +858,9 @@ export default function ProductDetailScreen({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleBidSubmit(currentPrice + 30000)}
-                    disabled={isBidSubmitting || currentPrice + 30000 < minBidAmount}
+                    disabled={
+                      isBidSubmitting || currentPrice + 30000 < minBidAmount
+                    }
                     className="h-12 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors disabled:opacity-50"
                   >
                     ₩{(currentPrice + 30000).toLocaleString()}
@@ -818,10 +912,17 @@ export default function ProductDetailScreen({
 
               <div className="flex items-center space-x-4">
                 <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden">
-                  <img
-                    src={displaySellerImageUrl}
-                    alt="Seller"
-                  />
+                  {displaySellerImageUrl ? (
+                    <img
+                      src={displaySellerImageUrl}
+                      alt="Seller"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-gray-300">
+                      <ImageIcon size={24} />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">{displaySellerName}</h3>
@@ -869,14 +970,16 @@ export default function ProductDetailScreen({
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
                       >
                         <span className="text-sm font-medium text-gray-800">
-                          {item.title}
+                          {item.title ?? "정보없음"}
                         </span>
                         <div className="text-right">
-                          <p className="text-xs font-bold">{item.price}</p>
+                          <p className="text-xs font-bold">
+                            {formatSellerRecentSalePrice(item.price)}
+                          </p>
                           <p
                             className={`text-[10px] ${item.status === "판매완료" ? "text-gray-400" : "text-blue-500"}`}
                           >
-                            {item.status}
+                            {item.status ?? "정보없음"}
                           </p>
                         </div>
                       </div>

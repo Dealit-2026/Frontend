@@ -8,6 +8,17 @@ export interface Seller {
   memberId: number;
   nickname: string;
   location: string;
+  profileImageUrl?: string | null;
+  bio?: string | null;
+  rating?: number | null;
+  warningCount?: number | null;
+  recentSales?: SellerRecentSale[] | null;
+}
+
+export interface SellerRecentSale {
+  title?: string | null;
+  price?: number | null;
+  status?: string | null;
 }
 
 export interface GeneralSale {
