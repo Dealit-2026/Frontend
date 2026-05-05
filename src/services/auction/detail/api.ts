@@ -4,6 +4,7 @@ import {
   handleUnauthorizedAccess,
 } from "@/services/auth/service";
 import type {
+  AuctionBidHistoryResponse,
   AuctionDetailResponse,
   CreateAuctionBidRequest,
   CreateAuctionBidResponse,
@@ -37,6 +38,28 @@ export async function getAuctionDetail(
     await throwProtectedApiError(
       response,
       "경매 상품 정보를 불러오지 못했습니다.",
+    );
+  }
+
+  return response.json();
+}
+
+export async function getAuctionBidHistory(
+  auctionId: number,
+): Promise<AuctionBidHistoryResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/auctions/${auctionId}/bids`,
+    {
+      method: "GET",
+      headers: getAuthorizationHeaders(),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    await throwProtectedApiError(
+      response,
+      "입찰 현황을 불러오지 못했습니다.",
     );
   }
 

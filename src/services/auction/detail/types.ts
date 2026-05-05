@@ -2,7 +2,10 @@ export type AuctionDetailStatus =
   | "AUCTION_SCHEDULED"
   | "AUCTION_LIVE"
   | "AUCTION_ENDED"
-  | "ENDED";
+  | "ONGOING"
+  | "ENDED"
+  | "NO_BID"
+  | "SUCCESSFUL_BID";
 
 export interface AuctionDetailImage {
   imageId: number;
@@ -47,4 +50,20 @@ export interface CreateAuctionBidResponse {
   currentPrice: number;
   bidderId: number;
   serverTime: string;
+}
+
+export interface AuctionBidHistoryItem {
+  bidId: number;
+  bidderId: number;
+  bidderNickname: string;
+  bidPrice: number;
+  bidAt: string;
+  highest: boolean;
+}
+
+export interface AuctionBidHistoryResponse {
+  auctionId: number;
+  currentPrice: number;
+  bidCount: number;
+  bids: AuctionBidHistoryItem[];
 }

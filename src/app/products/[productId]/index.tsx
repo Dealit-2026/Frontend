@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -24,6 +24,8 @@ import {
   placeAuctionBid,
 } from "@/services/auction/detail/service";
 import type { AuctionDetailResponse } from "@/services/auction/detail/types";
+import { useEventStream } from "@/services/events/EventStreamProvider";
+import type { AuctionEventStreamEvent } from "@/services/events/types";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
 
@@ -31,7 +33,10 @@ type AuctionStatus =
   | "AUCTION_SCHEDULED"
   | "AUCTION_LIVE"
   | "AUCTION_ENDED"
-  | "ENDED";
+  | "ONGOING"
+  | "ENDED"
+  | "NO_BID"
+  | "SUCCESSFUL_BID";
 
 interface ProductDetailScreenProps {
   productId: number | null;
@@ -96,6 +101,13 @@ function formatScheduleLabel(value?: string) {
   }).format(new Date(value));
 }
 
+function isAuctionEventForProduct(
+  event: AuctionEventStreamEvent | null,
+  productId: number | null,
+): event is AuctionEventStreamEvent {
+  return event != null && productId != null && event.auctionId === productId;
+}
+
 export default function ProductDetailScreen({
   productId,
   productData,
@@ -122,6 +134,8 @@ export default function ProductDetailScreen({
   const [auctionErrorMessage, setAuctionErrorMessage] = useState("");
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [auctionClockOffsetMs, setAuctionClockOffsetMs] = useState(0);
+  const { latestAuctionEvent } = useEventStream();
+  const showToastRef = useRef(showToast);
 
   const resolvedMode =
     productData?.saleType === "AUCTION" ? "auction" : mode;
@@ -147,6 +161,8 @@ export default function ProductDetailScreen({
     !isRegular &&
     (effectiveAuctionStatus === "AUCTION_ENDED" ||
       effectiveAuctionStatus === "ENDED" ||
+      effectiveAuctionStatus === "NO_BID" ||
+      effectiveAuctionStatus === "SUCCESSFUL_BID" ||
       hasAuctionTimeEnded);
   const bidUnit = auctionDetail?.minimumBidAmount ?? 10000;
   const minBidAmount =
@@ -187,6 +203,10 @@ export default function ProductDetailScreen({
     ? formatRemainingTime(auctionRemainingMs)
     : "정보 없음";
   const scheduledStartLabel = formatScheduleLabel(auctionStartAt);
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   // 새롭게 추가된 판매자 프로필용 변수 (API 연동 전 임시 데이터)
   const displaySellerBio = "좋은 거래 부탁드려요.";
@@ -264,6 +284,71 @@ export default function ProductDetailScreen({
       ignore = true;
     };
   }, [isRegular, productId]);
+
+  useEffect(() => {
+    if (isRegular || !isAuctionEventForProduct(latestAuctionEvent, productId)) {
+      return;
+    }
+
+    if (latestAuctionEvent.type === "AUCTION_BID_UPDATED") {
+      setCurrentPrice(latestAuctionEvent.currentPrice);
+      setBidCount(latestAuctionEvent.bidCount);
+      setInputBidAmount(latestAuctionEvent.minimumNextBidPrice);
+      setAuctionClockOffsetMs(
+        new Date(latestAuctionEvent.serverTime).getTime() - Date.now(),
+      );
+      setAuctionDetail((previous) =>
+        previous
+          ? {
+              ...previous,
+              currentPrice: latestAuctionEvent.currentPrice,
+              minimumNextBidPrice: latestAuctionEvent.minimumNextBidPrice,
+              bidCount: latestAuctionEvent.bidCount,
+              bidderCount: latestAuctionEvent.bidderCount,
+              serverTime: latestAuctionEvent.serverTime,
+            }
+          : previous,
+      );
+      return;
+    }
+
+    if (latestAuctionEvent.type === "BID_RECEIVED") {
+      showToastRef.current(
+        latestAuctionEvent.firstBid
+          ? "첫 입찰이 발생했습니다."
+          : "새로운 입찰이 발생했습니다.",
+      );
+      return;
+    }
+
+    if (latestAuctionEvent.type === "OUTBID") {
+      showToastRef.current("상위 입찰자가 생겼습니다.");
+      return;
+    }
+
+    if (latestAuctionEvent.type === "AUCTION_ENDED") {
+      const endedStatus = latestAuctionEvent.status;
+      setAuctionDetail((previous) =>
+        previous
+          ? {
+              ...previous,
+              currentPrice: latestAuctionEvent.finalPrice ?? previous.currentPrice,
+              minimumNextBidPrice: latestAuctionEvent.finalPrice ?? previous.minimumNextBidPrice,
+              serverTime: latestAuctionEvent.serverTime,
+              status:
+                endedStatus === "SUCCESSFUL_BID" || endedStatus === "NO_BID"
+                  ? endedStatus
+                  : "ENDED",
+            }
+          : previous,
+      );
+      showToastRef.current(
+        endedStatus === "NO_BID"
+          ? "경매가 유찰되었습니다."
+          : "경매가 종료되었습니다.",
+      );
+    }
+  }, [isRegular, latestAuctionEvent, productId]);
 
   const handleBidSubmit = async (bidPrice: number) => {
     if (isRegular || productId == null || isBidSubmitting) {

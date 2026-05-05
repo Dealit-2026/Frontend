@@ -13,6 +13,7 @@ import {
 import { fetchTotalUnreadCount } from "../chats/service";
 import type {
   AppEventStreamEvent,
+  AuctionEventStreamEvent,
   ChatRoomUpdatedEvent,
   ChatUnreadCountUpdatedEvent,
 } from "./types";
@@ -21,6 +22,7 @@ import { subscribeEventStream } from "./stream";
 interface EventStreamContextValue {
   chatUnreadCount: number;
   latestChatRoomEvent: ChatRoomUpdatedEvent | null;
+  latestAuctionEvent: AuctionEventStreamEvent | null;
   setChatUnreadCount: (count: number) => void;
 }
 
@@ -51,6 +53,18 @@ function isChatRoomUpdatedEvent(
   );
 }
 
+function isAuctionEvent(
+  event: AppEventStreamEvent,
+): event is AuctionEventStreamEvent {
+  return (
+    event.type === "BID_UPDATED" ||
+    event.type === "OUTBID" ||
+    event.type === "AUCTION_ENDED" ||
+    event.type === "BID_RECEIVED" ||
+    event.type === "AUCTION_BID_UPDATED"
+  );
+}
+
 export function EventStreamProvider({
   enabled,
   children,
@@ -61,6 +75,8 @@ export function EventStreamProvider({
   const [chatUnreadCount, setChatUnreadCountState] = useState(0);
   const [latestChatRoomEvent, setLatestChatRoomEvent] =
     useState<ChatRoomUpdatedEvent | null>(null);
+  const [latestAuctionEvent, setLatestAuctionEvent] =
+    useState<AuctionEventStreamEvent | null>(null);
 
   const setChatUnreadCount = useCallback((count: number) => {
     setChatUnreadCountState(Math.max(0, count));
@@ -70,6 +86,7 @@ export function EventStreamProvider({
     if (!enabled || !hasAccessToken()) {
       setChatUnreadCount(0);
       setLatestChatRoomEvent(null);
+      setLatestAuctionEvent(null);
       return;
     }
 
@@ -94,6 +111,11 @@ export function EventStreamProvider({
 
         if (isChatRoomUpdatedEvent(event)) {
           setLatestChatRoomEvent(event);
+          return;
+        }
+
+        if (isAuctionEvent(event)) {
+          setLatestAuctionEvent(event);
         }
       },
       onError: (error) => {
@@ -111,9 +133,10 @@ export function EventStreamProvider({
     () => ({
       chatUnreadCount,
       latestChatRoomEvent,
+      latestAuctionEvent,
       setChatUnreadCount,
     }),
-    [chatUnreadCount, latestChatRoomEvent, setChatUnreadCount],
+    [chatUnreadCount, latestAuctionEvent, latestChatRoomEvent, setChatUnreadCount],
   );
 
   return (
@@ -129,6 +152,7 @@ export function useEventStream() {
     context ?? {
       chatUnreadCount: 0,
       latestChatRoomEvent: null,
+      latestAuctionEvent: null,
       setChatUnreadCount: () => {},
     }
   );

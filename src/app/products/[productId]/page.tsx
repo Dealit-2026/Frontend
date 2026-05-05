@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import ProductDetailScreen from "./index";
 import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
 
@@ -99,24 +100,26 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <ProductDetailScreen
-      productId={productId}
-      productData={productData}
-      onBack={() => router.back()}
-      onChatClick={handleChatClick}
-      onReportClick={() => router.push(`/products/${productId}/report`)}
-      onPurchaseClick={() =>
-        router.push(`/products/${productId}/regular-purchase`)
-      }
-      onBidStatusClick={() =>
-        router.push(`/auctions/${productId}/bidding-status`)
-      }
-      onBidComplete={(data) =>
-        router.push(`/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`)
-      }
-      themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
-      mode={productData.saleType === "AUCTION" ? "auction" : "regular"}
-      showToast={() => {}}
-    />
+    <EventStreamProvider enabled>
+      <ProductDetailScreen
+        productId={productId}
+        productData={productData}
+        onBack={() => router.back()}
+        onChatClick={handleChatClick}
+        onReportClick={() => router.push(`/products/${productId}/report`)}
+        onPurchaseClick={() =>
+          router.push(`/products/${productId}/regular-purchase`)
+        }
+        onBidStatusClick={() =>
+          router.push(`/auctions/${productId}/bidding-status`)
+        }
+        onBidComplete={(data) =>
+          router.push(`/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`)
+        }
+        themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
+        mode={productData.saleType === "AUCTION" ? "auction" : "regular"}
+        showToast={() => {}}
+      />
+    </EventStreamProvider>
   );
 }
