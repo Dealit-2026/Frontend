@@ -37,6 +37,7 @@ import { Screen, Tab } from "../../../types/index";
 import { ExploreIcon } from "../../../components/common/ExploreIcon";
 import ProductListItem from "../../../components/product/ProductListItem";
 import { getErrorMessage } from "@/services/apiError";
+import { getUnreadNotificationCount } from "@/services/notifications/api";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import type { PopularProductItemViewModel } from "@/services/product/popular/types";
@@ -78,6 +79,7 @@ export default function HomeScreen({
   const [isPopularLoading, setIsPopularLoading] = useState(false);
   const [popularErrorMessage, setPopularErrorMessage] = useState("");
   const [hotProducts, setHotProducts] = useState<any[]>([]);
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const banners =
     mode === "regular"
       ? [
@@ -127,6 +129,26 @@ export default function HomeScreen({
     }, 5000);
     return () => clearInterval(timer);
   }, [banners.length]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    getUnreadNotificationCount()
+      .then((response) => {
+        if (!ignore) {
+          setHasUnreadNotifications(response.count > 0);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setHasUnreadNotifications(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (mode !== "regular") {
@@ -239,7 +261,9 @@ export default function HomeScreen({
             className="p-1.5 hover:bg-gray-50 rounded-full transition-colors relative"
           >
             <Bell size={22} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            {hasUnreadNotifications && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            )}
           </button>
           <button
             onClick={onWishlistClick}
