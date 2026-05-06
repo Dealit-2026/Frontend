@@ -87,7 +87,13 @@ import {
   resolveCurrentLocation,
 } from "@/services/location/service";
 import type { LocationFormValues } from "@/services/location/types";
-import { fetchMyLocationForm, saveMyLocation } from "@/services/mypage/service";
+import {
+  fetchMyLocationForm,
+  saveMyLocation,
+  saveMyProfile,
+  uploadMyProfileImage,
+} from "@/services/mypage/service";
+import type { MyProfileFormValues } from "@/services/mypage/types";
 import {
   clearMyProfileDraft,
   updateMyProfileDraft,
@@ -123,6 +129,10 @@ export default function App() {
   );
   const [isEditingLocation, setIsEditingLocation] = useState(false);
   const [profileRefreshKey, setProfileRefreshKey] = useState(0);
+  const [signupProfileForm, setSignupProfileForm] =
+    useState<MyProfileFormValues | null>(null);
+  const [signupProfileImageFile, setSignupProfileImageFile] =
+    useState<File | null>(null);
   const [isResolvingCurrentLocation, setIsResolvingCurrentLocation] =
     useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
@@ -270,13 +280,9 @@ export default function App() {
               }}
               onNext={async () => {
                 try {
-                  if (!isEditingLocation && !getAuthToken()) {
-                    const signUpResult = await signUp(getSignUpDraft());
-                    clearSignUpDraft();
-                    showToast(signUpResult.message);
+                  if (isEditingLocation || getAuthToken()) {
+                    await saveMyLocation(userLocationForm);
                   }
-
-                  await saveMyLocation(userLocationForm);
 
                   if (isEditingLocation) {
                     navigateTo("main");
@@ -328,12 +334,17 @@ export default function App() {
             <ProfileSetupScreen
               key="profile_setup"
               showToast={showToast}
+              deferSave={!isEditingProfile && !getAuthToken()}
+              onCompleteDraft={(form, imageFile) => {
+                setSignupProfileForm(form);
+                setSignupProfileImageFile(imageFile ?? null);
+              }}
               onBack={() => {
                 if (isEditingProfile) {
                   navigateTo("main");
                   setIsEditingProfile(false);
                 } else {
-                  navigateTo("terms");
+                  navigateTo("region_setup");
                 }
               }}
               onComplete={() => {
@@ -407,14 +418,66 @@ export default function App() {
             <CategorySelectionScreen
               key="category_selection"
               onBack={() => navigateTo("profile_setup")}
-              onComplete={() => navigateTo("main")}
-              onNavigateLogin={() => navigateTo("login")}
-              showSkip={true}
+              onComplete={async () => {
+                try {
+                  if (!getAuthToken()) {
+                    const signUpResult = await signUp(getSignUpDraft());
+                    showToast(signUpResult.message);
+
+                    try {
+                      await saveMyLocation(userLocationForm);
+                    } catch (locationError) {
+                      showToast(
+                        getErrorMessage(
+                          locationError,
+                          "지역 저장에 실패했습니다.",
+                        ),
+                      );
+                    }
+
+                    if (signupProfileForm) {
+                      try {
+                        let profileImageUrl = signupProfileForm.profileImageUrl;
+
+                        if (signupProfileImageFile) {
+                          const uploadedImage =
+                            await uploadMyProfileImage(signupProfileImageFile);
+                          profileImageUrl = uploadedImage.profileImageUrl;
+                        }
+
+                        await saveMyProfile({
+                          ...signupProfileForm,
+                          profileImageUrl,
+                        });
+                      } catch (profileError) {
+                        showToast(
+                          getErrorMessage(
+                            profileError,
+                            "프로필 저장에 실패했습니다.",
+                          ),
+                        );
+                      }
+                    }
+
+                    clearSignUpDraft();
+                    setSignupProfileForm(null);
+                    setSignupProfileImageFile(null);
+                  }
+
+                  navigateTo("main");
+                } catch (error) {
+                  showToast(
+                    getErrorMessage(error, "회원가입 완료에 실패했습니다."),
+                  );
+                }
+              }}
             />
           )}
           {currentScreen === "category_reset" && (
             <CategorySelectionScreen
               key="category_reset"
+              mode="edit"
+              showToast={showToast}
               onBack={() => navigateTo("main")}
               onComplete={() => navigateTo("main")}
               onNavigateLogin={() => navigateTo("login")}
@@ -476,6 +539,8 @@ export default function App() {
                 clearAuthToken();
                 clearSignUpDraft();
                 clearMyProfileDraft();
+                setSignupProfileForm(null);
+                setSignupProfileImageFile(null);
                 setUserLocationForm(createDefaultLocationForm());
                 setCurrentTab("home");
                 navigateTo("login");

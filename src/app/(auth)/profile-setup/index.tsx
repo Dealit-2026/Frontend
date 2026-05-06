@@ -9,6 +9,7 @@ import ResultModal from "@/components/common/modal/ResultModal";
 import { checkNicknameAvailability } from "@/services/auth/service";
 import { getSignUpDraft } from "@/services/auth/signUpDraft";
 import { saveMyProfile, uploadMyProfileImage } from "@/services/mypage/service";
+import type { MyProfileFormValues } from "@/services/mypage/types";
 
 type CheckStatus = "idle" | "available" | "duplicate";
 
@@ -16,10 +17,14 @@ export default function ProfileSetupScreen({
   showToast,
   onBack,
   onComplete,
+  deferSave = false,
+  onCompleteDraft,
 }: {
   showToast: (msg: string) => void;
   onBack: () => void;
   onComplete: () => void;
+  deferSave?: boolean;
+  onCompleteDraft?: (form: MyProfileFormValues, imageFile?: File | null) => void;
   key?: string;
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -27,6 +32,7 @@ export default function ProfileSetupScreen({
   const [nickname, setNickname] = useState("비드마스터");
   const [bio, setBio] = useState("안녕하세요! 비드마스터입니다. 좋은 거래 부탁드려요.");
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [nicknameCheckStatus, setNicknameCheckStatus] =
     useState<CheckStatus>("idle");
@@ -97,6 +103,14 @@ export default function ProfileSetupScreen({
     setIsUploadingImage(true);
     updateImagePreviewUrl(URL.createObjectURL(file));
 
+    if (deferSave) {
+      setProfileImageFile(file);
+      setProfileImageUrl(null);
+      setIsUploadingImage(false);
+      event.target.value = "";
+      return;
+    }
+
     try {
       const uploadedImage = await uploadMyProfileImage(file);
       setProfileImageUrl(uploadedImage.profileImageUrl);
@@ -117,12 +131,23 @@ export default function ProfileSetupScreen({
     setIsSubmitting(true);
 
     try {
-      await saveMyProfile({
+      const formValues = {
         name: getSignUpDraft().name,
         nickname,
         bio,
         profileImageUrl,
         location: "",
+      };
+
+      if (deferSave) {
+        onCompleteDraft?.(formValues, profileImageFile);
+        showToast("?꾨줈???ㅼ젙????λ릺?덉뒿?덈떎.");
+        onComplete();
+        return;
+      }
+
+      await saveMyProfile({
+        ...formValues,
       });
       showToast("프로필 설정이 저장되었습니다.");
       onComplete();
