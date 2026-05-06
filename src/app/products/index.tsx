@@ -36,6 +36,10 @@ import { motion, AnimatePresence } from "motion/react";
 import { Screen, Tab } from "../../types/index";
 import { ExploreIcon } from "../../components/common/ExploreIcon";
 import ProductListItem from "../../components/product/ProductListItem";
+import {
+  fetchClosingSoonAuctions,
+  fetchPopularAuctions,
+} from "@/services/auction/list/service";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { getErrorMessage } from "@/services/apiError";
 
@@ -59,13 +63,15 @@ export default function ProductListScreen({
 }) {
   const title =
     categoryName ||
-    (listType === "all"
-      ? "전체 목록"
-      : listType === "recent"
-        ? "최근 본 상품"
-        : mode === "regular"
-          ? "핫한 상품"
-          : "마감 임박 상품");
+    (mode === "auction" && listType === "all"
+      ? "실시간 인기 경매"
+      : mode === "auction" && listType === "closing_soon"
+        ? "마감 임박 경매"
+        : listType === "all"
+          ? "전체 목록"
+          : listType === "recent"
+            ? "최근 본 상품"
+            : "핫한 상품");
   const [itemIds] = useState<number[]>(
     mode === "auction" ? [] : [1, 2, 3, 4, 5, 6, 7, 8],
   );
@@ -75,17 +81,35 @@ export default function ProductListScreen({
 
   useEffect(() => {
     let ignore = false;
-    if (listType === "closing_soon" && mode === "regular") {
+    if (
+      (listType === "closing_soon" && mode === "regular") ||
+      (mode === "auction" && (listType === "all" || listType === "closing_soon"))
+    ) {
       setIsHotLoading(true);
       setHotError("");
-      fetchHotRegularProducts(8)
+
+      const request =
+        mode === "regular"
+          ? fetchHotRegularProducts(8)
+          : listType === "all"
+            ? fetchPopularAuctions(8)
+            : fetchClosingSoonAuctions(8);
+
+      request
         .then((products) => {
           if (!ignore) setHotProducts(products.slice(0, 8));
         })
         .catch((err) => {
           if (!ignore)
             setHotError(
-              getErrorMessage(err, "핫한 상품을 불러오지 못했습니다."),
+              getErrorMessage(
+                err,
+                mode === "regular"
+                  ? "핫한 상품을 불러오지 못했습니다."
+                  : listType === "all"
+                    ? "실시간 인기 경매를 불러오지 못했습니다."
+                    : "마감임박 경매를 불러오지 못했습니다.",
+              ),
             );
         })
         .finally(() => {
@@ -125,12 +149,17 @@ export default function ProductListScreen({
         </button>
       </div>
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
-        {listType === "closing_soon" && mode === "regular" ? (
+        {(listType === "closing_soon" && mode === "regular") ||
+        (mode === "auction" && (listType === "all" || listType === "closing_soon")) ? (
           isHotLoading ? (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
               <ShoppingBag size={48} className="opacity-20" />
               <p className="text-sm font-medium">
-                핫한 상품을 불러오는 중입니다
+                {mode === "regular"
+                  ? "핫한 상품을 불러오는 중입니다"
+                  : listType === "all"
+                    ? "실시간 인기 경매를 불러오는 중입니다"
+                    : "마감임박 경매를 불러오는 중입니다"}
               </p>
             </div>
           ) : hotError ? (
@@ -150,7 +179,13 @@ export default function ProductListScreen({
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-gray-400 space-y-2">
               <ShoppingBag size={48} className="opacity-20" />
-              <p className="text-sm font-medium">핫한 상품이 없습니다</p>
+              <p className="text-sm font-medium">
+                {mode === "regular"
+                  ? "핫한 상품이 없습니다"
+                  : listType === "all"
+                    ? "등록된 인기 경매가 없습니다"
+                    : "마감임박 경매가 없습니다"}
+              </p>
             </div>
           )
         ) : itemIds.length > 0 ? (
