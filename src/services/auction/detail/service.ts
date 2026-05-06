@@ -5,6 +5,10 @@ export async function fetchAuctionDetail(auctionId: number) {
   return auctionDetailApi.getAuctionDetail(auctionId);
 }
 
+export async function fetchAuctionBidHistory(auctionId: number) {
+  return auctionDetailApi.getAuctionBidHistory(auctionId);
+}
+
 export async function placeAuctionBid(auctionId: number, bidPrice: number) {
   return auctionDetailApi.postAuctionBid(auctionId, { bidPrice });
 }

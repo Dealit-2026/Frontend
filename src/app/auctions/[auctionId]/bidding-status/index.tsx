@@ -37,24 +37,37 @@ import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
 import { getErrorMessage } from '@/services/apiError';
 import {
+  fetchAuctionBidHistory,
   fetchAuctionDetail,
   getAuctionDisplayCurrentPrice,
 } from '@/services/auction/detail/service';
-import type { AuctionDetailResponse } from '@/services/auction/detail/types';
+import type { AuctionBidHistoryResponse, AuctionDetailResponse } from '@/services/auction/detail/types';
+import { useEventStream } from '@/services/events/EventStreamProvider';
+
+function formatBidTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
 
 export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: { auctionId: number | null; onBack: () => void; themeColor: string; key?: string }) {
   const [auctionDetail, setAuctionDetail] = useState<AuctionDetailResponse | null>(null);
+  const [bidHistory, setBidHistory] = useState<AuctionBidHistoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const bids: Array<{
-    user: string;
-    price: string;
-    time: string;
-    active: boolean;
-    img: string;
-  }> = [];
-  const currentDisplayPrice = getAuctionDisplayCurrentPrice(auctionDetail);
-  const bidCount = auctionDetail?.bidCount ?? 0;
+  const { latestAuctionEvent } = useEventStream();
+  const bids = bidHistory?.bids ?? [];
+  const currentDisplayPrice = bidHistory?.currentPrice ?? getAuctionDisplayCurrentPrice(auctionDetail);
+  const bidCount = bidHistory?.bidCount ?? auctionDetail?.bidCount ?? 0;
   const priceHelperText = bidCount > 0 ? "현재 최고 입찰가" : "입찰 기록 없음";
 
   useEffect(() => {
@@ -67,10 +80,14 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
     setIsLoading(true);
     setErrorMessage("");
 
-    fetchAuctionDetail(auctionId)
-      .then((data) => {
+    Promise.all([
+      fetchAuctionDetail(auctionId),
+      fetchAuctionBidHistory(auctionId),
+    ])
+      .then(([detail, history]) => {
         if (!ignore) {
-          setAuctionDetail(data);
+          setAuctionDetail(detail);
+          setBidHistory(history);
         }
       })
       .catch((error) => {
@@ -90,6 +107,41 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
       ignore = true;
     };
   }, [auctionId]);
+
+  useEffect(() => {
+    if (auctionId == null || latestAuctionEvent?.auctionId !== auctionId) {
+      return;
+    }
+
+    if (
+      latestAuctionEvent.type !== "AUCTION_BID_UPDATED" &&
+      latestAuctionEvent.type !== "BID_UPDATED" &&
+      latestAuctionEvent.type !== "BID_RECEIVED" &&
+      latestAuctionEvent.type !== "OUTBID"
+    ) {
+      return;
+    }
+
+    let ignore = false;
+
+    fetchAuctionBidHistory(auctionId)
+      .then((history) => {
+        if (!ignore) {
+          setBidHistory(history);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setErrorMessage(
+            getErrorMessage(error, "입찰 현황을 갱신하지 못했습니다."),
+          );
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [auctionId, latestAuctionEvent]);
 
   return (
     <motion.div
@@ -132,33 +184,33 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
           {bids.length > 0 ? (
             <div className="space-y-4">
               {bids.map((bid, idx) => (
-                <div key={idx} className="relative">
+                <div key={bid.bidId} className="relative">
                   {idx !== bids.length - 1 && (
                     <div className="absolute left-5 top-10 bottom-[-16px] w-px bg-gray-100"></div>
                   )}
                   
                   <div className="flex items-start space-x-4">
-                    <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 ${bid.active ? 'ring-2 ring-offset-2' : 'border-gray-100'}`} style={{ '--tw-ring-color': bid.active ? themeColor : 'transparent', borderColor: bid.active ? themeColor : '#F3F4F6' } as React.CSSProperties}>
-                      <img src={bid.img} alt={bid.user} className="w-full h-full object-cover" />
+                    <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 bg-gray-100 flex items-center justify-center ${bid.highest ? 'ring-2 ring-offset-2' : 'border-gray-100'}`} style={{ '--tw-ring-color': bid.highest ? themeColor : 'transparent', borderColor: bid.highest ? themeColor : '#F3F4F6' } as React.CSSProperties}>
+                      <User size={18} className="text-gray-400" />
                     </div>
                     
                     <div className="flex-1 min-w-0 pt-0.5">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center space-x-2">
-                          <span className={`text-sm font-bold ${bid.active ? 'text-black' : 'text-gray-600'}`}>{bid.user}</span>
-                          {bid.active && (
+                          <span className={`text-sm font-bold ${bid.highest ? 'text-black' : 'text-gray-600'}`}>{bid.bidderNickname}</span>
+                          {bid.highest && (
                             <span className="px-2 py-0.5 text-white text-[8px] font-black rounded-full uppercase tracking-wider" style={{ backgroundColor: themeColor }}>
                               Highest
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-gray-400 font-medium">{bid.time}</span>
+                        <span className="text-[10px] text-gray-400 font-medium">{formatBidTime(bid.bidAt)}</span>
                       </div>
                       <div className="flex items-baseline space-x-1">
-                        <span className={`text-lg font-black ${bid.active ? '' : 'text-gray-400'}`} style={{ color: bid.active ? themeColor : undefined }}>
-                          ₩{bid.price.replace('원', '')}
+                        <span className={`text-lg font-black ${bid.highest ? '' : 'text-gray-400'}`} style={{ color: bid.highest ? themeColor : undefined }}>
+                          ₩{bid.bidPrice.toLocaleString()}
                         </span>
-                        {bid.active && <span className="text-[10px] font-bold text-gray-400">입찰 중</span>}
+                        {bid.highest && <span className="text-[10px] font-bold text-gray-400">입찰 중</span>}
                       </div>
                     </div>
                   </div>
