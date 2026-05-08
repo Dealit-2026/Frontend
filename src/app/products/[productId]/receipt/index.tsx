@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createChatRoom } from "@/services/chats/service";
 import { motion } from "motion/react";
 
 import { fetchCurrentMember } from "@/services/auth/service";
@@ -64,6 +66,7 @@ export default function ReceiptScreen({
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<PurchaseReceiptResponse | null>(null);
   const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
+  const router = useRouter();
 
   async function loadReceipt(targetPurchaseId: number) {
     try {
@@ -296,6 +299,32 @@ export default function ReceiptScreen({
                 className="w-full h-14 bg-black text-white font-bold rounded-2xl"
               >
                 {actionLoading ? "처리 중..." : primaryActionLabel}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!receipt) return;
+                  try {
+                    setActionLoading(true);
+                    setActionMessage(null);
+                    const chat = await createChatRoom({
+                      productId: receipt.productId,
+                    });
+                    router.push(`/chats/${chat.roomId}`);
+                  } catch (error: unknown) {
+                    console.error(error);
+                    setActionMessage(
+                      error instanceof Error
+                        ? error.message
+                        : "채팅방 이동에 실패했습니다.",
+                    );
+                  } finally {
+                    setActionLoading(false);
+                  }
+                }}
+                disabled={actionLoading || loading}
+                className="w-full h-14 bg-white border border-gray-200 text-black font-bold rounded-2xl"
+              >
+                채팅방 이동
               </button>
               <button
                 onClick={onWriteReview}

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { ChevronLeft, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, Image as ImageIcon, Plus } from "lucide-react";
 import { motion } from "motion/react";
 
 import { Screen, Tab } from "../../../../types/index";
@@ -186,6 +186,28 @@ export default function PaymentScreen({
           </div>
         </div>
 
+        {/* Dealit Money Panel */}
+        <div className="bg-black text-white p-6 mb-2 rounded-2xl mx-2 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <div className="text-lg font-bold">💳 딜릿머니</div>
+            </div>
+            <div className="text-sm text-gray-300">DEALIT</div>
+          </div>
+          <div className="mb-6">
+            <div className="text-3xl font-bold">
+              ₩{(wallet?.balance ?? 0).toLocaleString()}
+            </div>
+          </div>
+          <button
+            onClick={() => setShowChargeModal(true)}
+            className="w-full h-12 bg-white text-black rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors flex items-center justify-center space-x-2"
+          >
+            <Plus size={20} />
+            <span>충전</span>
+          </button>
+        </div>
+
         <div className="bg-white p-6 space-y-4">
           <h2 className="font-bold">결제 금액</h2>
           <div className="space-y-2 text-sm">
@@ -227,27 +249,21 @@ export default function PaymentScreen({
             }
 
             if ((wallet?.balance ?? 0) < price) {
-              setShowChargeModal(true);
+              showToast(
+                "딜릿머니 잔액이 부족합니다. 충전 후 다시 시도해주세요.",
+              );
               return;
             }
 
             try {
               setPurchasing(true);
               const res = await purchaseService.purchaseProduct(productId);
-              showToast("결제가 완료되었습니다. 채팅방을 생성합니다...");
+              showToast("결제가 완료되었습니다.");
 
-              try {
-                const chat = await createChatRoom({ productId });
-                router.push(`/chats/${chat.roomId}`);
-              } catch (chatErr) {
-                console.warn(
-                  "채팅방 생성 실패, 영수증으로 이동합니다.",
-                  chatErr,
-                );
-                router.push(
-                  `/products/${productId}/receipt?purchaseId=${res.purchaseId}`,
-                );
-              }
+              // 구매 직후에는 영수증 페이지로 이동합니다. 채팅방은 영수증에서 이동하세요.
+              router.push(
+                `/products/${productId}/receipt?purchaseId=${res.purchaseId}`,
+              );
             } catch (err: unknown) {
               console.error(err);
               let msg =
@@ -269,7 +285,9 @@ export default function PaymentScreen({
               setPurchasing(false);
             }
           }}
-          disabled={loading || purchasing || !isPurchasable}
+          disabled={
+            loading || purchasing || !isPurchasable || !hasEnoughBalance
+          }
           className="w-full h-14 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-60"
           style={{ backgroundColor: themeColor }}
         >
@@ -280,8 +298,8 @@ export default function PaymentScreen({
               : !isPurchasable
                 ? actionLabel
                 : !hasEnoughBalance
-                  ? "딜릿머니 충전하기"
-                  : `${totalPrice.toLocaleString()}원 ${actionLabel}`}
+                  ? "딜릿머니 잔액 부족"
+                  : `${totalPrice.toLocaleString()}원 결제하기`}
         </button>
       </div>
 
@@ -291,31 +309,61 @@ export default function PaymentScreen({
             className="absolute inset-0 bg-black/40"
             onClick={() => setShowChargeModal(false)}
           />
-          <div className="bg-white rounded-xl p-6 z-10 w-[90%] max-w-md">
-            <h3 className="font-bold mb-2">딜릿머니 충전</h3>
+          <div className="bg-white rounded-xl p-6 z-10 w-[90%] max-w-md sm:max-w-lg lg:max-w-xl">
+            <h3 className="font-bold text-lg mb-2">딜릿머니 충전</h3>
             <p className="text-sm text-gray-600 mb-4">
-              현재 잔액: ₩{(wallet?.balance ?? 0).toLocaleString()}
+              현재 잔액: {(wallet?.balance ?? 0).toLocaleString()}원
             </p>
-            <div className="flex items-center space-x-2 mb-4">
+
+            {/* 직접 입력 */}
+            <div className="mb-4">
+              <label className="text-sm text-gray-600 mb-2 block">
+                충전 금액 직접 입력
+              </label>
               <input
                 type="number"
                 min={1000}
                 step={1000}
                 value={chargeAmount}
                 onChange={(e) => setChargeAmount(Number(e.target.value))}
-                className="flex-1 h-12 px-4 border rounded-lg"
+                className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="충전할 금액을 입력하세요"
               />
-              <button
-                onClick={() => setChargeAmount(1000)}
-                className="px-3 h-12 rounded-lg border"
-              >
-                ₩1,000
-              </button>
             </div>
+
+            {/* 빠른 충전 버튼 */}
+            <div className="mb-6">
+              <label className="text-sm text-gray-600 mb-2 block">
+                빠른 충전
+              </label>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                {[1000, 5000, 10000, 50000, 100000].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => setChargeAmount((prev) => prev + amount)}
+                    className="h-10 rounded-md border border-gray-300 hover:bg-green-50 hover:border-green-500 transition-colors text-sm font-medium"
+                  >
+                    +{amount.toLocaleString()}원
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 충전 예정액 표시 */}
+            <div className="bg-gray-50 rounded-lg p-3 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">충전 예정액</span>
+                <span className="text-lg font-bold text-green-500">
+                  {chargeAmount.toLocaleString()}원
+                </span>
+              </div>
+            </div>
+
+            {/* 버튼 */}
             <div className="flex justify-end space-x-2">
               <button
                 onClick={() => setShowChargeModal(false)}
-                className="px-4 py-2 rounded-lg border"
+                className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
               >
                 취소
               </button>
@@ -350,8 +398,8 @@ export default function PaymentScreen({
                     setCharging(false);
                   }
                 }}
-                disabled={charging}
-                className="px-4 py-2 rounded-lg bg-green-500 text-white disabled:opacity-60"
+                disabled={charging || chargeAmount <= 0}
+                className="px-4 py-2 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 disabled:opacity-60 transition-colors"
               >
                 {charging ? "충전 중..." : "충전하기"}
               </button>
