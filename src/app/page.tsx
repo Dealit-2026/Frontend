@@ -163,6 +163,10 @@ export default function App() {
     router.push(`/products/${id}`);
   };
 
+  const navigateToCatalogItem = (id: number) => {
+    router.push(themeMode === "auction" ? `/auction/${id}` : `/products/${id}`);
+  };
+
   const handleLocationPostcodeSearch = async () => {
     try {
       const nextLocationForm = await openDaumPostcodeSearch(
