@@ -50,6 +50,10 @@ export interface CreateAuctionBidResponse {
   currentPrice: number;
   bidderId: number;
   serverTime: string;
+  messages?: {
+    reserveNotice: string;
+    refundNotice: string;
+  };
 }
 
 export interface AuctionBidHistoryItem {
