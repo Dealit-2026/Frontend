@@ -766,6 +766,7 @@ export default function App() {
             {currentScreen === "receipt" && (
               <ReceiptScreen
                 key="receipt"
+                purchaseId={selectedPurchaseId}
                 onBack={() => navigateTo("main")}
                 onWriteReview={() => navigateTo("write_review")}
                 themeColor="#F64257"
