@@ -10,7 +10,7 @@ export default function WinningCompletePage() {
   return (
     <WinningBidCompletionScreen
       onBack={() => router.back()}
-      onPaymentClick={() => router.push("/products/1/payment")}
+      onPaymentClick={() => router.push("/products/1/regular-payment")}
       themeColor="#F64257"
     />
   );
