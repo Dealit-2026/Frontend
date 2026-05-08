@@ -135,16 +135,6 @@ export default function ReceiptScreen({
     receipt && currentMemberId ? receipt.sellerId === currentMemberId : false;
   const isBuyer =
     receipt && currentMemberId ? receipt.buyerId === currentMemberId : false;
-  const canShip = Boolean(receipt && isSeller && receipt.status === "PAID");
-  const canReceive = Boolean(
-    receipt && isBuyer && receipt.status === "SHIPPED",
-  );
-
-  const primaryActionLabel = canShip
-    ? "물건을 보냈어요"
-    : canReceive
-      ? "물건을 받았어요"
-      : "확인";
 
   const actionGuideMessage = useMemo(() => {
     if (!receipt) return null;
@@ -152,7 +142,7 @@ export default function ReceiptScreen({
       return "아직 판매자가 물건 발송 완료 전입니다.";
     }
     if (isSeller && receipt.status === "PAID") {
-      return "발송 완료 시 '물건을 보냈어요' 버튼을 눌러 주세요.";
+      return "발송 완료 후 판매자는 채팅방에서 '물건을 보냈어요' 버튼을 눌러 주세요.";
     }
     if (isSeller && receipt.status === "SHIPPED") {
       return "구매자 수령확정을 기다리는 상태입니다.";
@@ -244,61 +234,15 @@ export default function ReceiptScreen({
                   {statusText}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">구매 ID</span>
-                <span className="font-bold">{receipt?.purchaseId ?? "-"}</span>
-              </div>
+              {/* 구매 ID는 표시하지 않음 (요구사항) */}
             </div>
 
             <div className="pt-4 space-y-2">
               <button
-                onClick={async () => {
-                  if (!purchaseId || !receipt) {
-                    onBack();
-                    return;
-                  }
-
-                  if (!canShip && !canReceive) {
-                    onBack();
-                    return;
-                  }
-
-                  try {
-                    setActionLoading(true);
-                    setActionMessage(null);
-
-                    if (canShip) {
-                      await markPurchaseShipped(purchaseId);
-                      setActionMessage("발송 처리가 완료되었습니다.");
-                    } else if (canReceive) {
-                      await markPurchaseReceived(purchaseId);
-                      setActionMessage("수령 확정이 완료되었습니다.");
-                    }
-
-                    await loadReceipt(purchaseId);
-                  } catch (error: unknown) {
-                    console.error(error);
-
-                    if (error instanceof ApiRequestError) {
-                      const mapped = getReceiptActionErrorMessage(error.code);
-                      setActionMessage(
-                        mapped ?? (error.message || "처리에 실패했습니다."),
-                      );
-                    } else {
-                      setActionMessage(
-                        error instanceof Error
-                          ? error.message
-                          : "처리에 실패했습니다.",
-                      );
-                    }
-                  } finally {
-                    setActionLoading(false);
-                  }
-                }}
-                disabled={actionLoading || loading}
+                onClick={() => router.replace("/")}
                 className="w-full h-14 bg-black text-white font-bold rounded-2xl"
               >
-                {actionLoading ? "처리 중..." : primaryActionLabel}
+                확인
               </button>
               <button
                 onClick={async () => {
@@ -309,7 +253,9 @@ export default function ReceiptScreen({
                     const chat = await createChatRoom({
                       productId: receipt.productId,
                     });
-                    router.push(`/chats/${chat.roomId}`);
+                    router.push(
+                      `/chats/${chat.roomId}?purchaseId=${receipt.purchaseId}`,
+                    );
                   } catch (error: unknown) {
                     console.error(error);
                     setActionMessage(

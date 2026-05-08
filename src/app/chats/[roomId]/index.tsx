@@ -10,12 +10,22 @@ import {
   fetchChatMessages,
   markChatRoomAsRead,
   sendChatMessage,
+  fetchChatRoomTradeInfo,
 } from "../../../services/chats/service";
-import type { ChatMessageVM } from "../../../services/chats/types";
+import type {
+  ChatMessageVM,
+  ActionButton,
+} from "../../../services/chats/types";
+import { ApiRequestError } from "@/services/apiError";
+import {
+  markPurchaseReceived,
+  markPurchaseShipped,
+} from "@/services/product/purchase/service";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
   draftProductId?: number | null;
+  purchaseId?: number | null;
   onBack?: () => void;
   onProductClick?: (id: number) => void;
   themeColor: string;
@@ -24,6 +34,7 @@ interface ChatRoomScreenProps {
 export default function ChatRoomScreen({
   chatId,
   draftProductId = null,
+  purchaseId: _purchaseId = null,
   onBack,
   onProductClick,
   themeColor,
@@ -41,6 +52,12 @@ export default function ChatRoomScreen({
   const [draftMessage, setDraftMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
+  const [actionButton, setActionButton] = useState<ActionButton | null>(null);
+  const [tradeActionLoading, setTradeActionLoading] = useState(false);
+  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const roomId = chatId;
@@ -97,6 +114,37 @@ export default function ChatRoomScreen({
     };
   }, [chatId, draftProductId]);
 
+  useEffect(() => {
+    const roomId = chatId;
+    if (roomId == null) {
+      setRoomPurchaseId(null);
+      setActionButton(null);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadTradeInfo() {
+      try {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        if (!mounted) return;
+        setRoomPurchaseId(data.purchaseId ?? null);
+        setActionButton(data.actionButton);
+      } catch (error) {
+        console.warn("Failed to load chat room trade info:", error);
+        if (!mounted) return;
+        setRoomPurchaseId(null);
+        setActionButton(null);
+      }
+    }
+
+    void loadTradeInfo();
+
+    return () => {
+      mounted = false;
+    };
+  }, [chatId]);
+
   const sortedMessages = useMemo(() => {
     return [...messages].sort(
       (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
@@ -127,6 +175,73 @@ export default function ChatRoomScreen({
       return;
     }
     router.push(`/products/${id}`);
+  };
+
+  const getTradeActionErrorMessage = (code: string | null) => {
+    if (code === "PURCHASE_NOT_COMPLETABLE") {
+      return "현재 상태에서 처리할 수 없습니다.";
+    }
+    if (code === "PURCHASE_FORBIDDEN") {
+      return "본인만 처리할 수 있습니다.";
+    }
+    if (code === "PURCHASE_NOT_FOUND") {
+      return "구매 내역이 존재하지 않습니다.";
+    }
+    if (code === "TOKEN_EXPIRED" || code === "INVALID_TOKEN") {
+      return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
+    }
+    if (code === "INVALID_REQUEST" || code === "VALIDATION_ERROR") {
+      return "요청 값이 올바르지 않습니다.";
+    }
+
+    return null;
+  };
+
+  const handleTradeAction = async () => {
+    if (
+      !roomPurchaseId ||
+      !actionButton ||
+      !actionButton.enabled ||
+      tradeActionLoading
+    )
+      return;
+
+    try {
+      setTradeActionLoading(true);
+      setTradeActionMessage(null);
+
+      if (actionButton.actionType === "SELLER_CONFIRM") {
+        await markPurchaseShipped(roomPurchaseId);
+      } else if (actionButton.actionType === "BUYER_CONFIRM") {
+        await markPurchaseReceived(roomPurchaseId);
+      }
+
+      // 거래 정보 새로고침
+      const roomId = chatId;
+      if (roomId) {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        setActionButton(data.actionButton);
+      }
+
+      const successMsg =
+        actionButton.actionType === "SELLER_CONFIRM"
+          ? "발송 처리가 완료되었습니다."
+          : "수령 확정이 완료되었습니다.";
+      setTradeActionMessage(successMsg);
+    } catch (error: unknown) {
+      console.error(error);
+      if (error instanceof ApiRequestError) {
+        setTradeActionMessage(
+          getTradeActionErrorMessage(error.code) ?? error.message,
+        );
+      } else {
+        setTradeActionMessage(
+          error instanceof Error ? error.message : "거래 처리에 실패했습니다.",
+        );
+      }
+    } finally {
+      setTradeActionLoading(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -231,6 +346,25 @@ export default function ChatRoomScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {actionButton && (
+          <div className="sticky top-0 z-10 -mx-6 px-6 pt-0 pb-3 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80">
+            {tradeActionMessage && (
+              <p className="mb-2 px-1 text-xs text-gray-500">
+                {tradeActionMessage}
+              </p>
+            )}
+            <button
+              onClick={() => void handleTradeAction()}
+              disabled={
+                tradeActionLoading || !actionButton.enabled || !roomPurchaseId
+              }
+              className="w-full h-12 rounded-xl font-bold text-sm border border-gray-200 bg-black text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200"
+            >
+              {tradeActionLoading ? "처리 중..." : actionButton.label}
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-sm text-gray-400">
             채팅방 정보를 불러오는 중...

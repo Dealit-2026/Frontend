@@ -22,6 +22,8 @@ import type {
   MarkChatRoomAsReadResponse,
   ReportChatMessageRequest,
   SendChatMessageRequest,
+  ActionButton,
+  ChatRoomDetailResponse,
 } from "./types";
 
 /**
@@ -167,6 +169,13 @@ export async function fetchChatRoomDetail(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   return fetchChatMessages(request);
+}
+
+/** 거래 정보 조회 (actionButton 포함) */
+export async function fetchChatRoomTradeInfo(
+  roomId: number,
+): Promise<ChatRoomDetailResponse> {
+  return chatsApi.getChatRoomDetail(roomId);
 }
 
 /** 메시지 전송 */

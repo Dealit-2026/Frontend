@@ -32,6 +32,28 @@ export interface ChatActionButtons {
   completeTradeButtonType: Exclude<ChatActionButtonType, null> | null;
 }
 
+/* =========================
+ * 채팅방 상세 조회 (거래 버튼 포함)
+ * ========================= */
+
+export interface ActionButton {
+  label: string;
+  enabled: boolean;
+  actionType: "SELLER_CONFIRM" | "BUYER_CONFIRM";
+  disabledReason: string | null;
+}
+
+export interface ChatRoomDetailResponse {
+  roomId: number;
+  purchaseId: number | null;
+  chatType: ChatRoomType;
+  currentUserRole: ChatParticipantRole;
+  tradeStatus: string;
+  product: ChatRoomProduct;
+  opponent: Pick<ChatRoomParticipant, "userId" | "nickname">;
+  actionButton: ActionButton | null;
+}
+
 export interface ChatRoomProduct {
   productId: number;
   name: string;

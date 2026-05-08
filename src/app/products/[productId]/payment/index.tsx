@@ -91,12 +91,6 @@ export default function PaymentScreen({
     product?.purchaseBlockedReason ?? null,
   );
 
-  const actionLabel = !isPurchasable
-    ? (blockedReasonMessage ?? "현재 구매할 수 없는 상품")
-    : !hasEnoughBalance
-      ? "딜릿머니 충전하기"
-      : "딜릿머니로 구매하기";
-
   useEffect(() => {
     async function load() {
       if (!productId) return;
@@ -248,13 +242,6 @@ export default function PaymentScreen({
               return;
             }
 
-            if ((wallet?.balance ?? 0) < price) {
-              showToast(
-                "딜릿머니 잔액이 부족합니다. 충전 후 다시 시도해주세요.",
-              );
-              return;
-            }
-
             try {
               setPurchasing(true);
               const res = await purchaseService.purchaseProduct(productId);
@@ -288,18 +275,18 @@ export default function PaymentScreen({
           disabled={
             loading || purchasing || !isPurchasable || !hasEnoughBalance
           }
-          className="w-full h-14 text-white font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-60"
-          style={{ backgroundColor: themeColor }}
+          className={`w-full h-14 font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-100 disabled:shadow-none ${
+            loading || purchasing || !isPurchasable || !hasEnoughBalance
+              ? "bg-gray-200 text-gray-500"
+              : "text-white"
+          }`}
+          style={
+            loading || purchasing || !isPurchasable || !hasEnoughBalance
+              ? undefined
+              : { backgroundColor: themeColor }
+          }
         >
-          {loading
-            ? "로딩 중..."
-            : purchasing
-              ? "결제 진행 중..."
-              : !isPurchasable
-                ? actionLabel
-                : !hasEnoughBalance
-                  ? "딜릿머니 잔액 부족"
-                  : `${totalPrice.toLocaleString()}원 결제하기`}
+          {loading ? "로딩 중..." : purchasing ? "결제 진행 중..." : "결제하기"}
         </button>
       </div>
 
