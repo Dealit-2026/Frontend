@@ -37,9 +37,22 @@ import { Screen, Tab } from "../../../types/index";
 import { ExploreIcon } from "../../../components/common/ExploreIcon";
 import ProductListItem from "../../../components/product/ProductListItem";
 import { getErrorMessage } from "@/services/apiError";
+import {
+  fetchClosingSoonAuctions,
+  fetchPopularAuctions,
+} from "@/services/auction/list/service";
+import type { AuctionListItemViewModel } from "@/services/auction/list/types";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import type { PopularProductItemViewModel } from "@/services/product/popular/types";
+
+type PopularHomeItem = PopularProductItemViewModel | AuctionListItemViewModel;
+
+function isAuctionHomeItem(
+  item: PopularHomeItem,
+): item is AuctionListItemViewModel {
+  return "auctionId" in item;
+}
 
 export default function HomeScreen({
   onProductClick,
@@ -72,12 +85,14 @@ export default function HomeScreen({
       : "https://i.ibb.co/6RrSfG14/image.png";
 
   const [currentBanner, setCurrentBanner] = useState(0);
-  const [popularProducts, setPopularProducts] = useState<
-    PopularProductItemViewModel[]
-  >([]);
+  const [popularProducts, setPopularProducts] = useState<PopularHomeItem[]>(
+    [],
+  );
   const [isPopularLoading, setIsPopularLoading] = useState(false);
   const [popularErrorMessage, setPopularErrorMessage] = useState("");
   const [hotProducts, setHotProducts] = useState<any[]>([]);
+  const [isHotLoading, setIsHotLoading] = useState(false);
+  const [hotErrorMessage, setHotErrorMessage] = useState("");
   const banners =
     mode === "regular"
       ? [
@@ -129,19 +144,17 @@ export default function HomeScreen({
   }, [banners.length]);
 
   useEffect(() => {
-    if (mode !== "regular") {
-      setPopularProducts([]);
-      setPopularErrorMessage("");
-      setIsPopularLoading(false);
-      return;
-    }
-
     let ignore = false;
 
     setIsPopularLoading(true);
     setPopularErrorMessage("");
 
-    fetchPopularRegularProducts(10)
+    const request =
+      mode === "regular"
+        ? fetchPopularRegularProducts(10)
+        : fetchPopularAuctions(4);
+
+    request
       .then((products) => {
         if (!ignore) {
           setPopularProducts(products);
@@ -151,7 +164,12 @@ export default function HomeScreen({
         if (!ignore) {
           setPopularProducts([]);
           setPopularErrorMessage(
-            getErrorMessage(error, "실시간 인기 상품을 불러오지 못했습니다."),
+            getErrorMessage(
+              error,
+              mode === "regular"
+                ? "실시간 인기 상품을 불러오지 못했습니다."
+                : "실시간 인기 경매를 불러오지 못했습니다.",
+            ),
           );
         }
       })
@@ -167,23 +185,38 @@ export default function HomeScreen({
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "regular") {
-      setHotProducts([]);
-      return;
-    }
-
     let ignore = false;
 
-    fetchHotRegularProducts(8)
+    setIsHotLoading(true);
+    setHotErrorMessage("");
+
+    const request =
+      mode === "regular"
+        ? fetchHotRegularProducts(8)
+        : fetchClosingSoonAuctions(3);
+
+    request
       .then((products) => {
         if (!ignore) {
-          // Home shows top 3, more page will request up to 8
           setHotProducts(products.slice(0, 3));
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (!ignore) {
           setHotProducts([]);
+          setHotErrorMessage(
+            getErrorMessage(
+              error,
+              mode === "regular"
+                ? "핫한 상품을 불러오지 못했습니다."
+                : "마감임박 경매를 불러오지 못했습니다.",
+            ),
+          );
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsHotLoading(false);
         }
       });
 
@@ -327,13 +360,11 @@ export default function HomeScreen({
               </button>
             </div>
 
-            {mode !== "regular" ? (
+            {isPopularLoading ? (
               <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
-                등록된 경매 상품이 없습니다
-              </div>
-            ) : isPopularLoading ? (
-              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
-                실시간 인기 상품을 불러오는 중입니다
+                {mode === "regular"
+                  ? "실시간 인기 상품을 불러오는 중입니다"
+                  : "실시간 인기 경매를 불러오는 중입니다"}
               </div>
             ) : popularErrorMessage ? (
               <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-red-100 bg-red-50 px-4 text-center text-sm font-medium text-red-500">
@@ -344,13 +375,23 @@ export default function HomeScreen({
                 {popularProducts.map((product) => (
                   <div
                     key={product.productId}
-                    onClick={() => onProductClick(product.productId)}
+                    onClick={() =>
+                      onProductClick(
+                        isAuctionHomeItem(product)
+                          ? product.auctionId
+                          : product.productId,
+                      )
+                    }
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        onProductClick(product.productId);
+                        onProductClick(
+                          isAuctionHomeItem(product)
+                            ? product.auctionId
+                            : product.productId,
+                        );
                       }
                     }}
                     className="w-[140px] shrink-0 space-y-3 cursor-pointer group"
@@ -367,26 +408,53 @@ export default function HomeScreen({
                           <ImageIcon size={28} />
                         </div>
                       )}
+                      {isAuctionHomeItem(product) && (
+                        <div
+                          className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            product.rank === 1
+                              ? "bg-red-500 text-white"
+                              : "bg-black/60 text-white"
+                          }`}
+                        >
+                          {product.rank}위
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-sm font-semibold truncate text-gray-800">
                         {product.name}
                       </h4>
                       <p className="font-bold text-base text-black">
-                        {product.priceLabel}
+                        {isAuctionHomeItem(product)
+                          ? product.currentPriceLabel
+                          : product.priceLabel}
                       </p>
                       <p className="text-[10px] text-gray-400 font-medium truncate">
                         {product.categoryName} · {product.location}
                       </p>
-                      <div className="flex items-center space-x-2 text-[10px] text-gray-400 font-medium">
-                        <div className="flex items-center space-x-1">
-                          <Eye size={10} />
-                          <span>{product.viewCount}</span>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-gray-400 font-medium">
+                        <div className="flex items-center space-x-1 whitespace-nowrap">
+                          {isAuctionHomeItem(product) ? (
+                            <>
+                              <Clock size={10} />
+                              <span>{product.endAtLabel}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye size={10} />
+                              <span>{product.viewCount}</span>
+                            </>
+                          )}
                         </div>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 whitespace-nowrap">
                           <TrendingUp size={10} />
                           <span>{product.popularScore.toFixed(1)}</span>
                         </div>
+                        {isAuctionHomeItem(product) && (
+                          <div className="flex items-center space-x-1 whitespace-nowrap">
+                            <span>입찰 {product.bidCount}회</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -394,7 +462,9 @@ export default function HomeScreen({
               </div>
             ) : (
               <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
-                등록된 경매 상품이 없습니다
+                {mode === "regular"
+                  ? "등록된 일반 상품이 없습니다"
+                  : "등록된 인기 경매가 없습니다"}
               </div>
             )}
           </div>
@@ -416,7 +486,17 @@ export default function HomeScreen({
               </button>
             </div>
 
-            {hotProducts.length > 0 ? (
+            {isHotLoading ? (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
+                {mode === "regular"
+                  ? "핫한 상품을 불러오는 중입니다"
+                  : "마감임박 경매를 불러오는 중입니다"}
+              </div>
+            ) : hotErrorMessage ? (
+              <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-red-100 bg-red-50 px-4 text-center text-sm font-medium text-red-500">
+                {hotErrorMessage}
+              </div>
+            ) : hotProducts.length > 0 ? (
               <div className="space-y-4">
                 {hotProducts.map((p) => (
                   <ProductListItem
@@ -430,7 +510,9 @@ export default function HomeScreen({
               </div>
             ) : (
               <div className="flex h-32 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
-                핫한 상품이 없습니다
+                {mode === "regular"
+                  ? "핫한 상품이 없습니다"
+                  : "마감임박 경매가 없습니다"}
               </div>
             )}
           </div>
