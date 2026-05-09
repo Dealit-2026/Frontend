@@ -5,6 +5,7 @@ import {
 import type { LocationFormValues } from "@/services/location/types";
 import * as mypageApi from "@/services/mypage/api";
 import { fetchSalesManagementCount } from "@/services/sales-management/service";
+import { fetchMyBuyingAuctionCount } from "@/services/buying-auction/service";
 import type {
   AuctionEditDetailResponse,
   AuctionEditInitialData,
@@ -141,6 +142,7 @@ export function toMyProfileEditViewModel(
 export function toMyPageProfileViewModel(
   profile: MyProfileResponse,
   sellingCount = profile.sellingCount,
+  biddingCount = profile.biddingCount,
 ): MyPageProfileViewModel {
   return {
     id: profile.id,
@@ -152,7 +154,7 @@ export function toMyPageProfileViewModel(
     location: profile.location || "\uc9c0\uc5ed \ubbf8\uc124\uc815",
     ratingLabel: `\ud3c9\uc810 ${profile.rating.toFixed(1)}`,
     warningLabel: `\uacbd\uace0 ${profile.warningCount}\ud68c`,
-    biddingCount: profile.biddingCount,
+    biddingCount,
     sellingCount,
     wishlistCount: profile.wishlistCount,
   };
@@ -227,7 +229,12 @@ export async function fetchMyPageProfile() {
   const profile = await mypageApi.getMyProfile();
 
   try {
-    return toMyPageProfileViewModel(profile, await fetchSalesManagementCount());
+    const [sellingCount, biddingCount] = await Promise.all([
+      fetchSalesManagementCount(),
+      fetchMyBuyingAuctionCount(),
+    ]);
+
+    return toMyPageProfileViewModel(profile, sellingCount, biddingCount);
   } catch {
     return toMyPageProfileViewModel(profile);
   }

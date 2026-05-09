@@ -10,8 +10,8 @@ export default function MyBidsPage() {
   return (
     <MyBidsScreen
       onBack={() => router.back()}
-      onProductClick={(id) => router.push(`/products/${id}`)}
-      themeColor="#98E446"
+      onProductClick={(auctionId) => router.push(`/auctions/${auctionId}`)}
+      themeColor="#F64257"
     />
   );
 }
