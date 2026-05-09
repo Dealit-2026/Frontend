@@ -763,19 +763,11 @@ export default function App() {
                 themeColor={themeColor}
               />
             )}
-            {currentScreen === "receipt" && (
-              <ReceiptScreen
-                key="receipt"
-                purchaseId={selectedPurchaseId}
-                onBack={() => navigateTo("main")}
-                onWriteReview={() => navigateTo("write_review")}
-                themeColor="#F64257"
-              />
-            )}
+
             {currentScreen === "write_review" && (
               <WriteReviewScreen
                 key="write_review"
-                onBack={() => navigateTo("receipt")}
+                onBack={() => router.back()}
                 onComplete={() => {
                   showToast("리뷰가 등록되었습니다.");
                   navigateTo("main");
@@ -788,7 +780,6 @@ export default function App() {
                 key="payment"
                 showToast={showToast}
                 onBack={() => navigateTo("product_detail")}
-                onComplete={() => navigateTo("receipt")}
                 themeColor="#F64257"
               />
             )}

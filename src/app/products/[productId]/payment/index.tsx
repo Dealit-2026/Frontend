@@ -49,7 +49,7 @@ export default function PaymentScreen({
 }: {
   showToast: (msg: string) => void;
   onBack: () => void;
-  onComplete: () => void;
+  onComplete?: (purchaseId?: number) => void;
   themeColor: string;
   key?: string;
 }) {
@@ -247,10 +247,15 @@ export default function PaymentScreen({
               const res = await purchaseService.purchaseProduct(productId);
               showToast("결제가 완료되었습니다.");
 
-              // 구매 직후에는 영수증 페이지로 이동합니다. 채팅방은 영수증에서 이동하세요.
-              router.push(
-                `/products/${productId}/receipt?purchaseId=${res.purchaseId}`,
-              );
+              // 콜백이 제공되면 부모가 처리할 수 있도록 purchaseId를 전달합니다.
+              if (onComplete) {
+                onComplete(res.purchaseId);
+              } else {
+                // 기본 동작: 상품 페이지의 영수증 경로로 이동
+                router.push(
+                  `/products/${productId}/receipt?purchaseId=${res.purchaseId}`,
+                );
+              }
             } catch (err: unknown) {
               console.error(err);
               let msg =

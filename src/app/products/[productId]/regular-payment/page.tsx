@@ -14,7 +14,9 @@ export default function RegularPaymentPage() {
       key={`regular-payment-${productId}`}
       showToast={() => {}}
       onBack={() => router.back()}
-      onComplete={() => router.push(`/products/${productId}/receipt`)}
+      onComplete={(purchaseId?: number) =>
+        router.push(`/products/${productId}/receipt?purchaseId=${purchaseId}`)
+      }
       themeColor="#98E446"
     />
   );
