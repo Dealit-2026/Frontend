@@ -83,7 +83,7 @@ export function EventStreamProvider({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !hasAccessToken()) {
+    if (!enabled) {
       setChatUnreadCount(0);
       setLatestChatRoomEvent(null);
       setLatestAuctionEvent(null);
@@ -92,15 +92,17 @@ export function EventStreamProvider({
 
     let cancelled = false;
 
-    fetchTotalUnreadCount()
-      .then((result) => {
-        if (!cancelled) {
-          setChatUnreadCount(result.unreadCount);
-        }
-      })
-      .catch((error) => {
-        console.warn("fetchTotalUnreadCount failed:", error);
-      });
+    if (hasAccessToken()) {
+      fetchTotalUnreadCount()
+        .then((result) => {
+          if (!cancelled) {
+            setChatUnreadCount(result.unreadCount);
+          }
+        })
+        .catch((error) => {
+          console.warn("fetchTotalUnreadCount failed:", error);
+        });
+    }
 
     const subscription = subscribeEventStream({
       onEvent: (event) => {

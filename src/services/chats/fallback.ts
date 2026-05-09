@@ -64,8 +64,10 @@ export function createFallbackChatRooms(): ChatRoomListItemVM[] {
     {
       id: 1,
       productId: 1,
+      auctionId: null,
       name: "이경석",
       productName: "아이폰 14 Pro 256GB",
+      productImageUrl: "https://picsum.photos/seed/p1/100/100",
       productTypeLabel: "Deal it!",
       lastMessage: "네, 직거래 가능합니다",
       timeLabel: "5분 전",
@@ -124,6 +126,7 @@ export function createFallbackCreateChatRoomResponse(
       name: "임시 상품",
       thumbnailUrl: "https://picsum.photos/seed/p1/100/100",
       saleType: "GENERAL",
+      auctionId: null,
       status: "ACTIVE",
     },
     participants: [

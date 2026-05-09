@@ -106,6 +106,8 @@ import {
   signUp,
 } from "@/services/auth/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
+import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import { fetchAuctionDetail } from "@/services/auction/detail/service";
 
 export default function App() {
   const router = useRouter();
@@ -118,6 +120,9 @@ export default function App() {
     null,
   );
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const [selectedChatDraftProductId, setSelectedChatDraftProductId] = useState<
+    number | null
+  >(null);
   const [themeMode, setThemeMode] = useState<"regular" | "auction">("regular");
   const [productListType, setProductListType] = useState<
     "all" | "closing_soon" | "recent"
@@ -165,6 +170,26 @@ export default function App() {
 
   const navigateToCatalogItem = (id: number) => {
     router.push(themeMode === "auction" ? `/auction/${id}` : `/products/${id}`);
+  };
+
+  const openProductChat = async () => {
+    if (selectedProductId == null) {
+      return;
+    }
+
+    try {
+      const chatProductId =
+        themeMode === "auction"
+          ? (await fetchAuctionDetail(selectedProductId)).productId
+          : selectedProductId;
+      const existingRoom = await findExistingChatRoomByProductId(chatProductId);
+
+      setSelectedChatId(existingRoom?.roomId ?? null);
+      setSelectedChatDraftProductId(existingRoom ? null : chatProductId);
+      navigateTo("chat_room");
+    } catch (error) {
+      showToast(getErrorMessage(error, "채팅방을 열지 못했습니다."));
+    }
   };
 
   const handleLocationPostcodeSearch = async () => {
@@ -511,6 +536,7 @@ export default function App() {
               onBiddingClick={() => navigateTo("my_bids")}
               onChatClick={(id) => {
                 setSelectedChatId(id);
+                setSelectedChatDraftProductId(null);
                 navigateTo("chat_room");
               }}
               onCategoryResetClick={() => navigateTo("category_reset")}
@@ -623,10 +649,7 @@ export default function App() {
                 navigateTo("bid_placement_complete");
               }}
               onPurchaseClick={() => navigateTo("regular_purchase")}
-              onChatClick={() => {
-                setSelectedChatId(1);
-                navigateTo("chat_room");
-              }}
+              onChatClick={() => void openProductChat()}
               themeColor={themeColor}
               mode={themeMode}
               showToast={showToast}
@@ -739,10 +762,10 @@ export default function App() {
             <ChatRoomScreen
               key="chat_room"
               chatId={selectedChatId}
+              draftProductId={selectedChatDraftProductId}
               onBack={() => navigateTo("main")}
               onProductClick={(id) => {
-                setSelectedProductId(id);
-                navigateTo("product_detail");
+                router.push(`/products/${id}`);
               }}
               themeColor={themeColor}
             />
