@@ -163,6 +163,10 @@ export default function App() {
     router.push(`/products/${id}`);
   };
 
+  const navigateToCatalogItem = (id: number) => {
+    router.push(themeMode === "auction" ? `/auction/${id}` : `/products/${id}`);
+  };
+
   const handleLocationPostcodeSearch = async () => {
     try {
       const nextLocationForm = await openDaumPostcodeSearch(
@@ -489,7 +493,7 @@ export default function App() {
               key="main"
               activeTab={currentTab}
               onTabChange={setCurrentTab}
-              onProductClick={navigateToProduct}
+              onProductClick={navigateToCatalogItem}
               onProductListClick={(type, category) => {
                 setProductListType(type);
                 setSelectedCategory(category || null);
@@ -601,7 +605,7 @@ export default function App() {
                 setSelectedCategory(null);
                 navigateTo("main");
               }}
-              onProductClick={navigateToProduct}
+              onProductClick={navigateToCatalogItem}
               onSearchClick={() => navigateTo("search_detail")}
               themeColor={themeColor}
               mode={themeMode}
