@@ -663,15 +663,9 @@ export default function App() {
             <NotificationScreen
               key="notifications"
               onBack={() => navigateTo("main")}
-              onChatClick={(id) => {
-                setSelectedChatId(id);
-                navigateTo("chat_room");
-              }}
-              onReviewClick={() => navigateTo("review")}
-              onReceiptClick={() => navigateTo("receipt")}
               onProductClick={navigateToProduct}
-              onWinningBidClick={() => navigateTo("winning_bid_completion")}
-              onOutbidClick={() => navigateTo("outbid_notification")}
+              onAuctionClick={(id) => router.push(`/auctions/${id}`)}
+              onTargetUrl={(url) => router.push(url)}
               themeColor={themeColor}
             />
           )}
