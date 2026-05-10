@@ -56,6 +56,7 @@ export interface AuctionBidHistoryItem {
   bidId: number;
   bidderId: number;
   bidderNickname: string;
+  bidderProfileImageUrl: string | null;
   bidPrice: number;
   bidAt: string;
   highest: boolean;
