@@ -41,6 +41,7 @@ export interface AuctionFormValues {
   startPrice: string;
   bidUnit: string;
   durationDays: number;
+  durationSeconds: number | null;
 }
 
 // 등록 화면 전체에서 관리하는 프론트 폼 모델.
@@ -72,6 +73,7 @@ export interface AuctionCreateRequest {
   bidUnit: number | null;
   minimumBidAmount: number | null;
   auctionDurationDays: number | null;
+  auctionDurationSeconds: number | null;
   allowOffer: boolean;
   images: ProductImagePayload[];
   location: string;
