@@ -37,6 +37,7 @@ export interface ChatRoomProduct {
   name: string;
   thumbnailUrl: string | null;
   saleType?: ChatProductSaleType;
+  auctionId?: number | null;
   status?: ChatProductStatus;
 }
 
@@ -84,7 +85,10 @@ export interface GetChatRoomsRequest {
 export interface ChatRoomListItemResponse {
   roomId: number;
   chatType: ChatRoomType;
-  product: Pick<ChatRoomProduct, "productId" | "name" | "thumbnailUrl">;
+  product: Pick<
+    ChatRoomProduct,
+    "productId" | "name" | "thumbnailUrl" | "saleType" | "auctionId"
+  >;
   opponent: Pick<
     ChatRoomParticipant,
     "userId" | "nickname" | "profileImageUrl"
@@ -121,6 +125,7 @@ export interface ChatMessageResponse {
   content: string;
   isRead: boolean;
   sentAt: string;
+  senderType?: ChatMessageSenderType;
 }
 
 export interface GetChatRoomMessagesResponse {
@@ -141,6 +146,7 @@ export interface SendChatMessageResponse {
   messageId: number;
   roomId: number;
   senderId: number;
+  senderNickname: string;
   messageType: ChatMessageType;
   content: string;
   isRead: boolean;
@@ -180,8 +186,10 @@ export interface GetUnreadCountResponse {
 export interface ChatRoomListItemVM {
   id: number;
   productId: number;
+  auctionId: number | null;
   name: string;
   productName: string;
+  productImageUrl: string | null;
   productTypeLabel: "Deal it!" | "일반 판매";
   lastMessage: string;
   timeLabel: string;

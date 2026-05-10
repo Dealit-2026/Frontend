@@ -155,6 +155,7 @@ import {
 } from "../../services/chats/service";
 import type { ChatRoomListItemVM } from "../../services/chats/types";
 import { useEventStream } from "../../services/events/EventStreamProvider";
+import { saveChatRoomPreview } from "../../services/chats/roomPreview";
 
 interface ChatListScreenProps {
   themeColor: string;
@@ -293,10 +294,14 @@ export default function ChatListScreen({
           filteredChats.map((chat) => (
             <div
               key={chat.id}
-              onClick={() => onChatClick(chat.id)}
+              onClick={() => {
+                saveChatRoomPreview(chat);
+                onChatClick(chat.id);
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
+                  saveChatRoomPreview(chat);
                   onChatClick(chat.id);
                 }
               }}
