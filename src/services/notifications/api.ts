@@ -9,6 +9,7 @@ import type {
   MarkNotificationReadResponse,
   NotificationListResponse,
   UnreadNotificationCountResponse,
+  UnreadNotificationTypeCountResponse,
 } from "./types";
 
 export type RegisterFcmTokenPayload = {
@@ -69,6 +70,20 @@ export async function getUnreadNotificationCount(): Promise<UnreadNotificationCo
 
   if (!response.ok) {
     await throwProtectedApiError(response, "안 읽은 알림 개수를 불러오지 못했습니다.");
+  }
+
+  return response.json();
+}
+
+export async function getUnreadNotificationCountsByType(): Promise<UnreadNotificationTypeCountResponse[]> {
+  const response = await fetch("/api/v1/notifications/unread-counts-by-type", {
+    method: "GET",
+    headers: getAuthorizationHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "타입별 안 읽은 알림 개수를 불러오지 못했습니다.");
   }
 
   return response.json();

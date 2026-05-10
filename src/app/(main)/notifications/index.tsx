@@ -13,6 +13,7 @@ import {
   Bell,
   ChevronLeft,
   Loader2,
+  Megaphone,
   Package,
   ShieldCheck,
   Trash2,
@@ -26,6 +27,7 @@ import {
   deleteNotification,
   getNotifications,
   getUnreadNotificationCount,
+  getUnreadNotificationCountsByType,
   markAllNotificationsAsRead,
   markNotificationAsRead,
 } from "@/services/notifications/api";
@@ -68,8 +70,15 @@ function toTimeLabel(value: string | null) {
   }).format(date);
 }
 
-function getTypeIcon(type: NotificationType) {
-  switch (type) {
+function getNotificationIcon(notification: NotificationResponse) {
+  if (notification.title.includes("입찰 추월")) {
+    return Megaphone;
+  }
+  if (notification.title.includes("마감 임박")) {
+    return Bell;
+  }
+
+  switch (notification.type) {
     case "PRODUCT":
       return Package;
     case "TRADE":
@@ -82,6 +91,24 @@ function getTypeIcon(type: NotificationType) {
     default:
       return Bell;
   }
+}
+
+function toUnreadTypeCountMap(
+  counts: Array<{ type: NotificationType; count: number }>,
+): Record<NotificationType, number> {
+  return counts.reduce(
+    (acc, item) => ({
+      ...acc,
+      [item.type]: item.count,
+    }),
+    {
+      TRADE: 0,
+      PRODUCT: 0,
+      AUCTION: 0,
+      WALLET: 0,
+      SYSTEM: 0,
+    },
+  );
 }
 
 export default function NotificationScreen({
@@ -101,6 +128,13 @@ export default function NotificationScreen({
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("ALL");
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadTypeCounts, setUnreadTypeCounts] = useState<Record<NotificationType, number>>({
+    TRADE: 0,
+    PRODUCT: 0,
+    AUCTION: 0,
+    WALLET: 0,
+    SYSTEM: 0,
+  });
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,15 +155,17 @@ export default function NotificationScreen({
         }
         setErrorMessage("");
 
-        const [listResponse, unreadResponse] = await Promise.all([
+        const [listResponse, unreadResponse, unreadTypeCountResponse] = await Promise.all([
           getNotifications(nextPage, 20),
           getUnreadNotificationCount(),
+          getUnreadNotificationCountsByType(),
         ]);
 
         setNotifications((prev) =>
           append ? [...prev, ...listResponse.content] : listResponse.content,
         );
         setUnreadCount(unreadResponse.count);
+        setUnreadTypeCounts(toUnreadTypeCountMap(unreadTypeCountResponse));
         setPage(listResponse.page);
         setHasNext(listResponse.hasNext);
       } catch (error) {
@@ -180,6 +216,13 @@ export default function NotificationScreen({
         prev.map((notification) => ({ ...notification, read: true })),
       );
       setUnreadCount(0);
+      setUnreadTypeCounts({
+        TRADE: 0,
+        PRODUCT: 0,
+        AUCTION: 0,
+        WALLET: 0,
+        SYSTEM: 0,
+      });
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "전체 읽음 처리에 실패했습니다."));
     }
@@ -197,6 +240,10 @@ export default function NotificationScreen({
           ),
         );
         setUnreadCount((prev) => Math.max(prev - 1, 0));
+        setUnreadTypeCounts((prev) => ({
+          ...prev,
+          [notification.type]: Math.max(prev[notification.type] - 1, 0),
+        }));
       } catch (error) {
         setErrorMessage(getErrorMessage(error, "알림 읽음 처리에 실패했습니다."));
         return;
@@ -243,6 +290,10 @@ export default function NotificationScreen({
       );
       if (!notification.read) {
         setUnreadCount((prev) => Math.max(prev - 1, 0));
+        setUnreadTypeCounts((prev) => ({
+          ...prev,
+          [notification.type]: Math.max(prev[notification.type] - 1, 0),
+        }));
       }
     } catch (error) {
       setErrorMessage(getErrorMessage(error, "알림 삭제에 실패했습니다."));
@@ -277,19 +328,25 @@ export default function NotificationScreen({
       </div>
 
       <div className="flex space-x-2 px-6 py-4 border-b border-gray-50 overflow-x-auto no-scrollbar shrink-0">
-        {FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            onClick={() => setActiveFilter(filter.value)}
-            className="px-4 py-2 rounded-full text-xs font-bold transition-colors shrink-0"
-            style={{
-              backgroundColor: activeFilter === filter.value ? themeColor : "#F3F4F6",
-              color: activeFilter === filter.value ? "black" : "#9CA3AF",
-            }}
-          >
-            {filter.label}
-          </button>
-        ))}
+        {FILTERS.map((filter) => {
+          const count =
+            filter.value === "ALL" ? unreadCount : unreadTypeCounts[filter.value];
+
+          return (
+            <button
+              key={filter.value}
+              onClick={() => setActiveFilter(filter.value)}
+              className="px-4 py-2 rounded-full text-xs font-bold transition-colors shrink-0"
+              style={{
+                backgroundColor: activeFilter === filter.value ? themeColor : "#F3F4F6",
+                color: activeFilter === filter.value ? "black" : "#9CA3AF",
+              }}
+            >
+              <span>{filter.label}</span>
+              {count > 0 && <span className="ml-1">+{count}</span>}
+            </button>
+          );
+        })}
       </div>
 
       {errorMessage && (
@@ -324,7 +381,7 @@ export default function NotificationScreen({
         ) : (
           <div>
             {filteredNotifications.map((notification) => {
-              const Icon = getTypeIcon(notification.type);
+              const Icon = getNotificationIcon(notification);
               return (
                 <div
                   key={notification.notificationId}
