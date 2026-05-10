@@ -1,7 +1,6 @@
 import type { AppEventStreamEvent } from "./types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const EVENT_STREAM_API_URL = `${API_BASE_URL}/api/v1/events/stream`;
+const EVENT_STREAM_API_URL = "/api/v1/events/stream";
 
 export interface EventStreamSubscription {
   close: () => void;

@@ -10,7 +10,7 @@ import type {
   CreateAuctionBidResponse,
 } from "@/services/auction/detail/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
+const AUCTIONS_API_BASE = "/api/v1/auctions";
 
 async function throwProtectedApiError(
   response: Response,
@@ -29,7 +29,7 @@ async function throwProtectedApiError(
 export async function getAuctionDetail(
   auctionId: number,
 ): Promise<AuctionDetailResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auctions/${auctionId}`, {
+  const response = await fetch(`${AUCTIONS_API_BASE}/${auctionId}`, {
     method: "GET",
     headers: getAuthorizationHeaders(),
   });
@@ -48,7 +48,7 @@ export async function getAuctionBidHistory(
   auctionId: number,
 ): Promise<AuctionBidHistoryResponse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/auctions/${auctionId}/bids`,
+    `${AUCTIONS_API_BASE}/${auctionId}/bids`,
     {
       method: "GET",
       headers: getAuthorizationHeaders(),
@@ -71,7 +71,7 @@ export async function postAuctionBid(
   payload: CreateAuctionBidRequest,
 ): Promise<CreateAuctionBidResponse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/v1/auctions/${auctionId}/bids`,
+    `${AUCTIONS_API_BASE}/${auctionId}/bids`,
     {
       method: "POST",
       headers: {
