@@ -22,6 +22,13 @@ function getAccessToken(): string | null {
 
 function getWebSocketUrl() {
   const baseUrl = new URL(API_BASE_URL);
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+    ["localhost", "127.0.0.1"].includes(baseUrl.hostname)
+  ) {
+    baseUrl.hostname = window.location.hostname;
+  }
   baseUrl.protocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
   baseUrl.pathname = "/ws/chat";
   baseUrl.search = "";

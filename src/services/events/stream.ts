@@ -1,6 +1,8 @@
 import type { AppEventStreamEvent } from "./types";
 
-const EVENT_STREAM_API_URL = "/api/v1/events/stream";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:8080";
 
 export interface EventStreamSubscription {
   close: () => void;
@@ -14,6 +16,21 @@ interface SubscribeOptions {
 function getAccessToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem("accessToken");
+}
+
+function getEventStreamUrl() {
+  const baseUrl = new URL(API_BASE_URL);
+  if (
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname) &&
+    ["localhost", "127.0.0.1"].includes(baseUrl.hostname)
+  ) {
+    baseUrl.hostname = window.location.hostname;
+  }
+  baseUrl.pathname = "/api/v1/events/stream";
+  baseUrl.search = "";
+  baseUrl.hash = "";
+  return baseUrl.toString();
 }
 
 function parseSseData(buffer: string): string[] {
@@ -56,7 +73,7 @@ export function subscribeEventStream({
     controller = new AbortController();
 
     try {
-      const response = await fetch(EVENT_STREAM_API_URL, {
+      const response = await fetch(getEventStreamUrl(), {
         method: "GET",
         headers: {
           Accept: "text/event-stream",

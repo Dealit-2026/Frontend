@@ -2,7 +2,13 @@
 
 import { useEffect } from "react";
 
+import { getAuthorizationHeaders, getAuthToken } from "@/services/auth/service";
+import { registerFcmToken } from "./api";
 import { listenForegroundFcmMessages } from "./firebase";
+import { requestFcmToken } from "./firebase";
+
+const FCM_TOKEN_STORAGE_KEY = "dealit:fcm-token";
+const AUTH_TOKEN_CHANGED_EVENT = "dealit:auth-token-changed";
 
 function resolveNotificationUrl(data: Record<string, string> = {}) {
   if (data.targetUrl) return data.targetUrl;
@@ -19,6 +25,36 @@ export function ForegroundNotificationListener() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     let cancelled = false;
+
+    const syncGrantedFcmToken = async () => {
+      if (
+        typeof window === "undefined" ||
+        !("Notification" in window) ||
+        Notification.permission !== "granted" ||
+        !getAuthToken()
+      ) {
+        return;
+      }
+
+      const token = await requestFcmToken();
+      if (!token || cancelled) {
+        return;
+      }
+
+      await registerFcmToken(
+        {
+          token,
+          platform: "web",
+        },
+        getAuthorizationHeaders(),
+      );
+      window.localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
+    };
+
+    syncGrantedFcmToken().catch((error) => {
+      console.warn("FCM token sync failed:", error);
+    });
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, syncGrantedFcmToken);
 
     listenForegroundFcmMessages((payload) => {
       console.log("foreground FCM message received:", payload);
@@ -62,6 +98,7 @@ export function ForegroundNotificationListener() {
 
     return () => {
       cancelled = true;
+      window.removeEventListener(AUTH_TOKEN_CHANGED_EVENT, syncGrantedFcmToken);
       unsubscribe?.();
     };
   }, []);
