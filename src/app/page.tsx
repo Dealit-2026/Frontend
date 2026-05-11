@@ -765,8 +765,13 @@ export default function App() {
               <MyBidsScreen
                 key="my_bids"
                 onBack={() => navigateTo("main")}
-                onProductClick={navigateToProduct}
+                onProductClick={(auctionId) => {
+                  setThemeMode("auction");
+                  setSelectedProductId(auctionId);
+                  navigateTo("product_detail");
+                }}
                 themeColor={themeColor}
+                showToast={showToast}
               />
             )}
             {currentScreen === "review" && (
