@@ -7,6 +7,7 @@ import {
   createFallbackRoom,
   createFallbackUnreadCountResponse,
 } from "./fallback";
+import { fetchCurrentMember } from "@/services/auth/service";
 import type {
   ChatActionButtons,
   ChatMessageType,
@@ -70,19 +71,25 @@ function mapMessageType(type: ChatMessageType): ChatMessageType {
   return type;
 }
 
-function toMessageVM(message: {
-  messageId: number;
-  senderId: number;
-  senderNickname: string;
-  messageType: ChatMessageType;
-  content: string;
-  isRead: boolean;
-  sentAt: string;
-}): ChatMessageVM {
+function toMessageVM(
+  message: {
+    messageId: number;
+    senderId: number;
+    senderNickname: string;
+    messageType: ChatMessageType;
+    content: string;
+    isRead: boolean;
+    sentAt: string;
+  },
+  currentMemberId: number | null = null,
+): ChatMessageVM {
   return {
     ...message,
     messageType: mapMessageType(message.messageType),
-    senderType: message.senderNickname === "나" ? "ME" : "OTHER",
+    senderType:
+      currentMemberId != null && message.senderId === currentMemberId
+        ? "ME"
+        : "OTHER",
   };
 }
 

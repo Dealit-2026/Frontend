@@ -15,22 +15,20 @@ import {
   fetchChatRoomTradeInfo,
 } from "../../../services/chats/service";
 import type {
-  ChatMessageVM,
   ActionButton,
+  ChatActionButtons,
+  ChatMessageVM,
 } from "../../../services/chats/types";
 import { ApiRequestError } from "@/services/apiError";
+import { fetchCurrentMember } from "@/services/auth/service";
+import {
+  markPurchaseReceived,
+  markPurchaseShipped,
+} from "@/services/product/purchase/service";
 import {
   subscribeChatRoom,
   type ChatRoomSocketSubscription,
 } from "../../../services/chats/websocket";
-import { getChatRoomPreview } from "../../../services/chats/roomPreview";
-import type {
-  ChatActionButtons,
-  ChatMessageVM,
-} from "../../../services/chats/types";
-  markPurchaseReceived,
-  markPurchaseShipped,
-} from "@/services/product/purchase/service";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
@@ -70,6 +68,12 @@ export default function ChatRoomScreen({
   const [tradeActionLoading, setTradeActionLoading] = useState<
     "SHIP" | "CONFIRM_RECEIPT" | null
   >(null);
+  const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
+  const [actionButton, setActionButton] = useState<ActionButton | null>(null);
+  const [purchaseActionLoading, setPurchaseActionLoading] = useState(false);
+  const [purchaseActionMessage, setPurchaseActionMessage] = useState<
+    string | null
+  >(null);
   const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
   const socketSubscriptionRef = useRef<ChatRoomSocketSubscription | null>(null);
   const isComposingRef = useRef(false);
@@ -93,12 +97,6 @@ export default function ChatRoomScreen({
       ignore = true;
     };
   }, []);
-  const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
-  const [actionButton, setActionButton] = useState<ActionButton | null>(null);
-  const [tradeActionLoading, setTradeActionLoading] = useState(false);
-  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(
-    null,
-  );
 
   useEffect(() => {
     const roomId = chatId;
@@ -130,19 +128,10 @@ export default function ChatRoomScreen({
 
         if (!mounted) return;
 
-        const currentRoom = roomsResponse?.content.find(
-          (room) => room.id === roomId,
-        );
-
-        setRoomName(preview?.name ?? currentRoom?.name ?? detail.room.opponentName);
-        setProductId(preview?.productId ?? currentRoom?.productId ?? detail.room.productId);
-        setAuctionId(preview?.auctionId ?? currentRoom?.auctionId ?? null);
-        setProductName(preview?.productName ?? currentRoom?.productName ?? detail.room.productName);
-        setProductImageUrl(
-          preview?.productImageUrl ??
-            currentRoom?.productImageUrl ??
-            detail.room.productImageUrl,
-        );
+        setRoomName(detail.room.opponentName);
+        setProductId(detail.room.productId);
+        setProductName(detail.room.productName);
+        setProductImageUrl(detail.room.productImageUrl);
         setProductStatusLabel(detail.room.productStatusLabel);
         setActionButtons(detail.room.actionButtons ?? null);
         setMessages(detail.messages);
@@ -251,18 +240,18 @@ export default function ChatRoomScreen({
     return null;
   };
 
-  const handleTradeAction = async () => {
+  const handlePurchaseTradeAction = async () => {
     if (
       !roomPurchaseId ||
       !actionButton ||
       !actionButton.enabled ||
-      tradeActionLoading
+      purchaseActionLoading
     )
       return;
 
     try {
-      setTradeActionLoading(true);
-      setTradeActionMessage(null);
+      setPurchaseActionLoading(true);
+      setPurchaseActionMessage(null);
 
       if (actionButton.actionType === "SELLER_CONFIRM") {
         await markPurchaseShipped(roomPurchaseId);
@@ -281,20 +270,20 @@ export default function ChatRoomScreen({
         actionButton.actionType === "SELLER_CONFIRM"
           ? "발송 처리가 완료되었습니다."
           : "수령 확정이 완료되었습니다.";
-      setTradeActionMessage(successMsg);
+      setPurchaseActionMessage(successMsg);
     } catch (error: unknown) {
       console.error(error);
       if (error instanceof ApiRequestError) {
-        setTradeActionMessage(
+        setPurchaseActionMessage(
           getTradeActionErrorMessage(error.code) ?? error.message,
         );
       } else {
-        setTradeActionMessage(
+        setPurchaseActionMessage(
           error instanceof Error ? error.message : "거래 처리에 실패했습니다.",
         );
       }
     } finally {
-      setTradeActionLoading(false);
+      setPurchaseActionLoading(false);
     }
   };
 
@@ -316,10 +305,9 @@ export default function ChatRoomScreen({
           room.participants.find((participant) => participant.role === "SELLER")
             ?.nickname ?? "채팅방",
         );
-        setProductId(currentRoom.productId);
-        setAuctionId(currentRoom.auctionId);
-        setProductName(currentRoom.productName);
-        setProductImageUrl(currentRoom.productImageUrl);
+        setProductId(room.product.productId);
+        setProductName(room.product.name);
+        setProductImageUrl(room.product.thumbnailUrl ?? null);
         setProductStatusLabel(
           room.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
         );
@@ -523,19 +511,19 @@ export default function ChatRoomScreen({
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {actionButton && (
           <div className="sticky top-0 z-10 -mx-6 px-6 pt-0 pb-3 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80">
-            {tradeActionMessage && (
+            {purchaseActionMessage && (
               <p className="mb-2 px-1 text-xs text-gray-500">
-                {tradeActionMessage}
+                {purchaseActionMessage}
               </p>
             )}
             <button
-              onClick={() => void handleTradeAction()}
+              onClick={() => void handlePurchaseTradeAction()}
               disabled={
-                tradeActionLoading || !actionButton.enabled || !roomPurchaseId
+                purchaseActionLoading || !actionButton.enabled || !roomPurchaseId
               }
               className="w-full h-12 rounded-xl font-bold text-sm border border-gray-200 bg-black text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200"
             >
-              {tradeActionLoading ? "처리 중..." : actionButton.label}
+              {purchaseActionLoading ? "처리 중..." : actionButton.label}
             </button>
           </div>
         )}
