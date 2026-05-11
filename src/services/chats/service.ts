@@ -200,18 +200,18 @@ export async function fetchChatMessages(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   try {
-    const [response, currentMember] = await Promise.all([
+    const [response, currentMember, roomMetadata] = await Promise.all([
       chatsApi.getChatRoomMessages(request),
       fetchCurrentMember().catch(() => null),
+      chatsApi.getChatRoom(request.roomId).catch((error) => {
+        console.warn("getChatRoom metadata fallback activated:", error);
+        return null;
+      }),
     ]);
     const currentMemberId = currentMember?.memberId ?? null;
-    let room = toRoomVMFromDetailRequest(request.roomId);
-
-    try {
-      room = toRoomDetailVM(await chatsApi.getChatRoom(request.roomId));
-    } catch (error) {
-      console.warn("getChatRoom metadata fallback activated:", error);
-    }
+    const room = roomMetadata
+      ? toRoomDetailVM(roomMetadata)
+      : toRoomVMFromDetailRequest(request.roomId);
 
     return {
       room,
