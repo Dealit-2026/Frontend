@@ -10,9 +10,13 @@ import type {
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
-import { TEST_AUCTION_DURATION_DAYS } from "@/services/auction/register/service";
+import {
+  ONE_MINUTE_AUCTION_DURATION_SECONDS,
+  TEST_AUCTION_DURATION_DAYS,
+} from "@/services/auction/register/service";
 
 const AUCTION_DURATION_OPTIONS = [
+  { value: `seconds:${ONE_MINUTE_AUCTION_DURATION_SECONDS}`, label: "1분" },
   { value: TEST_AUCTION_DURATION_DAYS, label: "20초 테스트" },
   { value: 1, label: "1일" },
   { value: 3, label: "3일" },
@@ -406,7 +410,11 @@ export default function RegisterScreenView({
                       경매 기간
                     </span>
                     <select
-                      value={auction.durationDays}
+                      value={
+                        auction.durationSeconds != null
+                          ? `seconds:${auction.durationSeconds}`
+                          : auction.durationDays
+                      }
                       onChange={(event) => onAuctionDurationChange(event.target.value)}
                       className="w-full h-12 rounded-2xl border border-rose-100 bg-white px-4 text-sm outline-none"
                     >

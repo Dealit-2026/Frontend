@@ -40,9 +40,19 @@ export function subscribeEventStream({
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
   let controller: AbortController | null = null;
 
+  const scheduleReconnect = () => {
+    if (!closed) {
+      retryTimer = setTimeout(connect, 3000);
+    }
+  };
+
   const connect = async () => {
     const token = getAccessToken();
-    if (!token || closed) return;
+    if (closed) return;
+    if (!token) {
+      scheduleReconnect();
+      return;
+    }
 
     controller = new AbortController();
 
@@ -90,9 +100,7 @@ export function subscribeEventStream({
       }
     } finally {
       controller = null;
-      if (!closed) {
-        retryTimer = setTimeout(connect, 3000);
-      }
+      scheduleReconnect();
     }
   };
 

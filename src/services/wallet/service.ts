@@ -83,6 +83,10 @@ function getWalletLedgerTypeLabel(type: WalletLedgerType) {
       return "환불";
     case "WITHDRAWAL":
       return "출금";
+    case "AUCTION_RESERVE":
+      return "경매 예치";
+    case "AUCTION_REFUND":
+      return "경매 환불";
     default:
       return "내역";
   }

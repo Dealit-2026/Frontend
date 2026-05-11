@@ -13,6 +13,7 @@ import {
   getAuctionFieldContent,
   sanitizeNumericInput,
   updateAuctionDuration,
+  updateAuctionDurationSeconds,
 } from "@/services/auction/register/service";
 import type {
   AuctionFormValues,
@@ -612,6 +613,14 @@ export default function RegisterScreen({
   };
 
   const handleAuctionDurationChange = (value: string) => {
+    if (value.startsWith("seconds:")) {
+      const nextDurationSeconds = Number(value.replace("seconds:", ""));
+      setAuction((currentAuction) =>
+        updateAuctionDurationSeconds(currentAuction, nextDurationSeconds),
+      );
+      return;
+    }
+
     const nextDuration = Number(value);
     setAuction((currentAuction) =>
       updateAuctionDuration(currentAuction, nextDuration),

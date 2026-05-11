@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, PlusCircle, Send } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
 import {
   createChatRoom,
+  fetchChatRoomsStrict,
   fetchChatMessages,
   markChatRoomAsRead,
   sendChatMessage,
@@ -45,6 +46,7 @@ export default function ChatRoomScreen({
 
   const [roomName, setRoomName] = useState("");
   const [productId, setProductId] = useState<number>(0);
+  const [auctionId, setAuctionId] = useState<number | null>(null);
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
 
@@ -66,10 +68,20 @@ export default function ChatRoomScreen({
       setIsError(false);
       setRoomName("채팅방");
       setProductId(draftProductId ?? 0);
+      setAuctionId(null);
       setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
       setProductImageUrl(null);
       setMessages([]);
       return;
+    }
+
+    const preview = getChatRoomPreview(roomId);
+    if (preview) {
+      setRoomName(preview.name);
+      setProductId(preview.productId);
+      setAuctionId(preview.auctionId ?? null);
+      setProductName(preview.productName);
+      setProductImageUrl(preview.productImageUrl);
     }
 
     let mounted = true;
@@ -79,18 +91,30 @@ export default function ChatRoomScreen({
         setIsLoading(true);
         setIsError(false);
 
-        const detail = await fetchChatMessages({
-          roomId: roomId as number,
-          page: 0,
-          size: 30,
-        });
+        const [detail, roomsResponse] = await Promise.all([
+          fetchChatMessages({
+            roomId: roomId as number,
+            page: 0,
+            size: 30,
+          }),
+          fetchChatRoomsStrict({ page: 0, size: 100 }).catch(() => null),
+        ]);
 
         if (!mounted) return;
 
-        setRoomName(detail.room.opponentName);
-        setProductId(detail.room.productId);
-        setProductName(detail.room.productName);
-        setProductImageUrl(detail.room.productImageUrl);
+        const currentRoom = roomsResponse?.content.find(
+          (room) => room.id === roomId,
+        );
+
+        setRoomName(preview?.name ?? currentRoom?.name ?? detail.room.opponentName);
+        setProductId(preview?.productId ?? currentRoom?.productId ?? detail.room.productId);
+        setAuctionId(preview?.auctionId ?? currentRoom?.auctionId ?? null);
+        setProductName(preview?.productName ?? currentRoom?.productName ?? detail.room.productName);
+        setProductImageUrl(
+          preview?.productImageUrl ??
+            currentRoom?.productImageUrl ??
+            detail.room.productImageUrl,
+        );
         setMessages(detail.messages);
 
         // 읽음 처리 (실패해도 상세 렌더링은 유지)
@@ -170,6 +194,11 @@ export default function ChatRoomScreen({
   };
 
   const handleProductClick = (id: number) => {
+    if (auctionId != null) {
+      router.push(`/auctions/${auctionId}`);
+      return;
+    }
+
     if (onProductClick) {
       onProductClick(id);
       return;
@@ -258,26 +287,50 @@ export default function ChatRoomScreen({
       if (roomId == null && draftProductId) {
         const room = await createChatRoom({ productId: draftProductId });
         roomId = room.roomId;
+        const currentRoom = toChatRoomListItemVM({
+          roomId: room.roomId,
+          chatType: room.chatType,
+          product: {
+            productId: room.product.productId,
+            name: room.product.name,
+            thumbnailUrl: room.product.thumbnailUrl,
+            saleType: room.product.saleType,
+            auctionId: room.product.auctionId,
+          },
+          opponent:
+            room.participants.find((participant) => participant.role === "SELLER") ??
+            room.participants[0],
+          lastMessage: null,
+          unreadCount: 0,
+          updatedAt: room.createdAt,
+        });
         setRoomName(
-          room.participants.find((participant) => participant.role === "SELLER")
-            ?.nickname ?? "채팅방",
+          currentRoom.name,
         );
-        setProductId(room.product.productId);
-        setProductName(room.product.name ?? `상품 #${room.product.productId}`);
-        setProductImageUrl(room.product.thumbnailUrl ?? null);
+        setProductId(currentRoom.productId);
+        setAuctionId(currentRoom.auctionId);
+        setProductName(currentRoom.productName);
+        setProductImageUrl(currentRoom.productImageUrl);
       }
 
       if (roomId == null) return;
 
-      const response = await sendChatMessage(roomId, {
+      const messageRequest = {
         messageType: "TEXT",
         content,
-      });
+      } as const;
+
+      if (socketSubscriptionRef.current?.send(messageRequest)) {
+        setDraftMessage("");
+        return;
+      }
+
+      const response = await sendChatMessage(roomId, messageRequest);
 
       const nextMessage: ChatMessageVM = {
         messageId: response.messageId,
         senderId: response.senderId,
-        senderNickname: "나",
+        senderNickname: response.senderNickname,
         senderType: "ME",
         messageType: response.messageType,
         content: response.content,
@@ -285,7 +338,12 @@ export default function ChatRoomScreen({
         sentAt: response.sentAt,
       };
 
-      setMessages((prev) => [...prev, nextMessage]);
+      setMessages((prev) => {
+        if (prev.some((item) => item.messageId === nextMessage.messageId)) {
+          return prev;
+        }
+        return [...prev, nextMessage];
+      });
       setDraftMessage("");
 
       if (chatId == null) {
@@ -431,10 +489,20 @@ export default function ChatRoomScreen({
               if (sendError) setSendError(null);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (
+                e.key === "Enter" &&
+                !isComposingRef.current &&
+                !e.nativeEvent.isComposing
+              ) {
                 e.preventDefault();
                 void handleSendMessage();
               }
+            }}
+            onCompositionStart={() => {
+              isComposingRef.current = true;
+            }}
+            onCompositionEnd={() => {
+              isComposingRef.current = false;
             }}
             disabled={isSending || (chatId == null && !draftProductId)}
           />
