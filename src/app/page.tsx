@@ -259,7 +259,7 @@ export default function App() {
   return (
     <EventStreamProvider enabled={currentScreen !== "login"}>
       <div className="min-h-screen bg-white flex justify-center px-4 font-sans text-[#141414]">
-        <div className="w-full max-w-[720px] mx-auto bg-white overflow-hidden relative flex flex-col shrink-0">
+        <div className="w-full max-w-180 mx-auto bg-white overflow-hidden relative flex flex-col shrink-0">
           <AnimatePresence mode="wait">
             {currentScreen === "login" && (
               <LoginScreen
@@ -995,13 +995,13 @@ export default function App() {
               <NotificationScreen
                 key="notifications"
                 onBack={() => navigateTo("main")}
-                onProductClick={navigateToProduct}
                 onChatClick={(roomId) => {
                   setSelectedChatId(roomId);
                   navigateTo("chat_room");
                 }}
                 onReviewClick={() => navigateTo("review")}
                 onReceiptClick={() => navigateTo("receipt")}
+                onProductClick={navigateToProduct}
                 onWinningBidClick={() => navigateTo("winning_bid_completion")}
                 onOutbidClick={() => navigateTo("outbid_notification")}
                 themeColor={themeColor}
