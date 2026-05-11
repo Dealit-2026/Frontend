@@ -1,5 +1,4 @@
 // src/services/chats/service.ts
-import { fetchCurrentMember } from "@/services/auth/service";
 import * as chatsApi from "./api";
 import {
   createFallbackChatRoomsResponse,
@@ -42,12 +41,6 @@ function toProductTypeLabel(type: ChatRoomType): "Deal it!" | "일반 판매" {
   return type === "AUCTION" ? "Deal it!" : "일반 판매";
 }
 
-function resolveChatType(item: ChatRoomListItemResponse): ChatRoomType {
-  return item.chatType === "AUCTION" || item.product.saleType === "AUCTION"
-    ? "AUCTION"
-    : "GENERAL";
-}
-
 function toTimeLabel(iso: string | null | undefined): string {
   if (!iso) return "";
 
@@ -84,45 +77,28 @@ function toMessageVM(message: {
   content: string;
   isRead: boolean;
   sentAt: string;
-  senderType?: "ME" | "OTHER" | "SYSTEM";
-}, currentMemberId: number | null): ChatMessageVM {
-  const senderType =
-    message.senderType ??
-    (message.messageType === "SYSTEM"
-      ? "SYSTEM"
-      : currentMemberId != null
-        ? message.senderId === currentMemberId
-          ? "ME"
-          : "OTHER"
-        : message.senderNickname === "나"
-          ? "ME"
-          : "OTHER");
-
+}): ChatMessageVM {
   return {
     ...message,
     messageType: mapMessageType(message.messageType),
-    senderType,
+    senderType: message.senderNickname === "나" ? "ME" : "OTHER",
   };
 }
 
 export function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
-  const chatType = resolveChatType(item);
-
   return {
     id: item.roomId,
     productId: item.product.productId,
-    auctionId: item.product.auctionId ?? null,
     name: item.opponent.nickname,
     productName: item.product.name,
-    productImageUrl: item.product.thumbnailUrl ?? null,
-    productTypeLabel: toProductTypeLabel(chatType),
+    productTypeLabel: toProductTypeLabel(item.chatType),
     lastMessage: item.lastMessage?.content ?? "",
     timeLabel: toTimeLabel(item.lastMessage?.sentAt ?? item.updatedAt),
     unreadCount: item.unreadCount,
     profileImageUrl: item.opponent.profileImageUrl ?? null,
-    chatType,
+    chatType: item.chatType,
     isWinner: undefined,
     actionButtons: undefined,
   };
@@ -155,15 +131,6 @@ export async function fetchChatRooms(request: GetChatRoomsRequest = {}) {
   }
 }
 
-export async function fetchChatRoomsStrict(request: GetChatRoomsRequest = {}) {
-  const response = await chatsApi.getChatRooms(request);
-
-  return {
-    ...response,
-    content: response.content.map(toChatRoomListItemVM),
-  };
-}
-
 export async function findExistingChatRoomByProductId(productId: number) {
   const response = await chatsApi.getChatRooms({ page: 0, size: 100 });
   return response.content.find((room) => room.product.productId === productId);
@@ -179,17 +146,11 @@ export async function fetchChatMessages(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   try {
-    const [response, currentMember] = await Promise.all([
-      chatsApi.getChatRoomMessages(request),
-      fetchCurrentMember().catch(() => null),
-    ]);
-    const currentMemberId = currentMember?.memberId ?? null;
+    const response = await chatsApi.getChatRoomMessages(request);
 
     return {
       room: toRoomVMFromDetailRequest(request.roomId),
-      messages: response.content.map((message) =>
-        toMessageVM(message, currentMemberId),
-      ),
+      messages: response.content.map(toMessageVM),
       page: response.page,
       size: response.size,
       totalElements: response.totalElements,

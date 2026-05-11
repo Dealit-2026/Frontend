@@ -50,17 +50,12 @@ export interface CreateAuctionBidResponse {
   currentPrice: number;
   bidderId: number;
   serverTime: string;
-  messages?: {
-    reserveNotice: string;
-    refundNotice: string;
-  };
 }
 
 export interface AuctionBidHistoryItem {
   bidId: number;
   bidderId: number;
   bidderNickname: string;
-  bidderProfileImageUrl: string | null;
   bidPrice: number;
   bidAt: string;
   highest: boolean;

@@ -10,9 +10,12 @@ export default function NotificationsPage() {
   return (
     <NotificationScreen
       onBack={() => router.back()}
+      onChatClick={(id) => router.push(`/chats/${id}`)}
+      onReviewClick={() => router.push("/mypage/review")}
+      onReceiptClick={() => router.push("/products/1/receipt")}
       onProductClick={(id) => router.push(`/products/${id}`)}
-      onAuctionClick={(id) => router.push(`/auctions/${id}`)}
-      onTargetUrl={(url) => router.push(url)}
+      onWinningBidClick={() => router.push("/notifications")}
+      onOutbidClick={() => router.push("/notifications")}
       themeColor="#98E446"
     />
   );

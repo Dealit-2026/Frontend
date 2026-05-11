@@ -16,7 +16,6 @@ import type {
 } from "@/services/auction/register/types";
 
 export const TEST_AUCTION_DURATION_DAYS = 20 / 86400;
-export const ONE_MINUTE_AUCTION_DURATION_SECONDS = 60;
 
 // 화면 초기 렌더링용 기본 폼 상태를 만든다.
 // page.tsx는 이 값을 그대로 useState 초기값으로 사용하면 된다.
@@ -27,7 +26,6 @@ export function createDefaultAuctionForm(): AuctionFormValues {
     startPrice,
     bidUnit: calculateBidUnit(startPrice),
     durationDays: 3,
-    durationSeconds: null,
   };
 }
 
@@ -87,33 +85,11 @@ export function updateAuctionDuration(
   return {
     ...auction,
     durationDays: safeDuration,
-    durationSeconds: null,
-  };
-}
-
-export function updateAuctionDurationSeconds(
-  auction: AuctionFormValues,
-  durationSeconds: number,
-): AuctionFormValues {
-  const safeDuration = Number.isFinite(durationSeconds) ? durationSeconds : 60;
-
-  return {
-    ...auction,
-    durationDays: 0,
-    durationSeconds: safeDuration,
   };
 }
 
 // 경매 기간 표시용 문자열 생성.
 export function formatAuctionSchedule(auction: AuctionFormValues) {
-  if (auction.durationSeconds === ONE_MINUTE_AUCTION_DURATION_SECONDS) {
-    return "1분 동안 진행";
-  }
-
-  if (auction.durationSeconds != null) {
-    return `${auction.durationSeconds}초 동안 진행`;
-  }
-
   if (auction.durationDays === TEST_AUCTION_DURATION_DAYS) {
     return "20초 동안 진행";
   }
@@ -150,7 +126,6 @@ export function createDraft(
       bidUnit: calculateBidUnit(startPrice),
       durationDays:
         draft.auction?.durationDays ?? createDefaultAuctionForm().durationDays,
-      durationSeconds: draft.auction?.durationSeconds ?? null,
     },
   };
 }
@@ -202,11 +177,7 @@ export function buildCreateAuctionRequest(
     minimumBidAmount:
       draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
     auctionDurationDays:
-      draft.saleType === "auction" && draft.auction.durationSeconds == null
-        ? draft.auction.durationDays
-        : null,
-    auctionDurationSeconds:
-      draft.saleType === "auction" ? draft.auction.durationSeconds : null,
+      draft.saleType === "auction" ? draft.auction.durationDays : null,
     allowOffer: draft.allowOffer,
     images: normalizeImagePayload(draft.images),
     location: draft.location,
