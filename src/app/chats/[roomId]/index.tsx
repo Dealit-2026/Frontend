@@ -17,6 +17,7 @@ import {
 import type {
   ActionButton,
   ChatActionButtons,
+  ChatMessageResponse,
   ChatMessageVM,
 } from "../../../services/chats/types";
 import { ApiRequestError } from "@/services/apiError";
@@ -188,6 +189,67 @@ export default function ChatRoomScreen({
     };
   }, [chatId]);
 
+  useEffect(() => {
+    const roomId = chatId;
+    if (roomId == null) {
+      socketSubscriptionRef.current?.close();
+      socketSubscriptionRef.current = null;
+      return;
+    }
+
+    let mounted = true;
+    const toIncomingMessageVM = (
+      message: ChatMessageResponse,
+    ): ChatMessageVM => ({
+      ...message,
+      senderNickname:
+        message.senderNickname ??
+        (currentMemberId != null && message.senderId === currentMemberId
+          ? "나"
+          : "상대방"),
+      senderType:
+        currentMemberId != null && message.senderId === currentMemberId
+          ? "ME"
+          : "OTHER",
+    });
+
+    socketSubscriptionRef.current?.close();
+    const subscription = subscribeChatRoom({
+      roomId,
+      onMessage: (message) => {
+        if (!mounted) return;
+
+        const nextMessage = toIncomingMessageVM(message);
+        setMessages((prev) =>
+          prev.some((item) => item.messageId === nextMessage.messageId)
+            ? prev
+            : [...prev, nextMessage],
+        );
+
+        if (nextMessage.senderType !== "ME") {
+          markChatRoomAsRead(roomId).catch((err: unknown) => {
+            console.warn("markChatRoomAsRead failed:", err);
+          });
+        }
+      },
+      onError: (error) => {
+        if (mounted) {
+          console.warn("chat room websocket failed:", error);
+        }
+      },
+    });
+
+    socketSubscriptionRef.current = subscription;
+
+    return () => {
+      mounted = false;
+      if (socketSubscriptionRef.current === subscription) {
+        socketSubscriptionRef.current = null;
+      }
+      subscription.close();
+    };
+  }, [chatId, currentMemberId]);
+
   const sortedMessages = useMemo(() => {
     return [...messages].sort(
       (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
@@ -332,7 +394,13 @@ export default function ChatRoomScreen({
         sentAt: response.sentAt,
       };
 
-      setMessages((prev) => [...prev, nextMessage]);
+      setMessages((prev) =>
+        prev.some((item) => item.messageId === nextMessage.messageId)
+          ? prev.map((item) =>
+              item.messageId === nextMessage.messageId ? nextMessage : item,
+            )
+          : [...prev, nextMessage],
+      );
       setDraftMessage("");
 
       if (chatId == null) {
