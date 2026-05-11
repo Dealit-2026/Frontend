@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, PackageCheck, PlusCircle, Send, Truck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, PlusCircle, Send } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
 import {
-  confirmAuctionReceipt,
   createChatRoom,
   fetchChatMessages,
-  markAuctionShipment,
   markChatRoomAsRead,
   sendChatMessage,
   fetchChatRoomTradeInfo,
@@ -20,14 +18,6 @@ import type {
 } from "../../../services/chats/types";
 import { ApiRequestError } from "@/services/apiError";
 import {
-  subscribeChatRoom,
-  type ChatRoomSocketSubscription,
-} from "../../../services/chats/websocket";
-import { getChatRoomPreview } from "../../../services/chats/roomPreview";
-import type {
-  ChatActionButtons,
-  ChatMessageVM,
-} from "../../../services/chats/types";
   markPurchaseReceived,
   markPurchaseShipped,
 } from "@/services/product/purchase/service";
@@ -57,42 +47,11 @@ export default function ChatRoomScreen({
   const [productId, setProductId] = useState<number>(0);
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
-  const [productStatusLabel, setProductStatusLabel] = useState("거래 중");
-  const [actionButtons, setActionButtons] = useState<ChatActionButtons | null>(
-    null,
-  );
 
   const [messages, setMessages] = useState<ChatMessageVM[]>([]);
   const [draftMessage, setDraftMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(null);
-  const [tradeActionLoading, setTradeActionLoading] = useState<
-    "SHIP" | "CONFIRM_RECEIPT" | null
-  >(null);
-  const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
-  const socketSubscriptionRef = useRef<ChatRoomSocketSubscription | null>(null);
-  const isComposingRef = useRef(false);
-
-  useEffect(() => {
-    let ignore = false;
-
-    fetchCurrentMember()
-      .then((member) => {
-        if (!ignore) {
-          setCurrentMemberId(member.memberId);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setCurrentMemberId(null);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
   const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
   const [actionButton, setActionButton] = useState<ActionButton | null>(null);
   const [tradeActionLoading, setTradeActionLoading] = useState(false);
@@ -109,8 +68,6 @@ export default function ChatRoomScreen({
       setProductId(draftProductId ?? 0);
       setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
       setProductImageUrl(null);
-      setProductStatusLabel("거래 중");
-      setActionButtons(null);
       setMessages([]);
       return;
     }
@@ -130,21 +87,10 @@ export default function ChatRoomScreen({
 
         if (!mounted) return;
 
-        const currentRoom = roomsResponse?.content.find(
-          (room) => room.id === roomId,
-        );
-
-        setRoomName(preview?.name ?? currentRoom?.name ?? detail.room.opponentName);
-        setProductId(preview?.productId ?? currentRoom?.productId ?? detail.room.productId);
-        setAuctionId(preview?.auctionId ?? currentRoom?.auctionId ?? null);
-        setProductName(preview?.productName ?? currentRoom?.productName ?? detail.room.productName);
-        setProductImageUrl(
-          preview?.productImageUrl ??
-            currentRoom?.productImageUrl ??
-            detail.room.productImageUrl,
-        );
-        setProductStatusLabel(detail.room.productStatusLabel);
-        setActionButtons(detail.room.actionButtons ?? null);
+        setRoomName(detail.room.opponentName);
+        setProductId(detail.room.productId);
+        setProductName(detail.room.productName);
+        setProductImageUrl(detail.room.productImageUrl);
         setMessages(detail.messages);
 
         // 읽음 처리 (실패해도 상세 렌더링은 유지)
@@ -316,14 +262,9 @@ export default function ChatRoomScreen({
           room.participants.find((participant) => participant.role === "SELLER")
             ?.nickname ?? "채팅방",
         );
-        setProductId(currentRoom.productId);
-        setAuctionId(currentRoom.auctionId);
-        setProductName(currentRoom.productName);
-        setProductImageUrl(currentRoom.productImageUrl);
-        setProductStatusLabel(
-          room.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
-        );
-        setActionButtons(room.actionButtons ?? null);
+        setProductId(room.product.productId);
+        setProductName(room.product.name ?? `상품 #${room.product.productId}`);
+        setProductImageUrl(room.product.thumbnailUrl ?? null);
       }
 
       if (roomId == null) return;
@@ -357,67 +298,6 @@ export default function ChatRoomScreen({
       setIsSending(false);
     }
   };
-
-  const updateRoomMeta = (room: {
-    opponentName: string;
-    productId: number;
-    productName: string;
-    productImageUrl: string | null;
-    productStatusLabel: string;
-    actionButtons?: ChatActionButtons;
-  }) => {
-    setRoomName(room.opponentName);
-    setProductId(room.productId);
-    setProductName(room.productName);
-    setProductImageUrl(room.productImageUrl);
-    setProductStatusLabel(room.productStatusLabel);
-    setActionButtons(room.actionButtons ?? null);
-  };
-
-  const handleTradeAction = async (type: "SHIP" | "CONFIRM_RECEIPT") => {
-    if (chatId == null || tradeActionLoading) return;
-
-    if (type === "SHIP" && !actionButtons?.canShip) {
-      setTradeActionMessage("발송 처리 가능 시간이 지났거나 현재 발송 처리할 수 없는 상태입니다.");
-      return;
-    }
-
-    if (type === "CONFIRM_RECEIPT" && !actionButtons?.canConfirmReceipt) {
-      setTradeActionMessage("아직 판매자가 '보냈어요'를 누르기 전입니다. 발송 처리 후 수령확정할 수 있습니다.");
-      return;
-    }
-
-    try {
-      setTradeActionLoading(type);
-      setTradeActionMessage(null);
-      const room =
-        type === "SHIP"
-          ? await markAuctionShipment(chatId)
-          : await confirmAuctionReceipt(chatId);
-      updateRoomMeta(room);
-      setTradeActionMessage(
-        type === "SHIP"
-          ? "발송 처리가 완료되었습니다. 구매자가 상품을 받은 뒤 수령확정을 진행할 수 있습니다."
-          : "수령확정이 완료되었습니다. 경매 거래가 종료되었습니다.",
-      );
-    } catch (error) {
-      console.error("Failed to process trade action:", error);
-      setTradeActionMessage(
-        type === "SHIP"
-          ? "발송 처리에 실패했습니다. 잠시 후 다시 시도해주세요."
-          : "수령확정에 실패했습니다. 잠시 후 다시 시도해주세요.",
-      );
-    } finally {
-      setTradeActionLoading(null);
-    }
-  };
-
-  const showTradePanel =
-    Boolean(actionButtons?.notice) ||
-    Boolean(actionButtons?.shipButtonType) ||
-    Boolean(actionButtons?.confirmReceiptButtonType) ||
-    Boolean(actionButtons?.canShip) ||
-    Boolean(actionButtons?.canConfirmReceipt);
 
   return (
     <motion.div
@@ -457,68 +337,13 @@ export default function ChatRoomScreen({
             {productName || "상품 정보"}
           </p>
           <p className="text-[10px] font-bold" style={{ color: themeColor }}>
-            {productStatusLabel}
+            거래 중
           </p>
         </div>
         <button className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold shrink-0">
           상세보기
         </button>
       </div>
-
-      {showTradePanel && (
-        <div className="border-b border-gray-100 bg-white px-4 py-3">
-          {actionButtons?.notice && (
-            <p className="text-xs leading-relaxed text-gray-600">
-              {actionButtons.notice}
-            </p>
-          )}
-          <div className="mt-3 flex gap-2">
-            {actionButtons?.shipButtonType === "SHIP" && (
-              <button
-                type="button"
-                aria-disabled={!actionButtons.canShip || tradeActionLoading !== null}
-                onClick={() => void handleTradeAction("SHIP")}
-                className={`inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold ${
-                  actionButtons.canShip && tradeActionLoading === null
-                    ? "bg-black text-white"
-                    : "bg-gray-200 text-gray-500"
-                }`}
-              >
-                <Truck size={16} />
-                {tradeActionLoading === "SHIP" ? "처리 중" : "보냈어요"}
-              </button>
-            )}
-            {actionButtons?.confirmReceiptButtonType === "CONFIRM_RECEIPT" && (
-              <button
-                type="button"
-                aria-disabled={
-                  !actionButtons.canConfirmReceipt || tradeActionLoading !== null
-                }
-                onClick={() => void handleTradeAction("CONFIRM_RECEIPT")}
-                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold text-white"
-                style={{
-                  backgroundColor:
-                    actionButtons.canConfirmReceipt && tradeActionLoading === null
-                      ? themeColor
-                      : "#e5e7eb",
-                  color:
-                    actionButtons.canConfirmReceipt && tradeActionLoading === null
-                      ? "#ffffff"
-                      : "#6b7280",
-                }}
-              >
-                <PackageCheck size={16} />
-                {tradeActionLoading === "CONFIRM_RECEIPT"
-                  ? "처리 중"
-                  : "받았어요"}
-              </button>
-            )}
-          </div>
-          {tradeActionMessage && (
-            <p className="mt-2 text-xs text-gray-500">{tradeActionMessage}</p>
-          )}
-        </div>
-      )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {actionButton && (

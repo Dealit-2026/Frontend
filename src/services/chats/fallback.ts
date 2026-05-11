@@ -17,14 +17,6 @@ function createFallbackActionButtons(): ChatActionButtons {
     canCompleteTrade: false,
     payButtonType: null,
     completeTradeButtonType: null,
-    canShip: false,
-    canConfirmReceipt: false,
-    shipButtonType: null,
-    confirmReceiptButtonType: null,
-    status: null,
-    notice: null,
-    shipDeadline: null,
-    receiptDeadline: null,
   };
 }
 
@@ -152,14 +144,6 @@ export function createFallbackCreateChatRoomResponse(
       canCompleteTrade: false,
       payButtonType: null,
       completeTradeButtonType: null,
-      canShip: false,
-      canConfirmReceipt: false,
-      shipButtonType: null,
-      confirmReceiptButtonType: null,
-      status: null,
-      notice: null,
-      shipDeadline: null,
-      receiptDeadline: null,
     },
     createdAt: new Date().toISOString(),
   };

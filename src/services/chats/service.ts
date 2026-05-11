@@ -17,7 +17,6 @@ import type {
   ChatRoomMessagesResult,
   ChatRoomType,
   CreateChatRoomRequest,
-  CreateChatRoomResponse,
   GetChatRoomMessagesRequest,
   GetChatRoomsRequest,
   MarkChatRoomAsReadResponse,
@@ -109,23 +108,6 @@ function toRoomVMFromDetailRequest(roomId: number): ChatRoomDetailVM {
   return createFallbackRoom(roomId);
 }
 
-function toRoomDetailVM(response: CreateChatRoomResponse): ChatRoomDetailVM {
-  const opponent = response.participants[1] ?? response.participants[0];
-
-  return {
-    roomId: response.roomId,
-    opponentName: opponent?.nickname ?? "채팅방",
-    productId: response.product.productId,
-    productName: response.product.name ?? `상품 #${response.product.productId}`,
-    productImageUrl: response.product.thumbnailUrl ?? null,
-    productStatusLabel:
-      response.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
-    chatType: response.chatType,
-    isWinner: response.isWinner,
-    actionButtons: response.actionButtons,
-  };
-}
-
 /* =========================
  * page에서 호출할 공개 함수
  * ========================= */
@@ -159,34 +141,16 @@ export async function createChatRoom(request: CreateChatRoomRequest) {
   return chatsApi.postChatRoom(request);
 }
 
-export async function fetchChatRoom(roomId: number): Promise<ChatRoomDetailVM> {
-  const response = await chatsApi.getChatRoom(roomId);
-  return toRoomDetailVM(response);
-}
-
 /** 메시지 조회 */
 export async function fetchChatMessages(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   try {
-    const [response, currentMember, roomMetadata] = await Promise.all([
-      chatsApi.getChatRoomMessages(request),
-      fetchCurrentMember().catch(() => null),
-      chatsApi.getChatRoom(request.roomId).catch((error) => {
-        console.warn("getChatRoom metadata fallback activated:", error);
-        return null;
-      }),
-    ]);
-    const currentMemberId = currentMember?.memberId ?? null;
-    const room = roomMetadata
-      ? toRoomDetailVM(roomMetadata)
-      : toRoomVMFromDetailRequest(request.roomId);
+    const response = await chatsApi.getChatRoomMessages(request);
 
     return {
-      room,
-      messages: response.content.map((message) =>
-        toMessageVM(message, currentMemberId),
-      ),
+      room: toRoomVMFromDetailRequest(request.roomId),
+      messages: response.content.map(toMessageVM),
       page: response.page,
       size: response.size,
       totalElements: response.totalElements,
@@ -220,20 +184,6 @@ export async function sendChatMessage(
   request: SendChatMessageRequest,
 ) {
   return chatsApi.postChatMessage(roomId, request);
-}
-
-export async function markAuctionShipment(
-  roomId: number,
-): Promise<ChatRoomDetailVM> {
-  const response = await chatsApi.postChatRoomShipment(roomId);
-  return toRoomDetailVM(response);
-}
-
-export async function confirmAuctionReceipt(
-  roomId: number,
-): Promise<ChatRoomDetailVM> {
-  const response = await chatsApi.postChatRoomReceipt(roomId);
-  return toRoomDetailVM(response);
 }
 
 /** 채팅 메시지 신고 */
