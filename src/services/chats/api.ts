@@ -13,6 +13,7 @@ import type {
   ReportChatMessageResponse,
   SendChatMessageRequest,
   SendChatMessageResponse,
+  ChatRoomDetailResponse,
 } from "./types";
 
 const CHAT_API_PREFIX = "/api/v1/chats";
@@ -56,7 +57,10 @@ function toQueryString(
 async function parseJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
     throw new ApiRequestError(
-      await getApiErrorMessage(response, `HTTP ${response.status} ${response.statusText}`),
+      await getApiErrorMessage(
+        response,
+        `HTTP ${response.status} ${response.statusText}`,
+      ),
       response.status,
     );
   }
@@ -111,6 +115,20 @@ export async function getChatRoomMessages(
   );
 
   return parseJson<GetChatRoomMessagesResponse>(response);
+}
+
+/** 3-1) 채팅방 상세 조회 (거래 버튼 정보 포함) */
+export async function getChatRoomDetail(
+  roomId: number,
+): Promise<ChatRoomDetailResponse> {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}`, {
+    method: "GET",
+    headers: createAuthHeaders(),
+  });
+
+  const data = await parseJson<ChatRoomDetailResponse>(response);
+  console.log("[API] getChatRoomDetail response:", data);
+  return data;
 }
 
 /** 4) 메시지 전송 */

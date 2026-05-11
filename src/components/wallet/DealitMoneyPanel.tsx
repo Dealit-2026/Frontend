@@ -210,15 +210,6 @@ export default function DealitMoneyPanel() {
                       {formatWon(amount)}
                     </button>
                   ))}
-                  {modal === "withdraw" && wallet?.balance ? (
-                    <button
-                      type="button"
-                      onClick={() => setAmountInput(String(wallet.balance))}
-                      className="col-span-2 h-11 rounded-lg bg-black text-sm font-bold text-white hover:bg-gray-900"
-                    >
-                      전액 출금
-                    </button>
-                  ) : null}
                 </div>
                 <input
                   value={amountInput}
