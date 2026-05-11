@@ -23,6 +23,8 @@ export type ChatActionButtonType =
   | "AUCTION_PAYMENT"
   | "SELLER_CONFIRM"
   | "BUYER_CONFIRM"
+  | "SHIP"
+  | "CONFIRM_RECEIPT"
   | null;
 
 export interface ChatActionButtons {
@@ -30,6 +32,14 @@ export interface ChatActionButtons {
   canCompleteTrade: boolean;
   payButtonType: Exclude<ChatActionButtonType, null> | null;
   completeTradeButtonType: Exclude<ChatActionButtonType, null> | null;
+  canShip?: boolean;
+  canConfirmReceipt?: boolean;
+  shipButtonType?: Exclude<ChatActionButtonType, null> | null;
+  confirmReceiptButtonType?: Exclude<ChatActionButtonType, null> | null;
+  status?: string | null;
+  notice?: string | null;
+  shipDeadline?: string | null;
+  receiptDeadline?: string | null;
 }
 
 export interface ChatRoomProduct {

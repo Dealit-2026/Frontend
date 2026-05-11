@@ -95,7 +95,19 @@ export async function getChatRooms(
   return parseJson<GetChatRoomsResponse>(response);
 }
 
-/** 3) 채팅 내역 조회 */
+/** 3) 채팅방 단건 조회 */
+export async function getChatRoom(
+  roomId: number,
+): Promise<CreateChatRoomResponse> {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}`, {
+    method: "GET",
+    headers: createAuthHeaders(),
+  });
+
+  return parseJson<CreateChatRoomResponse>(response);
+}
+
+/** 4) 채팅 내역 조회 */
 export async function getChatRoomMessages(
   request: GetChatRoomMessagesRequest,
 ): Promise<GetChatRoomMessagesResponse> {
@@ -113,7 +125,7 @@ export async function getChatRoomMessages(
   return parseJson<GetChatRoomMessagesResponse>(response);
 }
 
-/** 4) 메시지 전송 */
+/** 5) 메시지 전송 */
 export async function postChatMessage(
   roomId: number,
   payload: SendChatMessageRequest,
@@ -129,7 +141,31 @@ export async function postChatMessage(
   return parseJson<SendChatMessageResponse>(response);
 }
 
-/** 5) 메시지 삭제 (204 No Content) */
+/** 6) 경매 채팅방 판매자 발송 처리 */
+export async function postChatRoomShipment(
+  roomId: number,
+): Promise<CreateChatRoomResponse> {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}/shipment`, {
+    method: "POST",
+    headers: createAuthHeaders(),
+  });
+
+  return parseJson<CreateChatRoomResponse>(response);
+}
+
+/** 7) 경매 채팅방 구매자 수령확정 */
+export async function postChatRoomReceipt(
+  roomId: number,
+): Promise<CreateChatRoomResponse> {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}/receipt`, {
+    method: "POST",
+    headers: createAuthHeaders(),
+  });
+
+  return parseJson<CreateChatRoomResponse>(response);
+}
+
+/** 8) 메시지 삭제 (204 No Content) */
 export async function deleteChatMessage(messageId: number): Promise<void> {
   const response = await fetch(`${CHAT_API_PREFIX}/messages/${messageId}`, {
     method: "DELETE",
@@ -142,7 +178,7 @@ export async function deleteChatMessage(messageId: number): Promise<void> {
   }
 }
 
-/** 6) 채팅방 읽음 처리 */
+/** 9) 채팅방 읽음 처리 */
 export async function patchChatRoomRead(
   roomId: number,
 ): Promise<MarkChatRoomAsReadResponse> {
@@ -154,7 +190,7 @@ export async function patchChatRoomRead(
   return parseJson<MarkChatRoomAsReadResponse>(response);
 }
 
-/** 7) 채팅 메시지 신고 */
+/** 10) 채팅 메시지 신고 */
 export async function postChatMessageReport(
   messageId: number,
   payload: ReportChatMessageRequest,
@@ -173,7 +209,7 @@ export async function postChatMessageReport(
   return parseJson<ReportChatMessageResponse>(response);
 }
 
-/** 8) 안읽은 채팅 수 조회 */
+/** 11) 안읽은 채팅 수 조회 */
 export async function getUnreadCount(): Promise<GetUnreadCountResponse> {
   const response = await fetch(`${CHAT_API_PREFIX}/unread-count`, {
     method: "GET",

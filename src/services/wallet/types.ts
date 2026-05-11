@@ -3,7 +3,8 @@ export type WalletLedgerType =
   | "REFUND"
   | "WITHDRAWAL"
   | "AUCTION_RESERVE"
-  | "AUCTION_REFUND";
+  | "AUCTION_REFUND"
+  | "AUCTION_SETTLEMENT";
 
 export interface WalletResponse {
   walletId: number;

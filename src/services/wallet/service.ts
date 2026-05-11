@@ -87,6 +87,8 @@ function getWalletLedgerTypeLabel(type: WalletLedgerType) {
       return "경매 예치";
     case "AUCTION_REFUND":
       return "경매 환불";
+    case "AUCTION_SETTLEMENT":
+      return "판매대금 정산";
     default:
       return "내역";
   }
