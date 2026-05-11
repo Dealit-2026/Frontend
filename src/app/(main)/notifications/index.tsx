@@ -113,14 +113,24 @@ function toUnreadTypeCountMap(
 
 export default function NotificationScreen({
   onBack,
+  onChatClick,
+  onReviewClick,
+  onReceiptClick,
   onProductClick,
   onAuctionClick,
+  onWinningBidClick,
+  onOutbidClick,
   onTargetUrl,
   themeColor,
 }: {
   onBack: () => void;
+  onChatClick?: (id: number) => void;
+  onReviewClick?: () => void;
+  onReceiptClick?: () => void;
   onProductClick: (id: number) => void;
   onAuctionClick?: (id: number) => void;
+  onWinningBidClick?: () => void;
+  onOutbidClick?: () => void;
   onTargetUrl?: (url: string) => void;
   themeColor: string;
   key?: string;
@@ -260,20 +270,49 @@ export default function NotificationScreen({
       return;
     }
 
-    if (!notification.targetId) return;
+    const targetType = notification.targetType?.trim().toUpperCase() ?? "";
+    const targetId = notification.targetId;
 
-    const targetType = notification.targetType?.trim().toUpperCase();
+    if (targetType === "REVIEW") {
+      onReviewClick?.();
+      return;
+    }
+
+    if (targetType === "RECEIPT" || targetType === "PAYMENT") {
+      onReceiptClick?.();
+      return;
+    }
+
+    if (targetType === "BID_WIN" || targetType === "WINNING_BID") {
+      onWinningBidClick?.();
+      return;
+    }
+
+    if (targetType === "BID_OUTBID" || targetType === "OUTBID") {
+      onOutbidClick?.();
+      return;
+    }
+
+    if (!targetId) return;
+
+    if (targetType === "CHAT" || targetType === "CHAT_ROOM") {
+      if (onChatClick) {
+        onChatClick(targetId);
+      }
+      return;
+    }
+
     if (targetType === "AUCTION") {
       if (onAuctionClick) {
-        onAuctionClick(notification.targetId);
+        onAuctionClick(targetId);
         return;
       }
-      onProductClick(notification.targetId);
+      onProductClick(targetId);
       return;
     }
 
     if (targetType === "PRODUCT" || notification.type === "PRODUCT") {
-      onProductClick(notification.targetId);
+      onProductClick(targetId);
     }
   };
 

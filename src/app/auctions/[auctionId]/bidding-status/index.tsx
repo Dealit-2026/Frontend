@@ -191,15 +191,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                   
                   <div className="flex items-start space-x-4">
                     <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 bg-gray-100 flex items-center justify-center ${bid.highest ? 'ring-2 ring-offset-2' : 'border-gray-100'}`} style={{ '--tw-ring-color': bid.highest ? themeColor : 'transparent', borderColor: bid.highest ? themeColor : '#F3F4F6' } as React.CSSProperties}>
-                      {bid.bidderProfileImageUrl ? (
-                        <img
-                          src={bid.bidderProfileImageUrl}
-                          alt={`${bid.bidderNickname} 프로필`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <User size={18} className="text-gray-400" />
-                      )}
+                      <User size={18} className="text-gray-400" />
                     </div>
                     
                     <div className="flex-1 min-w-0 pt-0.5">

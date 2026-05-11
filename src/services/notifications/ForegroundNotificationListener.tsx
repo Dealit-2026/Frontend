@@ -10,17 +10,6 @@ import { requestFcmToken } from "./firebase";
 const FCM_TOKEN_STORAGE_KEY = "dealit:fcm-token";
 const AUTH_TOKEN_CHANGED_EVENT = "dealit:auth-token-changed";
 
-function resolveNotificationUrl(data: Record<string, string> = {}) {
-  if (data.targetUrl) return data.targetUrl;
-  if (data.type === "CHAT_MESSAGE" && data.roomId) return `/chats/${data.roomId}`;
-  if (data.type === "WISHLIST_ADDED" && data.productId) {
-    return `/products/${data.productId}`;
-  }
-  if (data.productId) return `/products/${data.productId}`;
-  if (data.auctionId) return `/auctions/${data.auctionId}`;
-  return "/";
-}
-
 export function ForegroundNotificationListener() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -65,15 +54,11 @@ export function ForegroundNotificationListener() {
 
       const title = payload.notification?.title || "Dealit";
       const body = payload.notification?.body || "";
-      const data = payload.data || {};
       const options: NotificationOptions = {
         body,
         icon: "/dealit-logo.svg",
         badge: "/dealit-logo.svg",
-        data: {
-          ...data,
-          targetUrl: resolveNotificationUrl(data),
-        },
+        data: payload.data || {},
       };
 
       navigator.serviceWorker.ready

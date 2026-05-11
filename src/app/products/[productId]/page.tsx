@@ -25,7 +25,9 @@ export default function ProductDetailPage() {
       try {
         setLoading(true);
         setError(null);
-        setProductData(await productDetailService.fetchProductDetail(productId));
+        setProductData(
+          await productDetailService.fetchProductDetail(productId),
+        );
       } catch (err) {
         console.error("Failed to fetch product detail:", err);
         setError(
@@ -108,13 +110,15 @@ export default function ProductDetailPage() {
         onChatClick={handleChatClick}
         onReportClick={() => router.push(`/products/${productId}/report`)}
         onPurchaseClick={() =>
-          router.push(`/products/${productId}/regular-purchase`)
+          router.push(`/products/${productId}/regular-payment`)
         }
         onBidStatusClick={() =>
           router.push(`/auctions/${productId}/bidding-status`)
         }
         onBidComplete={(data) =>
-          router.push(`/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`)
+          router.push(
+            `/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`,
+          )
         }
         themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
         mode={productData.saleType === "AUCTION" ? "auction" : "regular"}

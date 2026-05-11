@@ -1,9 +1,4 @@
-export type WalletLedgerType =
-  | "TEMP_CHARGE"
-  | "REFUND"
-  | "WITHDRAWAL"
-  | "AUCTION_RESERVE"
-  | "AUCTION_REFUND";
+export type WalletLedgerType = "TEMP_CHARGE" | "REFUND" | "WITHDRAWAL";
 
 export interface WalletResponse {
   walletId: number;
