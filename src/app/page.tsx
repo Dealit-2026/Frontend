@@ -106,6 +106,8 @@ import {
   signUp,
 } from "@/services/auth/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
+import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import { fetchAuctionDetail } from "@/services/auction/detail/service";
 
 export default function App() {
   const router = useRouter();
@@ -118,6 +120,9 @@ export default function App() {
     null,
   );
   const [selectedChatId, setSelectedChatId] = useState<number | null>(null);
+  const [selectedChatDraftProductId, setSelectedChatDraftProductId] = useState<
+    number | null
+  >(null);
   const [themeMode, setThemeMode] = useState<"regular" | "auction">("regular");
   const [productListType, setProductListType] = useState<
     "all" | "closing_soon" | "recent"
@@ -165,6 +170,26 @@ export default function App() {
 
   const navigateToCatalogItem = (id: number) => {
     router.push(themeMode === "auction" ? `/auction/${id}` : `/products/${id}`);
+  };
+
+  const openProductChat = async () => {
+    if (selectedProductId == null) {
+      return;
+    }
+
+    try {
+      const chatProductId =
+        themeMode === "auction"
+          ? (await fetchAuctionDetail(selectedProductId)).productId
+          : selectedProductId;
+      const existingRoom = await findExistingChatRoomByProductId(chatProductId);
+
+      setSelectedChatId(existingRoom?.roomId ?? null);
+      setSelectedChatDraftProductId(existingRoom ? null : chatProductId);
+      navigateTo("chat_room");
+    } catch (error) {
+      showToast(getErrorMessage(error, "채팅방을 열지 못했습니다."));
+    }
   };
 
   const handleLocationPostcodeSearch = async () => {
@@ -780,6 +805,312 @@ export default function App() {
                 key="payment"
                 showToast={showToast}
                 onBack={() => navigateTo("product_detail")}
+                onComplete={() => navigateTo("receipt")}
+                themeColor="#F64257"
+              />
+            )}
+            {currentScreen === "category_reset" && (
+              <CategorySelectionScreen
+                key="category_reset"
+                mode="edit"
+                showToast={showToast}
+                onBack={() => navigateTo("main")}
+                onComplete={() => navigateTo("main")}
+                onNavigateLogin={() => navigateTo("login")}
+                showSkip={false}
+              />
+            )}
+            {currentScreen === "main" && (
+              <MainLayout
+                key="main"
+                activeTab={currentTab}
+                onTabChange={setCurrentTab}
+                onProductClick={navigateToCatalogItem}
+                onProductListClick={(type, category) => {
+                  setProductListType(type);
+                  setSelectedCategory(category || null);
+                  navigateTo("product_list");
+                }}
+                onNotificationClick={() => navigateTo("notifications")}
+                onReviewClick={() => navigateTo("review")}
+                onSalesManagementClick={() => navigateTo("sales_management")}
+                onNotificationSettingsClick={() =>
+                  navigateTo("notification_settings")
+                }
+                onAccountManagementClick={() =>
+                  navigateTo("account_management")
+                }
+                onPurchaseHistoryClick={() => navigateTo("purchase_history")}
+                onSalesHistoryClick={() => navigateTo("sales_history")}
+                onBiddingClick={() => navigateTo("my_bids")}
+                onChatClick={(id) => {
+                  setSelectedChatId(id);
+                  setSelectedChatDraftProductId(null);
+                  navigateTo("chat_room");
+                }}
+                onCategoryResetClick={() => navigateTo("category_reset")}
+                onSearchClick={() => {
+                  setSelectedCategory(null);
+                  navigateTo("search_detail");
+                }}
+                onProfileEditClick={() => {
+                  setIsEditingProfile(true);
+                  navigateTo("edit_profile");
+                }}
+                onLocationEditClick={() => {
+                  setIsEditingLocation(true);
+                  fetchMyLocationForm()
+                    .then((locationForm) => {
+                      setUserLocationForm(locationForm);
+                    })
+                    .catch(() => {
+                      setUserLocationForm(createDefaultLocationForm());
+                    });
+                  navigateTo("region_setup");
+                }}
+                onWishlistClick={() => navigateTo("wishlist")}
+                themeMode={themeMode}
+                onThemeChange={setThemeMode}
+                themeColor={themeColor}
+                userLocation={getLocationDisplayName(userLocationForm)}
+                profileRefreshKey={profileRefreshKey}
+                onLogout={() => {
+                  clearAuthToken();
+                  clearSignUpDraft();
+                  clearMyProfileDraft();
+                  setSignupProfileForm(null);
+                  setSignupProfileImageFile(null);
+                  setUserLocationForm(createDefaultLocationForm());
+                  setCurrentTab("home");
+                  navigateTo("login");
+                }}
+              />
+            )}
+            {currentScreen === "bid_placement_complete" && bidData && (
+              <BidPlacementCompleteScreen
+                key="bid_placement_complete"
+                productName={bidData.productName}
+                sellerName={bidData.sellerName}
+                bidAmount={bidData.bidAmount}
+                remainingTime={bidData.remainingTime}
+                productId={bidData.productId}
+                productImageUrl={bidData.productImageUrl ?? undefined}
+                onBack={() => {
+                  setSelectedProductId(bidData.productId);
+                  navigateTo("product_detail");
+                }}
+                onBrowseOther={() => {
+                  setCurrentTab("home");
+                  navigateTo("main");
+                }}
+                onProductDetail={() => {
+                  setSelectedProductId(bidData.productId);
+                  navigateTo("product_detail");
+                }}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "wishlist" && (
+              <WishlistScreen
+                key="wishlist"
+                onBack={() => navigateTo("main")}
+                onProductClick={navigateToProduct}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "search_detail" && (
+              <SearchDetailScreen
+                key="search_detail"
+                onBack={() => navigateTo("main")}
+                onSearch={(keyword) => {
+                  setProductListType("all");
+                  setSelectedCategory(keyword);
+                  navigateTo("product_list");
+                }}
+                themeColor={themeColor}
+                initialCategory={selectedCategory}
+              />
+            )}
+            {currentScreen === "product_list" && (
+              <ProductListScreen
+                key="product_list"
+                listType={productListType}
+                categoryName={selectedCategory}
+                onBack={() => {
+                  setSelectedCategory(null);
+                  navigateTo("main");
+                }}
+                onProductClick={navigateToCatalogItem}
+                onSearchClick={() => navigateTo("search_detail")}
+                themeColor={themeColor}
+                mode={themeMode}
+              />
+            )}
+            {currentScreen === "product_detail" && (
+              <ProductDetailScreen
+                key="product_detail"
+                productId={selectedProductId}
+                onBack={() => navigateTo("main")}
+                onBidStatusClick={() => navigateTo("bidding_status")}
+                onReportClick={() => navigateTo("report")}
+                onBidComplete={(data) => {
+                  setBidData(data);
+                  navigateTo("bid_placement_complete");
+                }}
+                onPurchaseClick={() => navigateTo("regular_purchase")}
+                onChatClick={() => void openProductChat()}
+                themeColor={themeColor}
+                mode={themeMode}
+                showToast={showToast}
+              />
+            )}
+            {currentScreen === "regular_purchase" && (
+              <RegularPurchaseScreen
+                key="regular_purchase"
+                productId={selectedProductId}
+                onBack={() => navigateTo("product_detail")}
+                onComplete={() => navigateTo("receipt")}
+                themeColor={themeColor}
+                showToast={showToast}
+              />
+            )}
+            {currentScreen === "bidding_status" && (
+              <BiddingStatusScreen
+                key="bidding_status"
+                auctionId={selectedProductId}
+                onBack={() => navigateTo("product_detail")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "report" && (
+              <ReportScreen
+                key="report"
+                productId={selectedProductId}
+                onBack={() => navigateTo("product_detail")}
+                themeColor={themeColor}
+                showToast={showToast}
+              />
+            )}
+            {currentScreen === "notifications" && (
+              <NotificationScreen
+                key="notifications"
+                onBack={() => navigateTo("main")}
+                onProductClick={navigateToProduct}
+                onChatClick={(roomId) => {
+                  setSelectedChatId(roomId);
+                  navigateTo("chat_room");
+                }}
+                onReviewClick={() => navigateTo("review")}
+                onReceiptClick={() => navigateTo("receipt")}
+                onWinningBidClick={() => navigateTo("winning_bid_completion")}
+                onOutbidClick={() => navigateTo("outbid_notification")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "winning_bid_completion" && (
+              <WinningBidCompletionScreen
+                key="winning_bid_completion"
+                onBack={() => navigateTo("notifications")}
+                onPaymentClick={() => navigateTo("payment")}
+                themeColor="#F64257"
+              />
+            )}
+            {currentScreen === "outbid_notification" && (
+              <OutbidNotificationScreen
+                key="outbid_notification"
+                onBack={() => navigateTo("notifications")}
+                onProductClick={navigateToProduct}
+                themeColor="#F64257"
+              />
+            )}
+            {currentScreen === "notification_settings" && (
+              <NotificationSettingsScreen
+                key="notification_settings"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "account_management" && (
+              <AccountManagementScreen
+                key="account_management"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "purchase_history" && (
+              <PurchaseHistoryScreen
+                key="purchase_history"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "sales_history" && (
+              <SalesHistoryScreen
+                key="sales_history"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "sales_management" && (
+              <SalesManagementScreen
+                key="sales_management"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "my_bids" && (
+              <MyBidsScreen
+                key="my_bids"
+                onBack={() => navigateTo("main")}
+                onProductClick={navigateToProduct}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "review" && (
+              <ReviewScreen
+                key="review"
+                onBack={() => navigateTo("main")}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "chat_room" && (
+              <ChatRoomScreen
+                key="chat_room"
+                chatId={selectedChatId}
+                draftProductId={selectedChatDraftProductId}
+                onBack={() => navigateTo("main")}
+                onProductClick={(id) => {
+                  router.push(`/products/${id}`);
+                }}
+                themeColor={themeColor}
+              />
+            )}
+            {currentScreen === "receipt" && (
+              <ReceiptScreen
+                key="receipt"
+                purchaseId={null}
+                onBack={() => navigateTo("main")}
+                onWriteReview={() => navigateTo("write_review")}
+                themeColor="#F64257"
+              />
+            )}
+            {currentScreen === "write_review" && (
+              <WriteReviewScreen
+                key="write_review"
+                onBack={() => navigateTo("receipt")}
+                onComplete={() => {
+                  showToast("리뷰가 등록되었습니다.");
+                  navigateTo("main");
+                }}
+                themeColor="#F64257"
+              />
+            )}
+            {currentScreen === "payment" && (
+              <PaymentScreen
+                key="payment"
+                showToast={showToast}
+                onBack={() => navigateTo("product_detail")}
+                onComplete={() => navigateTo("receipt")}
                 themeColor="#F64257"
               />
             )}
