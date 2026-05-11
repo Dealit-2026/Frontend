@@ -814,17 +814,6 @@ export default function App() {
                 themeColor="#F64257"
               />
             )}
-            {currentScreen === "category_reset" && (
-              <CategorySelectionScreen
-                key="category_reset"
-                mode="edit"
-                showToast={showToast}
-                onBack={() => navigateTo("main")}
-                onComplete={() => navigateTo("main")}
-                onNavigateLogin={() => navigateTo("login")}
-                showSkip={false}
-              />
-            )}
           </AnimatePresence>
         </div>
       </div>

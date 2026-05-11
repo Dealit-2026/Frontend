@@ -10,10 +10,14 @@ import type {
   ProductImagePayload,
   SaleType,
 } from "@/services/auction/register/types";
-import { TEST_AUCTION_DURATION_DAYS } from "@/services/auction/register/service";
+import {
+  ONE_MINUTE_AUCTION_DURATION_DAYS,
+  TEST_AUCTION_DURATION_DAYS,
+} from "@/services/auction/register/service";
 
 const AUCTION_DURATION_OPTIONS = [
   { value: TEST_AUCTION_DURATION_DAYS, label: "20초 테스트" },
+  { value: ONE_MINUTE_AUCTION_DURATION_DAYS, label: "1분 테스트" },
   { value: 1, label: "1일" },
   { value: 3, label: "3일" },
   { value: 5, label: "5일" },

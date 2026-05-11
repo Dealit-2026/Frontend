@@ -8,7 +8,6 @@ import { ExploreIcon } from "../../../../components/common/ExploreIcon";
 import { useRouter, useParams } from "next/navigation";
 
 import * as purchaseService from "@/services/product/purchase/service";
-import { createChatRoom } from "@/services/chats/service";
 import { getWallet, chargeWallet } from "@/services/wallet/api";
 import { ApiRequestError } from "@/services/apiError";
 
@@ -76,6 +75,7 @@ export default function PaymentScreen({
   >(null);
   const [loading, setLoading] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState<string | null>(null);
 
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [chargeAmount, setChargeAmount] = useState(1000);
@@ -90,6 +90,11 @@ export default function PaymentScreen({
   const blockedReasonMessage = purchaseService.getPurchaseBlockedReasonMessage(
     product?.purchaseBlockedReason ?? null,
   );
+
+  const notify = (message: string) => {
+    setNoticeMessage(message);
+    showToast(message);
+  };
 
   useEffect(() => {
     async function load() {
@@ -106,7 +111,7 @@ export default function PaymentScreen({
         setWallet(wal);
       } catch (err: unknown) {
         console.error(err);
-        showToast("데이터를 불러오는 중 오류가 발생했습니다.");
+        notify("데이터를 불러오는 중 오류가 발생했습니다.");
       } finally {
         setLoading(false);
       }
@@ -129,8 +134,14 @@ export default function PaymentScreen({
         >
           <ChevronLeft size={24} />
         </button>
-        <h1 className="flex-1 text-center font-bold text-lg mr-10">결제하기</h1>
-      </div>
+          <h1 className="flex-1 text-center font-bold text-lg mr-10">결제하기</h1>
+        </div>
+
+      {noticeMessage && (
+        <div className="mx-4 mt-3 rounded-lg bg-red-50 px-4 py-3 text-xs font-medium text-red-500">
+          {noticeMessage}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
         <div className="bg-white p-6 mb-2">
@@ -204,11 +215,11 @@ export default function PaymentScreen({
 
         <div className="bg-white p-6 space-y-4">
           <h2 className="font-bold">결제 금액</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">낙찰 금액</span>
-              <span>₩{price.toLocaleString()}</span>
-            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">상품 금액</span>
+                <span>₩{price.toLocaleString()}</span>
+              </div>
             <div className="flex justify-between">
               <span className="text-gray-500">배송비</span>
               <span>
@@ -231,21 +242,27 @@ export default function PaymentScreen({
         <button
           onClick={async () => {
             if (!productId) {
-              showToast("상품 정보를 찾을 수 없습니다.");
+              notify("상품 정보를 찾을 수 없습니다.");
               return;
             }
 
             if (!product?.canPurchase) {
               const msg =
                 blockedReasonMessage || "현재 구매할 수 없는 상품입니다.";
-              showToast(msg);
+              notify(msg);
+              return;
+            }
+
+            if (!hasEnoughBalance) {
+              notify("딜릿머니 잔액이 부족해요. 충전 후 다시 시도해 주세요.");
+              setShowChargeModal(true);
               return;
             }
 
             try {
               setPurchasing(true);
               const res = await purchaseService.purchaseProduct(productId);
-              showToast("결제가 완료되었습니다.");
+              notify("결제가 완료되었습니다.");
 
               // 콜백이 제공되면 부모가 처리할 수 있도록 purchaseId를 전달합니다.
               if (onComplete) {
@@ -272,21 +289,19 @@ export default function PaymentScreen({
                 }
               }
 
-              showToast(msg);
+              notify(msg);
             } finally {
               setPurchasing(false);
             }
           }}
-          disabled={
-            loading || purchasing || !isPurchasable || !hasEnoughBalance
-          }
+          disabled={loading || purchasing || !isPurchasable}
           className={`w-full h-14 font-bold rounded-xl shadow-lg transition-transform active:scale-[0.98] disabled:opacity-100 disabled:shadow-none ${
-            loading || purchasing || !isPurchasable || !hasEnoughBalance
+            loading || purchasing || !isPurchasable
               ? "bg-gray-200 text-gray-500"
               : "text-white"
           }`}
           style={
-            loading || purchasing || !isPurchasable || !hasEnoughBalance
+            loading || purchasing || !isPurchasable
               ? undefined
               : { backgroundColor: themeColor }
           }
@@ -361,16 +376,16 @@ export default function PaymentScreen({
               </button>
               <button
                 onClick={async () => {
-                  if (chargeAmount <= 0) {
-                    showToast("충전 금액을 확인해 주세요.");
-                    return;
-                  }
+	                  if (chargeAmount <= 0) {
+	                    notify("충전 금액을 확인해 주세요.");
+	                    return;
+	                  }
                   try {
                     setCharging(true);
                     const res = await chargeWallet({ amount: chargeAmount });
-                    setWallet(res);
-                    setShowChargeModal(false);
-                    showToast("충전이 완료되었습니다.");
+	                    setWallet(res);
+	                    setShowChargeModal(false);
+	                    notify("충전이 완료되었습니다.");
                   } catch (err: unknown) {
                     console.error(err);
                     let msg =
@@ -385,8 +400,8 @@ export default function PaymentScreen({
                       }
                     }
 
-                    showToast(msg);
-                  } finally {
+	                    notify(msg);
+	                  } finally {
                     setCharging(false);
                   }
                 }}

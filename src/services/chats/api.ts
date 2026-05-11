@@ -133,14 +133,12 @@ export async function getChatRoomMessages(
 export async function getChatRoomDetail(
   roomId: number,
 ): Promise<ChatRoomDetailResponse> {
-  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}`, {
+  const response = await fetch(`${CHAT_API_PREFIX}/rooms/${roomId}/trade-info`, {
     method: "GET",
     headers: createAuthHeaders(),
   });
 
-  const data = await parseJson<ChatRoomDetailResponse>(response);
-  console.log("[API] getChatRoomDetail response:", data);
-  return data;
+  return parseJson<ChatRoomDetailResponse>(response);
 }
 
 /** 4) 메시지 전송 */

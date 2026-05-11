@@ -16,6 +16,7 @@ import type {
 } from "@/services/auction/register/types";
 
 export const TEST_AUCTION_DURATION_DAYS = 20 / 86400;
+export const ONE_MINUTE_AUCTION_DURATION_DAYS = 60 / 86400;
 
 // 화면 초기 렌더링용 기본 폼 상태를 만든다.
 // page.tsx는 이 값을 그대로 useState 초기값으로 사용하면 된다.
@@ -92,6 +93,9 @@ export function updateAuctionDuration(
 export function formatAuctionSchedule(auction: AuctionFormValues) {
   if (auction.durationDays === TEST_AUCTION_DURATION_DAYS) {
     return "20초 동안 진행";
+  }
+  if (auction.durationDays === ONE_MINUTE_AUCTION_DURATION_DAYS) {
+    return "1분 동안 진행";
   }
 
   return `${auction.durationDays}일 동안 진행`;
