@@ -34,7 +34,6 @@ import {
   fetchRegularWishlist,
   removeRegularWishlist,
 } from "@/services/wishlist/service";
-import { fetchWallet, formatWon } from "@/services/wallet/service";
 
 type AuctionStatus =
   | "AUCTION_SCHEDULED"
@@ -139,9 +138,6 @@ export default function ProductDetailScreen({
     useState<AuctionDetailResponse | null>(null);
   const [isAuctionLoading, setIsAuctionLoading] = useState(false);
   const [isBidSubmitting, setIsBidSubmitting] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [isWalletLoading, setIsWalletLoading] = useState(false);
-  const [walletErrorMessage, setWalletErrorMessage] = useState("");
   const [auctionErrorMessage, setAuctionErrorMessage] = useState("");
   const [currentTimeMs, setCurrentTimeMs] = useState(() => Date.now());
   const [auctionClockOffsetMs, setAuctionClockOffsetMs] = useState(0);
@@ -182,8 +178,6 @@ export default function ProductDetailScreen({
   const bidUnit = auctionDetail?.minimumBidAmount ?? 10000;
   const minBidAmount =
     auctionDetail?.minimumNextBidPrice ?? currentPrice + bidUnit;
-  const isWalletBalanceInsufficient =
-    walletBalance != null && walletBalance < inputBidAmount;
 
   const displayName =
     auctionDetail?.name ?? productData?.name ?? "상품 정보 없음";
@@ -291,40 +285,6 @@ export default function ProductDetailScreen({
       setInputBidAmount(minBidAmount);
     }
   }, [showBidSheet, minBidAmount]);
-
-  useEffect(() => {
-    if (!showBidSheet || isRegular) {
-      return;
-    }
-
-    let ignore = false;
-    setIsWalletLoading(true);
-    setWalletErrorMessage("");
-
-    fetchWallet()
-      .then((wallet) => {
-        if (!ignore) {
-          setWalletBalance(wallet.balance);
-        }
-      })
-      .catch((error) => {
-        if (!ignore) {
-          setWalletBalance(null);
-          setWalletErrorMessage(
-            getErrorMessage(error, "Dealit Pay 잔액을 불러오지 못했습니다."),
-          );
-        }
-      })
-      .finally(() => {
-        if (!ignore) {
-          setIsWalletLoading(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [showBidSheet, isRegular]);
 
   useEffect(() => {
     if (isRegular) {
@@ -485,14 +445,9 @@ export default function ProductDetailScreen({
       return;
     }
 
-    if (walletBalance != null && walletBalance < bidPrice) {
-      showToast("Dealit Pay 잔액이 부족합니다.");
-      return;
-    }
-
     try {
       setIsBidSubmitting(true);
-      const bidResult = await placeAuctionBid(productId, bidPrice);
+      await placeAuctionBid(productId, bidPrice);
       const nextAuctionDetail = await fetchAuctionDetail(productId);
 
       setAuctionDetail(nextAuctionDetail);
@@ -502,13 +457,7 @@ export default function ProductDetailScreen({
       setCurrentPrice(getAuctionDisplayCurrentPrice(nextAuctionDetail));
       setBidCount(nextAuctionDetail.bidCount);
       setInputBidAmount(nextAuctionDetail.minimumNextBidPrice);
-      setWalletBalance((previous) =>
-        previous == null ? previous : Math.max(previous - bidPrice, 0),
-      );
       setShowBidSheet(false);
-      if (bidResult.messages?.reserveNotice) {
-        showToast(bidResult.messages.reserveNotice);
-      }
       onBidComplete({
         productId,
         productName: nextAuctionDetail.name,
@@ -886,20 +835,6 @@ export default function ProductDetailScreen({
                       ₩{bidUnit.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Dealit Pay 잔액</span>
-                    <span
-                      className={`font-bold ${
-                        isWalletBalanceInsufficient ? "text-red-500" : ""
-                      }`}
-                    >
-                      {isWalletLoading
-                        ? "확인 중..."
-                        : walletBalance == null
-                          ? "확인 필요"
-                          : formatWon(walletBalance)}
-                    </span>
-                  </div>
                 </div>
 
                 <div className="space-y-3">
@@ -918,29 +853,13 @@ export default function ProductDetailScreen({
                   <p className="text-[10px] text-gray-400">
                     최소 입찰가: ₩{minBidAmount.toLocaleString()}
                   </p>
-                  {isWalletBalanceInsufficient && (
-                    <p className="text-[10px] font-medium text-red-500">
-                      Dealit Pay 잔액이 입찰가보다 부족합니다.
-                    </p>
-                  )}
-                  {walletErrorMessage && (
-                    <p className="text-[10px] font-medium text-red-500">
-                      {walletErrorMessage}
-                    </p>
-                  )}
-                  <div className="rounded-xl bg-gray-50 px-4 py-3 text-[11px] leading-relaxed text-gray-500">
-                    <p>입찰 시 해당 금액은 Dealit Pay에서 즉시 예치됩니다.</p>
-                    <p>경매에서 추월당할 경우 예치금은 자동 환불됩니다.</p>
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleBidSubmit(currentPrice + 30000)}
                     disabled={
-                      isBidSubmitting ||
-                      currentPrice + 30000 < minBidAmount ||
-                      (walletBalance != null && walletBalance < currentPrice + 30000)
+                      isBidSubmitting || currentPrice + 30000 < minBidAmount
                     }
                     className="h-12 border border-blue-200 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-100 transition-colors disabled:opacity-50"
                   >
@@ -948,10 +867,7 @@ export default function ProductDetailScreen({
                   </button>
                   <button
                     onClick={() => handleBidSubmit(minBidAmount)}
-                    disabled={
-                      isBidSubmitting ||
-                      (walletBalance != null && walletBalance < minBidAmount)
-                    }
+                    disabled={isBidSubmitting}
                     className="h-12 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     ₩{minBidAmount.toLocaleString()}
@@ -959,18 +875,12 @@ export default function ProductDetailScreen({
                 </div>
 
                 <button
-                  disabled={
-                    isBidSubmitting ||
-                    inputBidAmount < minBidAmount ||
-                    isWalletBalanceInsufficient
-                  }
+                  disabled={isBidSubmitting || inputBidAmount < minBidAmount}
                   onClick={() => handleBidSubmit(inputBidAmount)}
                   className="w-full h-14 text-white font-bold rounded-xl transition-all shadow-lg disabled:bg-gray-300 disabled:opacity-50"
                   style={{
                     backgroundColor:
-                      inputBidAmount < minBidAmount || isWalletBalanceInsufficient
-                        ? undefined
-                        : themeColor,
+                      inputBidAmount < minBidAmount ? undefined : themeColor,
                   }}
                 >
                   {isBidSubmitting ? "입찰 중..." : "입찰하기"}

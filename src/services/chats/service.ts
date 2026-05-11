@@ -1,5 +1,4 @@
 // src/services/chats/service.ts
-import { fetchCurrentMember } from "@/services/auth/service";
 import * as chatsApi from "./api";
 import {
   createFallbackChatRoomsResponse,
@@ -24,6 +23,8 @@ import type {
   MarkChatRoomAsReadResponse,
   ReportChatMessageRequest,
   SendChatMessageRequest,
+  ActionButton,
+  ChatRoomDetailResponse,
 } from "./types";
 
 /**
@@ -39,12 +40,6 @@ import type {
 
 function toProductTypeLabel(type: ChatRoomType): "Deal it!" | "일반 판매" {
   return type === "AUCTION" ? "Deal it!" : "일반 판매";
-}
-
-function resolveChatType(item: ChatRoomListItemResponse): ChatRoomType {
-  return item.chatType === "AUCTION" || item.product.saleType === "AUCTION"
-    ? "AUCTION"
-    : "GENERAL";
 }
 
 function toTimeLabel(iso: string | null | undefined): string {
@@ -83,45 +78,28 @@ function toMessageVM(message: {
   content: string;
   isRead: boolean;
   sentAt: string;
-  senderType?: "ME" | "OTHER" | "SYSTEM";
-}, currentMemberId: number | null): ChatMessageVM {
-  const senderType =
-    message.senderType ??
-    (message.messageType === "SYSTEM"
-      ? "SYSTEM"
-      : currentMemberId != null
-        ? message.senderId === currentMemberId
-          ? "ME"
-          : "OTHER"
-        : message.senderNickname === "나"
-          ? "ME"
-          : "OTHER");
-
+}): ChatMessageVM {
   return {
     ...message,
     messageType: mapMessageType(message.messageType),
-    senderType,
+    senderType: message.senderNickname === "나" ? "ME" : "OTHER",
   };
 }
 
 export function toChatRoomListItemVM(
   item: ChatRoomListItemResponse,
 ): ChatRoomListItemVM {
-  const chatType = resolveChatType(item);
-
   return {
     id: item.roomId,
     productId: item.product.productId,
-    auctionId: item.product.auctionId ?? null,
     name: item.opponent.nickname,
     productName: item.product.name,
-    productImageUrl: item.product.thumbnailUrl ?? null,
-    productTypeLabel: toProductTypeLabel(chatType),
+    productTypeLabel: toProductTypeLabel(item.chatType),
     lastMessage: item.lastMessage?.content ?? "",
     timeLabel: toTimeLabel(item.lastMessage?.sentAt ?? item.updatedAt),
     unreadCount: item.unreadCount,
     profileImageUrl: item.opponent.profileImageUrl ?? null,
-    chatType,
+    chatType: item.chatType,
     isWinner: undefined,
     actionButtons: undefined,
   };
@@ -169,15 +147,6 @@ export async function fetchChatRooms(request: GetChatRoomsRequest = {}) {
       request.size ?? 20,
     );
   }
-}
-
-export async function fetchChatRoomsStrict(request: GetChatRoomsRequest = {}) {
-  const response = await chatsApi.getChatRooms(request);
-
-  return {
-    ...response,
-    content: response.content.map(toChatRoomListItemVM),
-  };
 }
 
 export async function findExistingChatRoomByProductId(productId: number) {
@@ -236,6 +205,13 @@ export async function fetchChatRoomDetail(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   return fetchChatMessages(request);
+}
+
+/** 거래 정보 조회 (actionButton 포함) */
+export async function fetchChatRoomTradeInfo(
+  roomId: number,
+): Promise<ChatRoomDetailResponse> {
+  return chatsApi.getChatRoomDetail(roomId);
 }
 
 /** 메시지 전송 */

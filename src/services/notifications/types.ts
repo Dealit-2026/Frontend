@@ -30,6 +30,11 @@ export type UnreadNotificationCountResponse = {
   count: number;
 };
 
+export type UnreadNotificationTypeCountResponse = {
+  type: NotificationType;
+  count: number;
+};
+
 export type MarkNotificationReadResponse = {
   notificationId: number;
   read: boolean;

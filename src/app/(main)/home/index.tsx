@@ -37,7 +37,6 @@ import { Screen, Tab } from "../../../types/index";
 import { ExploreIcon } from "../../../components/common/ExploreIcon";
 import ProductListItem from "../../../components/product/ProductListItem";
 import { getErrorMessage } from "@/services/apiError";
-import { getUnreadNotificationCount } from "@/services/notifications/api";
 import {
   fetchClosingSoonAuctions,
   fetchPopularAuctions,
@@ -92,7 +91,6 @@ export default function HomeScreen({
   const [isPopularLoading, setIsPopularLoading] = useState(false);
   const [popularErrorMessage, setPopularErrorMessage] = useState("");
   const [hotProducts, setHotProducts] = useState<any[]>([]);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [isHotLoading, setIsHotLoading] = useState(false);
   const [hotErrorMessage, setHotErrorMessage] = useState("");
   const banners =
@@ -144,26 +142,6 @@ export default function HomeScreen({
     }, 5000);
     return () => clearInterval(timer);
   }, [banners.length]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    getUnreadNotificationCount()
-      .then((response) => {
-        if (!ignore) {
-          setHasUnreadNotifications(response.count > 0);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setHasUnreadNotifications(false);
-        }
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -294,9 +272,7 @@ export default function HomeScreen({
             className="p-1.5 hover:bg-gray-50 rounded-full transition-colors relative"
           >
             <Bell size={22} />
-            {hasUnreadNotifications && (
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
-            )}
+            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
           </button>
           <button
             onClick={onWishlistClick}

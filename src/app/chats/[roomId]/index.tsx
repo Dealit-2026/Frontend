@@ -8,14 +8,17 @@ import { useRouter } from "next/navigation";
 import {
   confirmAuctionReceipt,
   createChatRoom,
-  fetchChatRoomsStrict,
   fetchChatMessages,
   markAuctionShipment,
   markChatRoomAsRead,
   sendChatMessage,
-  toChatRoomListItemVM,
+  fetchChatRoomTradeInfo,
 } from "../../../services/chats/service";
-import { fetchCurrentMember } from "@/services/auth/service";
+import type {
+  ChatMessageVM,
+  ActionButton,
+} from "../../../services/chats/types";
+import { ApiRequestError } from "@/services/apiError";
 import {
   subscribeChatRoom,
   type ChatRoomSocketSubscription,
@@ -25,10 +28,14 @@ import type {
   ChatActionButtons,
   ChatMessageVM,
 } from "../../../services/chats/types";
+  markPurchaseReceived,
+  markPurchaseShipped,
+} from "@/services/product/purchase/service";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
   draftProductId?: number | null;
+  purchaseId?: number | null;
   onBack?: () => void;
   onProductClick?: (id: number) => void;
   themeColor: string;
@@ -37,6 +44,7 @@ interface ChatRoomScreenProps {
 export default function ChatRoomScreen({
   chatId,
   draftProductId = null,
+  purchaseId: _purchaseId = null,
   onBack,
   onProductClick,
   themeColor,
@@ -47,7 +55,6 @@ export default function ChatRoomScreen({
 
   const [roomName, setRoomName] = useState("");
   const [productId, setProductId] = useState<number>(0);
-  const [auctionId, setAuctionId] = useState<number | null>(null);
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
   const [productStatusLabel, setProductStatusLabel] = useState("거래 중");
@@ -86,6 +93,12 @@ export default function ChatRoomScreen({
       ignore = true;
     };
   }, []);
+  const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
+  const [actionButton, setActionButton] = useState<ActionButton | null>(null);
+  const [tradeActionLoading, setTradeActionLoading] = useState(false);
+  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     const roomId = chatId;
@@ -94,22 +107,12 @@ export default function ChatRoomScreen({
       setIsError(false);
       setRoomName("채팅방");
       setProductId(draftProductId ?? 0);
-      setAuctionId(null);
       setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
       setProductImageUrl(null);
       setProductStatusLabel("거래 중");
       setActionButtons(null);
       setMessages([]);
       return;
-    }
-
-    const preview = getChatRoomPreview(roomId);
-    if (preview) {
-      setRoomName(preview.name);
-      setProductId(preview.productId);
-      setAuctionId(preview.auctionId ?? null);
-      setProductName(preview.productName);
-      setProductImageUrl(preview.productImageUrl);
     }
 
     let mounted = true;
@@ -119,14 +122,11 @@ export default function ChatRoomScreen({
         setIsLoading(true);
         setIsError(false);
 
-        const [detail, roomsResponse] = await Promise.all([
-          fetchChatMessages({
-            roomId: roomId as number,
-            page: 0,
-            size: 30,
-          }),
-          fetchChatRoomsStrict({ page: 0, size: 100 }).catch(() => null),
-        ]);
+        const detail = await fetchChatMessages({
+          roomId: roomId as number,
+          page: 0,
+          size: 30,
+        });
 
         if (!mounted) return;
 
@@ -169,45 +169,35 @@ export default function ChatRoomScreen({
   }, [chatId, draftProductId]);
 
   useEffect(() => {
-    if (chatId == null || currentMemberId == null) {
+    const roomId = chatId;
+    if (roomId == null) {
+      setRoomPurchaseId(null);
+      setActionButton(null);
       return;
     }
 
-    const subscription = subscribeChatRoom({
-      roomId: chatId,
-      onMessage: (message) => {
-        const nextMessage: ChatMessageVM = {
-          ...message,
-          senderType: message.senderId === currentMemberId ? "ME" : "OTHER",
-        };
+    let mounted = true;
 
-        setMessages((prev) => {
-          if (prev.some((item) => item.messageId === nextMessage.messageId)) {
-            return prev;
-          }
-          return [...prev, nextMessage];
-        });
+    async function loadTradeInfo() {
+      try {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        if (!mounted) return;
+        setRoomPurchaseId(data.purchaseId ?? null);
+        setActionButton(data.actionButton);
+      } catch (error) {
+        console.warn("Failed to load chat room trade info:", error);
+        if (!mounted) return;
+        setRoomPurchaseId(null);
+        setActionButton(null);
+      }
+    }
 
-        if (nextMessage.senderType === "OTHER") {
-          markChatRoomAsRead(chatId).catch((err: unknown) => {
-            console.warn("markChatRoomAsRead failed:", err);
-          });
-        }
-      },
-      onError: (error) => {
-        console.warn("chat websocket error:", error);
-      },
-    });
-
-    socketSubscriptionRef.current = subscription;
+    void loadTradeInfo();
 
     return () => {
-      subscription.close();
-      if (socketSubscriptionRef.current === subscription) {
-        socketSubscriptionRef.current = null;
-      }
+      mounted = false;
     };
-  }, [chatId, currentMemberId]);
+  }, [chatId]);
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort(
@@ -234,16 +224,78 @@ export default function ChatRoomScreen({
   };
 
   const handleProductClick = (id: number) => {
-    if (auctionId != null) {
-      router.push(`/auctions/${auctionId}`);
-      return;
-    }
-
     if (onProductClick) {
       onProductClick(id);
       return;
     }
     router.push(`/products/${id}`);
+  };
+
+  const getTradeActionErrorMessage = (code: string | null) => {
+    if (code === "PURCHASE_NOT_COMPLETABLE") {
+      return "현재 상태에서 처리할 수 없습니다.";
+    }
+    if (code === "PURCHASE_FORBIDDEN") {
+      return "본인만 처리할 수 있습니다.";
+    }
+    if (code === "PURCHASE_NOT_FOUND") {
+      return "구매 내역이 존재하지 않습니다.";
+    }
+    if (code === "TOKEN_EXPIRED" || code === "INVALID_TOKEN") {
+      return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
+    }
+    if (code === "INVALID_REQUEST" || code === "VALIDATION_ERROR") {
+      return "요청 값이 올바르지 않습니다.";
+    }
+
+    return null;
+  };
+
+  const handleTradeAction = async () => {
+    if (
+      !roomPurchaseId ||
+      !actionButton ||
+      !actionButton.enabled ||
+      tradeActionLoading
+    )
+      return;
+
+    try {
+      setTradeActionLoading(true);
+      setTradeActionMessage(null);
+
+      if (actionButton.actionType === "SELLER_CONFIRM") {
+        await markPurchaseShipped(roomPurchaseId);
+      } else if (actionButton.actionType === "BUYER_CONFIRM") {
+        await markPurchaseReceived(roomPurchaseId);
+      }
+
+      // 거래 정보 새로고침
+      const roomId = chatId;
+      if (roomId) {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        setActionButton(data.actionButton);
+      }
+
+      const successMsg =
+        actionButton.actionType === "SELLER_CONFIRM"
+          ? "발송 처리가 완료되었습니다."
+          : "수령 확정이 완료되었습니다.";
+      setTradeActionMessage(successMsg);
+    } catch (error: unknown) {
+      console.error(error);
+      if (error instanceof ApiRequestError) {
+        setTradeActionMessage(
+          getTradeActionErrorMessage(error.code) ?? error.message,
+        );
+      } else {
+        setTradeActionMessage(
+          error instanceof Error ? error.message : "거래 처리에 실패했습니다.",
+        );
+      }
+    } finally {
+      setTradeActionLoading(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -260,25 +312,9 @@ export default function ChatRoomScreen({
       if (roomId == null && draftProductId) {
         const room = await createChatRoom({ productId: draftProductId });
         roomId = room.roomId;
-        const currentRoom = toChatRoomListItemVM({
-          roomId: room.roomId,
-          chatType: room.chatType,
-          product: {
-            productId: room.product.productId,
-            name: room.product.name,
-            thumbnailUrl: room.product.thumbnailUrl,
-            saleType: room.product.saleType,
-            auctionId: room.product.auctionId,
-          },
-          opponent:
-            room.participants.find((participant) => participant.role === "SELLER") ??
-            room.participants[0],
-          lastMessage: null,
-          unreadCount: 0,
-          updatedAt: room.createdAt,
-        });
         setRoomName(
-          currentRoom.name,
+          room.participants.find((participant) => participant.role === "SELLER")
+            ?.nickname ?? "채팅방",
         );
         setProductId(currentRoom.productId);
         setAuctionId(currentRoom.auctionId);
@@ -292,22 +328,15 @@ export default function ChatRoomScreen({
 
       if (roomId == null) return;
 
-      const messageRequest = {
+      const response = await sendChatMessage(roomId, {
         messageType: "TEXT",
         content,
-      } as const;
-
-      if (socketSubscriptionRef.current?.send(messageRequest)) {
-        setDraftMessage("");
-        return;
-      }
-
-      const response = await sendChatMessage(roomId, messageRequest);
+      });
 
       const nextMessage: ChatMessageVM = {
         messageId: response.messageId,
         senderId: response.senderId,
-        senderNickname: response.senderNickname,
+        senderNickname: "나",
         senderType: "ME",
         messageType: response.messageType,
         content: response.content,
@@ -315,12 +344,7 @@ export default function ChatRoomScreen({
         sentAt: response.sentAt,
       };
 
-      setMessages((prev) => {
-        if (prev.some((item) => item.messageId === nextMessage.messageId)) {
-          return prev;
-        }
-        return [...prev, nextMessage];
-      });
+      setMessages((prev) => [...prev, nextMessage]);
       setDraftMessage("");
 
       if (chatId == null) {
@@ -497,6 +521,25 @@ export default function ChatRoomScreen({
       )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {actionButton && (
+          <div className="sticky top-0 z-10 -mx-6 px-6 pt-0 pb-3 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80">
+            {tradeActionMessage && (
+              <p className="mb-2 px-1 text-xs text-gray-500">
+                {tradeActionMessage}
+              </p>
+            )}
+            <button
+              onClick={() => void handleTradeAction()}
+              disabled={
+                tradeActionLoading || !actionButton.enabled || !roomPurchaseId
+              }
+              className="w-full h-12 rounded-xl font-bold text-sm border border-gray-200 bg-black text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200"
+            >
+              {tradeActionLoading ? "처리 중..." : actionButton.label}
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-sm text-gray-400">
             채팅방 정보를 불러오는 중...
@@ -563,20 +606,10 @@ export default function ChatRoomScreen({
               if (sendError) setSendError(null);
             }}
             onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !isComposingRef.current &&
-                !e.nativeEvent.isComposing
-              ) {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 void handleSendMessage();
               }
-            }}
-            onCompositionStart={() => {
-              isComposingRef.current = true;
-            }}
-            onCompositionEnd={() => {
-              isComposingRef.current = false;
             }}
             disabled={isSending || (chatId == null && !draftProductId)}
           />

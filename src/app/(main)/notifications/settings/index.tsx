@@ -39,12 +39,39 @@ import { getAuthorizationHeaders } from '../../../../services/auth/service';
 import { registerFcmToken } from '../../../../services/notifications/api';
 import { requestFcmToken } from '../../../../services/notifications/firebase';
 
+const FCM_TOKEN_STORAGE_KEY = 'dealit:fcm-token';
+
+function getStoredFcmToken() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
+}
+
+function saveFcmToken(token: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
+}
+
+function clearStoredFcmToken() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(FCM_TOKEN_STORAGE_KEY);
+}
+
 export default function NotificationSettingsScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
   const [settings, setSettings] = useState({
     all: true,
     auction: true,
     like: true,
     views: true,
+    chat: true,
     review: true,
     payment: true,
     notice: true,
@@ -52,6 +79,23 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
 
   const [retention, setRetention] = useState('30일');
   const [pushStatus, setPushStatus] = useState<'idle' | 'connecting' | 'connected' | 'blocked' | 'failed'>('idle');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setPushStatus('blocked');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      clearStoredFcmToken();
+      setPushStatus('blocked');
+      return;
+    }
+
+    if (Notification.permission === 'granted' && getStoredFcmToken()) {
+      setPushStatus('connected');
+    }
+  }, []);
 
   const toggle = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -76,8 +120,10 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
         getAuthorizationHeaders(),
       );
 
+      saveFcmToken(token);
       setPushStatus('connected');
     } catch (error) {
+      clearStoredFcmToken();
       setPushStatus('failed');
     }
   };
@@ -129,10 +175,10 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
           <button
             type="button"
             onClick={connectPushNotification}
-            disabled={pushStatus === 'connecting'}
+            disabled={pushStatus === 'connecting' || pushStatus === 'connected'}
             className="px-4 py-2 rounded-xl bg-black text-white text-xs font-bold disabled:opacity-50"
           >
-            연결
+            {pushStatus === 'connected' ? '연결됨' : '연결'}
           </button>
         </div>
 
@@ -157,6 +203,7 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
             { key: 'auction', label: '경매 알림', desc: '입찰, 낙찰, 추월, 마감 알림' },
             { key: 'like', label: '찜 알림', desc: '가격 인하, 마감 임박 알림' },
             { key: 'views', label: '조회수 증가 알림', desc: '내 상품의 조회수 증가 알림' },
+            { key: 'chat', label: '채팅 알림', desc: '새로운 채팅 메시지 알림' },
             { key: 'review', label: '리뷰 알림', desc: '새로운 리뷰 등록 알림' },
             { key: 'payment', label: '결제 알림', desc: '결제 완료 및 영수증 알림' },
             { key: 'notice', label: '시스템 공지', desc: '서비스 업데이트 및 공지사항' },

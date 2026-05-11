@@ -102,10 +102,6 @@ export default function BidPlacementCompleteScreen({
               </div>
             </div>
             <div className="h-px bg-gray-200"></div>
-            <div className="rounded-2xl bg-white p-4 text-xs leading-relaxed text-gray-500">
-              <p>입찰 금액은 Dealit Pay에서 예치금으로 잠금 처리되었습니다.</p>
-              <p>경매에서 추월당할 경우 예치금은 자동 환불됩니다.</p>
-            </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">상품명</span>
