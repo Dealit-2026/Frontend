@@ -7,6 +7,7 @@ import {
   createFallbackRoom,
   createFallbackUnreadCountResponse,
 } from "./fallback";
+import { fetchCurrentMember } from "@/services/auth/service";
 import type {
   ChatActionButtons,
   ChatMessageType,
@@ -17,11 +18,14 @@ import type {
   ChatRoomMessagesResult,
   ChatRoomType,
   CreateChatRoomRequest,
+  CreateChatRoomResponse,
   GetChatRoomMessagesRequest,
   GetChatRoomsRequest,
   MarkChatRoomAsReadResponse,
   ReportChatMessageRequest,
   SendChatMessageRequest,
+  ActionButton,
+  ChatRoomDetailResponse,
 } from "./types";
 
 /**
@@ -67,19 +71,25 @@ function mapMessageType(type: ChatMessageType): ChatMessageType {
   return type;
 }
 
-function toMessageVM(message: {
-  messageId: number;
-  senderId: number;
-  senderNickname: string;
-  messageType: ChatMessageType;
-  content: string;
-  isRead: boolean;
-  sentAt: string;
-}): ChatMessageVM {
+function toMessageVM(
+  message: {
+    messageId: number;
+    senderId: number;
+    senderNickname: string;
+    messageType: ChatMessageType;
+    content: string;
+    isRead: boolean;
+    sentAt: string;
+  },
+  currentMemberId: number | null = null,
+): ChatMessageVM {
   return {
     ...message,
     messageType: mapMessageType(message.messageType),
-    senderType: message.senderNickname === "나" ? "ME" : "OTHER",
+    senderType:
+      currentMemberId != null && message.senderId === currentMemberId
+        ? "ME"
+        : "OTHER",
   };
 }
 
@@ -104,6 +114,23 @@ export function toChatRoomListItemVM(
 
 function toRoomVMFromDetailRequest(roomId: number): ChatRoomDetailVM {
   return createFallbackRoom(roomId);
+}
+
+function toRoomDetailVM(response: CreateChatRoomResponse): ChatRoomDetailVM {
+  const opponent = response.participants[1] ?? response.participants[0];
+
+  return {
+    roomId: response.roomId,
+    opponentName: opponent?.nickname ?? "채팅방",
+    productId: response.product.productId,
+    productName: response.product.name ?? `상품 #${response.product.productId}`,
+    productImageUrl: response.product.thumbnailUrl ?? null,
+    productStatusLabel:
+      response.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
+    chatType: response.chatType,
+    isWinner: response.isWinner,
+    actionButtons: response.actionButtons,
+  };
 }
 
 /* =========================
@@ -139,16 +166,34 @@ export async function createChatRoom(request: CreateChatRoomRequest) {
   return chatsApi.postChatRoom(request);
 }
 
+export async function fetchChatRoom(roomId: number): Promise<ChatRoomDetailVM> {
+  const response = await chatsApi.getChatRoom(roomId);
+  return toRoomDetailVM(response);
+}
+
 /** 메시지 조회 */
 export async function fetchChatMessages(
   request: GetChatRoomMessagesRequest,
 ): Promise<ChatRoomMessagesResult> {
   try {
-    const response = await chatsApi.getChatRoomMessages(request);
+    const [response, currentMember, roomMetadata] = await Promise.all([
+      chatsApi.getChatRoomMessages(request),
+      fetchCurrentMember().catch(() => null),
+      chatsApi.getChatRoom(request.roomId).catch((error) => {
+        console.warn("getChatRoom metadata fallback activated:", error);
+        return null;
+      }),
+    ]);
+    const currentMemberId = currentMember?.memberId ?? null;
+    const room = roomMetadata
+      ? toRoomDetailVM(roomMetadata)
+      : toRoomVMFromDetailRequest(request.roomId);
 
     return {
-      room: toRoomVMFromDetailRequest(request.roomId),
-      messages: response.content.map(toMessageVM),
+      room,
+      messages: response.content.map((message) =>
+        toMessageVM(message, currentMemberId),
+      ),
       page: response.page,
       size: response.size,
       totalElements: response.totalElements,
@@ -169,12 +214,33 @@ export async function fetchChatRoomDetail(
   return fetchChatMessages(request);
 }
 
+/** 거래 정보 조회 (actionButton 포함) */
+export async function fetchChatRoomTradeInfo(
+  roomId: number,
+): Promise<ChatRoomDetailResponse> {
+  return chatsApi.getChatRoomDetail(roomId);
+}
+
 /** 메시지 전송 */
 export async function sendChatMessage(
   roomId: number,
   request: SendChatMessageRequest,
 ) {
   return chatsApi.postChatMessage(roomId, request);
+}
+
+export async function markAuctionShipment(
+  roomId: number,
+): Promise<ChatRoomDetailVM> {
+  const response = await chatsApi.postChatRoomShipment(roomId);
+  return toRoomDetailVM(response);
+}
+
+export async function confirmAuctionReceipt(
+  roomId: number,
+): Promise<ChatRoomDetailVM> {
+  const response = await chatsApi.postChatRoomReceipt(roomId);
+  return toRoomDetailVM(response);
 }
 
 /** 채팅 메시지 신고 */

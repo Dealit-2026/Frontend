@@ -39,6 +39,32 @@ import { getAuthorizationHeaders } from '../../../../services/auth/service';
 import { registerFcmToken } from '../../../../services/notifications/api';
 import { requestFcmToken } from '../../../../services/notifications/firebase';
 
+const FCM_TOKEN_STORAGE_KEY = 'dealit:fcm-token';
+
+function getStoredFcmToken() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem(FCM_TOKEN_STORAGE_KEY);
+}
+
+function saveFcmToken(token: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
+}
+
+function clearStoredFcmToken() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.removeItem(FCM_TOKEN_STORAGE_KEY);
+}
+
 export default function NotificationSettingsScreen({ onBack, themeColor }: { onBack: () => void; themeColor: string; key?: string }) {
   const [settings, setSettings] = useState({
     all: true,
@@ -53,6 +79,23 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
 
   const [retention, setRetention] = useState('30일');
   const [pushStatus, setPushStatus] = useState<'idle' | 'connecting' | 'connected' | 'blocked' | 'failed'>('idle');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setPushStatus('blocked');
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      clearStoredFcmToken();
+      setPushStatus('blocked');
+      return;
+    }
+
+    if (Notification.permission === 'granted' && getStoredFcmToken()) {
+      setPushStatus('connected');
+    }
+  }, []);
 
   const toggle = (key: keyof typeof settings) => {
     setSettings(prev => ({ ...prev, [key]: !prev[key] }));
@@ -77,8 +120,10 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
         getAuthorizationHeaders(),
       );
 
+      saveFcmToken(token);
       setPushStatus('connected');
     } catch (error) {
+      clearStoredFcmToken();
       setPushStatus('failed');
     }
   };
@@ -130,10 +175,10 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
           <button
             type="button"
             onClick={connectPushNotification}
-            disabled={pushStatus === 'connecting'}
+            disabled={pushStatus === 'connecting' || pushStatus === 'connected'}
             className="px-4 py-2 rounded-xl bg-black text-white text-xs font-bold disabled:opacity-50"
           >
-            연결
+            {pushStatus === 'connected' ? '연결됨' : '연결'}
           </button>
         </div>
 

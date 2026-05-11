@@ -20,6 +20,7 @@ const TOKEN_TYPE_STORAGE_KEY = "tokenType";
 const LEGACY_ACCESS_TOKEN_STORAGE_KEY = "dealit_access_token";
 const LEGACY_TOKEN_TYPE_STORAGE_KEY = "dealit_token_type";
 const DEFAULT_TOKEN_TYPE = "Bearer";
+const AUTH_TOKEN_CHANGED_EVENT = "dealit:auth-token-changed";
 
 function canUseStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage);
@@ -97,6 +98,7 @@ export function saveAuthToken(loginResponse: LoginResponse) {
   );
   localStorage.removeItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY);
   localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
+  window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
 }
 
 export function clearAuthToken() {
@@ -108,6 +110,7 @@ export function clearAuthToken() {
   localStorage.removeItem(TOKEN_TYPE_STORAGE_KEY);
   localStorage.removeItem(LEGACY_ACCESS_TOKEN_STORAGE_KEY);
   localStorage.removeItem(LEGACY_TOKEN_TYPE_STORAGE_KEY);
+  window.dispatchEvent(new Event(AUTH_TOKEN_CHANGED_EVENT));
 }
 
 export function getAuthToken() {

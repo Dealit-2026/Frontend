@@ -1,18 +1,16 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
-import PaymentScreen from "./index";
+import { useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 
 export default function PaymentPage() {
+  const params = useParams<{ productId: string }>();
   const router = useRouter();
+  const productId = Number(params.productId) || 1;
 
-  return (
-    <PaymentScreen
-      showToast={() => {}}
-      onBack={() => router.back()}
-      onComplete={() => router.push("/products/1/receipt")}
-      themeColor="#98E446"
-    />
-  );
+  useEffect(() => {
+    router.replace(`/products/${productId}/regular-payment`);
+  }, [productId, router]);
+
+  return null;
 }

@@ -1,4 +1,4 @@
-import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
+import { ApiRequestError, getApiErrorDetail } from "@/services/apiError";
 import {
   getAuthorizationHeaders,
   handleUnauthorizedAccess,
@@ -17,10 +17,9 @@ async function throwProtectedApiError(
     handleUnauthorizedAccess();
   }
 
-  throw new ApiRequestError(
-    await getApiErrorMessage(response, fallbackMessage),
-    response.status,
-  );
+  const detail = await getApiErrorDetail(response, fallbackMessage);
+
+  throw new ApiRequestError(detail.message, response.status, detail.code);
 }
 
 export async function getWallet(): Promise<WalletResponse> {
@@ -31,7 +30,10 @@ export async function getWallet(): Promise<WalletResponse> {
   });
 
   if (!response.ok) {
-    await throwProtectedApiError(response, "딜릿머니 잔액을 불러오지 못했습니다.");
+    await throwProtectedApiError(
+      response,
+      "딜릿머니 잔액을 불러오지 못했습니다.",
+    );
   }
 
   return response.json();
@@ -55,7 +57,10 @@ export async function getWalletLedgers(
   );
 
   if (!response.ok) {
-    await throwProtectedApiError(response, "딜릿머니 내역을 불러오지 못했습니다.");
+    await throwProtectedApiError(
+      response,
+      "딜릿머니 내역을 불러오지 못했습니다.",
+    );
   }
 
   return response.json();
@@ -64,7 +69,11 @@ export async function getWalletLedgers(
 export async function chargeWallet(
   payload: WalletAmountRequest,
 ): Promise<WalletResponse> {
-  return postWalletAmount("/api/v1/wallet/charge", payload, "딜릿머니 충전에 실패했습니다.");
+  return postWalletAmount(
+    "/api/v1/wallet/charge",
+    payload,
+    "딜릿머니 충전에 실패했습니다.",
+  );
 }
 
 export async function withdrawWallet(

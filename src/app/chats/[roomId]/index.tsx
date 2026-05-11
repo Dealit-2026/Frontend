@@ -1,21 +1,39 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, PlusCircle, Send } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, PackageCheck, PlusCircle, Send, Truck } from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
 import {
+  confirmAuctionReceipt,
   createChatRoom,
   fetchChatMessages,
+  markAuctionShipment,
   markChatRoomAsRead,
   sendChatMessage,
+  fetchChatRoomTradeInfo,
 } from "../../../services/chats/service";
-import type { ChatMessageVM } from "../../../services/chats/types";
+import type {
+  ActionButton,
+  ChatActionButtons,
+  ChatMessageVM,
+} from "../../../services/chats/types";
+import { ApiRequestError } from "@/services/apiError";
+import { fetchCurrentMember } from "@/services/auth/service";
+import {
+  markPurchaseReceived,
+  markPurchaseShipped,
+} from "@/services/product/purchase/service";
+import {
+  subscribeChatRoom,
+  type ChatRoomSocketSubscription,
+} from "../../../services/chats/websocket";
 
 interface ChatRoomScreenProps {
   chatId: number | null;
   draftProductId?: number | null;
+  purchaseId?: number | null;
   onBack?: () => void;
   onProductClick?: (id: number) => void;
   themeColor: string;
@@ -24,6 +42,7 @@ interface ChatRoomScreenProps {
 export default function ChatRoomScreen({
   chatId,
   draftProductId = null,
+  purchaseId: _purchaseId = null,
   onBack,
   onProductClick,
   themeColor,
@@ -36,11 +55,48 @@ export default function ChatRoomScreen({
   const [productId, setProductId] = useState<number>(0);
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
+  const [productStatusLabel, setProductStatusLabel] = useState("거래 중");
+  const [actionButtons, setActionButtons] = useState<ChatActionButtons | null>(
+    null,
+  );
 
   const [messages, setMessages] = useState<ChatMessageVM[]>([]);
   const [draftMessage, setDraftMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(null);
+  const [tradeActionLoading, setTradeActionLoading] = useState<
+    "SHIP" | "CONFIRM_RECEIPT" | null
+  >(null);
+  const [roomPurchaseId, setRoomPurchaseId] = useState<number | null>(null);
+  const [actionButton, setActionButton] = useState<ActionButton | null>(null);
+  const [purchaseActionLoading, setPurchaseActionLoading] = useState(false);
+  const [purchaseActionMessage, setPurchaseActionMessage] = useState<
+    string | null
+  >(null);
+  const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
+  const socketSubscriptionRef = useRef<ChatRoomSocketSubscription | null>(null);
+  const isComposingRef = useRef(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    fetchCurrentMember()
+      .then((member) => {
+        if (!ignore) {
+          setCurrentMemberId(member.memberId);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setCurrentMemberId(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   useEffect(() => {
     const roomId = chatId;
@@ -51,6 +107,8 @@ export default function ChatRoomScreen({
       setProductId(draftProductId ?? 0);
       setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
       setProductImageUrl(null);
+      setProductStatusLabel("거래 중");
+      setActionButtons(null);
       setMessages([]);
       return;
     }
@@ -74,6 +132,8 @@ export default function ChatRoomScreen({
         setProductId(detail.room.productId);
         setProductName(detail.room.productName);
         setProductImageUrl(detail.room.productImageUrl);
+        setProductStatusLabel(detail.room.productStatusLabel);
+        setActionButtons(detail.room.actionButtons ?? null);
         setMessages(detail.messages);
 
         // 읽음 처리 (실패해도 상세 렌더링은 유지)
@@ -96,6 +156,37 @@ export default function ChatRoomScreen({
       mounted = false;
     };
   }, [chatId, draftProductId]);
+
+  useEffect(() => {
+    const roomId = chatId;
+    if (roomId == null) {
+      setRoomPurchaseId(null);
+      setActionButton(null);
+      return;
+    }
+
+    let mounted = true;
+
+    async function loadTradeInfo() {
+      try {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        if (!mounted) return;
+        setRoomPurchaseId(data.purchaseId ?? null);
+        setActionButton(data.actionButton);
+      } catch (error) {
+        console.warn("Failed to load chat room trade info:", error);
+        if (!mounted) return;
+        setRoomPurchaseId(null);
+        setActionButton(null);
+      }
+    }
+
+    void loadTradeInfo();
+
+    return () => {
+      mounted = false;
+    };
+  }, [chatId]);
 
   const sortedMessages = useMemo(() => {
     return [...messages].sort(
@@ -129,6 +220,73 @@ export default function ChatRoomScreen({
     router.push(`/products/${id}`);
   };
 
+  const getTradeActionErrorMessage = (code: string | null) => {
+    if (code === "PURCHASE_NOT_COMPLETABLE") {
+      return "현재 상태에서 처리할 수 없습니다.";
+    }
+    if (code === "PURCHASE_FORBIDDEN") {
+      return "본인만 처리할 수 있습니다.";
+    }
+    if (code === "PURCHASE_NOT_FOUND") {
+      return "구매 내역이 존재하지 않습니다.";
+    }
+    if (code === "TOKEN_EXPIRED" || code === "INVALID_TOKEN") {
+      return "로그인이 만료되었습니다. 다시 로그인해 주세요.";
+    }
+    if (code === "INVALID_REQUEST" || code === "VALIDATION_ERROR") {
+      return "요청 값이 올바르지 않습니다.";
+    }
+
+    return null;
+  };
+
+  const handlePurchaseTradeAction = async () => {
+    if (
+      !roomPurchaseId ||
+      !actionButton ||
+      !actionButton.enabled ||
+      purchaseActionLoading
+    )
+      return;
+
+    try {
+      setPurchaseActionLoading(true);
+      setPurchaseActionMessage(null);
+
+      if (actionButton.actionType === "SELLER_CONFIRM") {
+        await markPurchaseShipped(roomPurchaseId);
+      } else if (actionButton.actionType === "BUYER_CONFIRM") {
+        await markPurchaseReceived(roomPurchaseId);
+      }
+
+      // 거래 정보 새로고침
+      const roomId = chatId;
+      if (roomId) {
+        const data = await fetchChatRoomTradeInfo(roomId as number);
+        setActionButton(data.actionButton);
+      }
+
+      const successMsg =
+        actionButton.actionType === "SELLER_CONFIRM"
+          ? "발송 처리가 완료되었습니다."
+          : "수령 확정이 완료되었습니다.";
+      setPurchaseActionMessage(successMsg);
+    } catch (error: unknown) {
+      console.error(error);
+      if (error instanceof ApiRequestError) {
+        setPurchaseActionMessage(
+          getTradeActionErrorMessage(error.code) ?? error.message,
+        );
+      } else {
+        setPurchaseActionMessage(
+          error instanceof Error ? error.message : "거래 처리에 실패했습니다.",
+        );
+      }
+    } finally {
+      setPurchaseActionLoading(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     let roomId = chatId;
     const content = draftMessage.trim();
@@ -148,8 +306,12 @@ export default function ChatRoomScreen({
             ?.nickname ?? "채팅방",
         );
         setProductId(room.product.productId);
-        setProductName(room.product.name ?? `상품 #${room.product.productId}`);
+        setProductName(room.product.name);
         setProductImageUrl(room.product.thumbnailUrl ?? null);
+        setProductStatusLabel(
+          room.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
+        );
+        setActionButtons(room.actionButtons ?? null);
       }
 
       if (roomId == null) return;
@@ -183,6 +345,67 @@ export default function ChatRoomScreen({
       setIsSending(false);
     }
   };
+
+  const updateRoomMeta = (room: {
+    opponentName: string;
+    productId: number;
+    productName: string;
+    productImageUrl: string | null;
+    productStatusLabel: string;
+    actionButtons?: ChatActionButtons;
+  }) => {
+    setRoomName(room.opponentName);
+    setProductId(room.productId);
+    setProductName(room.productName);
+    setProductImageUrl(room.productImageUrl);
+    setProductStatusLabel(room.productStatusLabel);
+    setActionButtons(room.actionButtons ?? null);
+  };
+
+  const handleTradeAction = async (type: "SHIP" | "CONFIRM_RECEIPT") => {
+    if (chatId == null || tradeActionLoading) return;
+
+    if (type === "SHIP" && !actionButtons?.canShip) {
+      setTradeActionMessage("발송 처리 가능 시간이 지났거나 현재 발송 처리할 수 없는 상태입니다.");
+      return;
+    }
+
+    if (type === "CONFIRM_RECEIPT" && !actionButtons?.canConfirmReceipt) {
+      setTradeActionMessage("아직 판매자가 '보냈어요'를 누르기 전입니다. 발송 처리 후 수령확정할 수 있습니다.");
+      return;
+    }
+
+    try {
+      setTradeActionLoading(type);
+      setTradeActionMessage(null);
+      const room =
+        type === "SHIP"
+          ? await markAuctionShipment(chatId)
+          : await confirmAuctionReceipt(chatId);
+      updateRoomMeta(room);
+      setTradeActionMessage(
+        type === "SHIP"
+          ? "발송 처리가 완료되었습니다. 구매자가 상품을 받은 뒤 수령확정을 진행할 수 있습니다."
+          : "수령확정이 완료되었습니다. 경매 거래가 종료되었습니다.",
+      );
+    } catch (error) {
+      console.error("Failed to process trade action:", error);
+      setTradeActionMessage(
+        type === "SHIP"
+          ? "발송 처리에 실패했습니다. 잠시 후 다시 시도해주세요."
+          : "수령확정에 실패했습니다. 잠시 후 다시 시도해주세요.",
+      );
+    } finally {
+      setTradeActionLoading(null);
+    }
+  };
+
+  const showTradePanel =
+    Boolean(actionButtons?.notice) ||
+    Boolean(actionButtons?.shipButtonType) ||
+    Boolean(actionButtons?.confirmReceiptButtonType) ||
+    Boolean(actionButtons?.canShip) ||
+    Boolean(actionButtons?.canConfirmReceipt);
 
   return (
     <motion.div
@@ -222,7 +445,7 @@ export default function ChatRoomScreen({
             {productName || "상품 정보"}
           </p>
           <p className="text-[10px] font-bold" style={{ color: themeColor }}>
-            거래 중
+            {productStatusLabel}
           </p>
         </div>
         <button className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[10px] font-bold shrink-0">
@@ -230,7 +453,81 @@ export default function ChatRoomScreen({
         </button>
       </div>
 
+      {showTradePanel && (
+        <div className="border-b border-gray-100 bg-white px-4 py-3">
+          {actionButtons?.notice && (
+            <p className="text-xs leading-relaxed text-gray-600">
+              {actionButtons.notice}
+            </p>
+          )}
+          <div className="mt-3 flex gap-2">
+            {actionButtons?.shipButtonType === "SHIP" && (
+              <button
+                type="button"
+                aria-disabled={!actionButtons.canShip || tradeActionLoading !== null}
+                onClick={() => void handleTradeAction("SHIP")}
+                className={`inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold ${
+                  actionButtons.canShip && tradeActionLoading === null
+                    ? "bg-black text-white"
+                    : "bg-gray-200 text-gray-500"
+                }`}
+              >
+                <Truck size={16} />
+                {tradeActionLoading === "SHIP" ? "처리 중" : "보냈어요"}
+              </button>
+            )}
+            {actionButtons?.confirmReceiptButtonType === "CONFIRM_RECEIPT" && (
+              <button
+                type="button"
+                aria-disabled={
+                  !actionButtons.canConfirmReceipt || tradeActionLoading !== null
+                }
+                onClick={() => void handleTradeAction("CONFIRM_RECEIPT")}
+                className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold text-white"
+                style={{
+                  backgroundColor:
+                    actionButtons.canConfirmReceipt && tradeActionLoading === null
+                      ? themeColor
+                      : "#e5e7eb",
+                  color:
+                    actionButtons.canConfirmReceipt && tradeActionLoading === null
+                      ? "#ffffff"
+                      : "#6b7280",
+                }}
+              >
+                <PackageCheck size={16} />
+                {tradeActionLoading === "CONFIRM_RECEIPT"
+                  ? "처리 중"
+                  : "받았어요"}
+              </button>
+            )}
+          </div>
+          {tradeActionMessage && (
+            <p className="mt-2 text-xs text-gray-500">{tradeActionMessage}</p>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+        {actionButton && (
+          <div className="sticky top-0 z-10 -mx-6 px-6 pt-0 pb-3 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80">
+            {purchaseActionMessage && (
+              <p className="mb-2 px-1 text-xs text-gray-500">
+                {purchaseActionMessage}
+              </p>
+            )}
+            <button
+              onClick={() => void handlePurchaseTradeAction()}
+              disabled={
+                purchaseActionLoading || !actionButton.enabled || !roomPurchaseId
+              }
+              className="w-full h-12 rounded-xl font-bold text-sm border border-gray-200 bg-black text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200"
+            >
+              {purchaseActionLoading ? "처리 중..." : actionButton.label}
+            </button>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="h-full flex items-center justify-center text-sm text-gray-400">
             채팅방 정보를 불러오는 중...
