@@ -35,6 +35,7 @@ import type {
   NotificationResponse,
   NotificationType,
 } from "@/services/notifications/types";
+import { useEventStream } from "@/services/events/EventStreamProvider";
 
 type NotificationFilter = "ALL" | NotificationType;
 
@@ -43,7 +44,7 @@ const FILTERS: Array<{ label: string; value: NotificationFilter }> = [
   { label: "상품", value: "PRODUCT" },
   { label: "거래", value: "TRADE" },
   { label: "경매", value: "AUCTION" },
-  { label: "지갑", value: "WALLET" },
+  { label: "딜릿머니", value: "WALLET" },
   { label: "공지", value: "SYSTEM" },
 ];
 
@@ -135,6 +136,7 @@ export default function NotificationScreen({
   themeColor: string;
   key?: string;
 }) {
+  const { setNotificationUnreadCount } = useEventStream();
   const [activeFilter, setActiveFilter] = useState<NotificationFilter>("ALL");
   const [notifications, setNotifications] = useState<NotificationResponse[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -175,6 +177,7 @@ export default function NotificationScreen({
           append ? [...prev, ...listResponse.content] : listResponse.content,
         );
         setUnreadCount(unreadResponse.count);
+        setNotificationUnreadCount(unreadResponse.count);
         setUnreadTypeCounts(toUnreadTypeCountMap(unreadTypeCountResponse));
         setPage(listResponse.page);
         setHasNext(listResponse.hasNext);
@@ -186,7 +189,7 @@ export default function NotificationScreen({
         setIsLoadingMore(false);
       }
     },
-    [],
+    [setNotificationUnreadCount],
   );
 
   useEffect(() => {
@@ -226,6 +229,7 @@ export default function NotificationScreen({
         prev.map((notification) => ({ ...notification, read: true })),
       );
       setUnreadCount(0);
+      setNotificationUnreadCount(0);
       setUnreadTypeCounts({
         TRADE: 0,
         PRODUCT: 0,
@@ -249,7 +253,9 @@ export default function NotificationScreen({
               : item,
           ),
         );
-        setUnreadCount((prev) => Math.max(prev - 1, 0));
+        const nextUnreadCount = Math.max(unreadCount - 1, 0);
+        setUnreadCount(nextUnreadCount);
+        setNotificationUnreadCount(nextUnreadCount);
         setUnreadTypeCounts((prev) => ({
           ...prev,
           [notification.type]: Math.max(prev[notification.type] - 1, 0),
@@ -328,7 +334,9 @@ export default function NotificationScreen({
         prev.filter((item) => item.notificationId !== notification.notificationId),
       );
       if (!notification.read) {
-        setUnreadCount((prev) => Math.max(prev - 1, 0));
+        const nextUnreadCount = Math.max(unreadCount - 1, 0);
+        setUnreadCount(nextUnreadCount);
+        setNotificationUnreadCount(nextUnreadCount);
         setUnreadTypeCounts((prev) => ({
           ...prev,
           [notification.type]: Math.max(prev[notification.type] - 1, 0),

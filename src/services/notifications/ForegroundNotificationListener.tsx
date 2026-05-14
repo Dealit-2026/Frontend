@@ -10,6 +10,22 @@ import { requestFcmToken } from "./firebase";
 const FCM_TOKEN_STORAGE_KEY = "dealit:fcm-token";
 const AUTH_TOKEN_CHANGED_EVENT = "dealit:auth-token-changed";
 
+function resolvePayloadTargetUrl(payload: { data?: Record<string, string>; fcmOptions?: { link?: string } }) {
+  const data = payload.data || {};
+
+  if (data.targetUrl) return data.targetUrl;
+  if (payload.fcmOptions?.link) return payload.fcmOptions.link;
+  if (data.roomId) return `/chats/${data.roomId}`;
+  if (data.productId) return `/products/${data.productId}`;
+  if (data.auctionId) return `/auctions/${data.auctionId}`;
+
+  return "/";
+}
+
+function openNotificationTarget(targetUrl: string) {
+  window.location.assign(new URL(targetUrl, window.location.origin).href);
+}
+
 export function ForegroundNotificationListener() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -66,7 +82,11 @@ export function ForegroundNotificationListener() {
           registration.showNotification(title, options);
         })
         .catch(() => {
-          new Notification(title, options);
+          const notification = new Notification(title, options);
+          notification.onclick = () => {
+            notification.close();
+            openNotificationTarget(resolvePayloadTargetUrl(payload));
+          };
         });
     })
       .then((nextUnsubscribe) => {

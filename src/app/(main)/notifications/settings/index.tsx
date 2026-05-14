@@ -70,7 +70,6 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
     all: true,
     auction: true,
     like: true,
-    views: true,
     chat: true,
     review: true,
     payment: true,
@@ -202,7 +201,6 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
           {[
             { key: 'auction', label: '경매 알림', desc: '입찰, 낙찰, 추월, 마감 알림' },
             { key: 'like', label: '찜 알림', desc: '가격 인하, 마감 임박 알림' },
-            { key: 'views', label: '조회수 증가 알림', desc: '내 상품의 조회수 증가 알림' },
             { key: 'chat', label: '채팅 알림', desc: '새로운 채팅 메시지 알림' },
             { key: 'review', label: '리뷰 알림', desc: '새로운 리뷰 등록 알림' },
             { key: 'payment', label: '결제 알림', desc: '결제 완료 및 영수증 알림' },

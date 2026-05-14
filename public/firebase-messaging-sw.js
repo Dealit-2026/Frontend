@@ -13,6 +13,49 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+function resolveNotificationTargetUrl(notification) {
+  const data = notification.data || {};
+  const fcmMessage = data.FCM_MSG || {};
+  const fcmData = fcmMessage.data || {};
+  const fcmOptions = fcmMessage.fcmOptions || fcmMessage.webpush?.fcmOptions || {};
+
+  const targetUrl =
+    data.targetUrl ||
+    fcmData.targetUrl ||
+    fcmOptions.link ||
+    data.click_action ||
+    fcmData.click_action;
+
+  if (targetUrl) {
+    return targetUrl;
+  }
+
+  const roomId = data.roomId || fcmData.roomId;
+  if (roomId) {
+    return `/chats/${roomId}`;
+  }
+
+  const productId = data.productId || fcmData.productId;
+  if (productId) {
+    return `/products/${productId}`;
+  }
+
+  const auctionId = data.auctionId || fcmData.auctionId;
+  if (auctionId) {
+    return `/auctions/${auctionId}`;
+  }
+
+  return "/";
+}
+
 messaging.onBackgroundMessage((payload) => {
   const notification = payload.notification || {};
   const title = notification.title || "Dealit";
@@ -24,4 +67,35 @@ messaging.onBackgroundMessage((payload) => {
   };
 
   self.registration.showNotification(title, options);
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = resolveNotificationTargetUrl(event.notification);
+  const url = new URL(targetUrl, self.location.origin).href;
+
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ("focus" in client) {
+            if ("navigate" in client) {
+              return client.navigate(url).then((navigatedClient) => {
+                return navigatedClient ? navigatedClient.focus() : client.focus();
+              });
+            }
+
+            return client.focus();
+          }
+        }
+
+        if (clients.openWindow) {
+          return clients.openWindow(url);
+        }
+
+        return undefined;
+      })
+  );
 });

@@ -45,6 +45,7 @@ import type { AuctionListItemViewModel } from "@/services/auction/list/types";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import type { PopularProductItemViewModel } from "@/services/product/popular/types";
+import { useEventStream } from "@/services/events/EventStreamProvider";
 
 type PopularHomeItem = PopularProductItemViewModel | AuctionListItemViewModel;
 
@@ -78,6 +79,7 @@ export default function HomeScreen({
   onModeChange: (mode: "regular" | "auction") => void;
   onTabChange: (tab: Tab) => void;
 }) {
+  const { notificationUnreadCount } = useEventStream();
   const themeColor = mode === "regular" ? "#98E446" : "#F64257";
   const logoUrl =
     mode === "regular"
@@ -276,7 +278,9 @@ export default function HomeScreen({
             className="p-1.5 hover:bg-gray-50 rounded-full transition-colors relative"
           >
             <Bell size={22} />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            {notificationUnreadCount > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+            )}
           </button>
           <button
             onClick={onWishlistClick}
