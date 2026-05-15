@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -108,9 +108,294 @@ import {
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 import { findExistingChatRoomByProductId } from "@/services/chats/service";
 import { fetchAuctionDetail } from "@/services/auction/detail/service";
+import {
+  readStoredThemeMode,
+  writeStoredThemeMode,
+  type ThemeMode,
+} from "@/services/themeMode";
+
+type RouteState = {
+  screen: Screen;
+  tab?: Tab;
+  productId?: number;
+  chatId?: number | null;
+  chatDraftProductId?: number | null;
+  themeMode?: ThemeMode;
+  productListType?: "all" | "closing_soon" | "recent";
+  category?: string | null;
+};
+
+const getFiniteId = (value: number | null | undefined) =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+
+const buildUrl = (
+  screen: Screen,
+  {
+    tab,
+    productId,
+    chatId,
+    chatDraftProductId,
+    themeMode,
+    productListType,
+    category,
+    bidAmount,
+  }: {
+    tab: Tab;
+    productId: number | null;
+    chatId: number | null;
+    chatDraftProductId: number | null;
+    themeMode: ThemeMode;
+    productListType: "all" | "closing_soon" | "recent";
+    category: string | null;
+    bidAmount?: number;
+  },
+) => {
+  const safeProductId = getFiniteId(productId);
+  const safeChatId = getFiniteId(chatId);
+  const params = new URLSearchParams();
+
+  if (category) {
+    params.set("category", category);
+  }
+
+  switch (screen) {
+    case "login":
+      return "/login";
+    case "signup":
+      return "/signup";
+    case "find_id":
+      return "/find-id";
+    case "find_password":
+      return "/find-password";
+    case "email_auth":
+      return "/email-auth";
+    case "terms":
+      return "/terms";
+    case "region_setup":
+      return "/region-setup";
+    case "profile_setup":
+      return "/profile-setup";
+    case "edit_profile":
+      return "/mypage/edit-profile";
+    case "edit_profile_region":
+      return "/mypage/edit-profile/location";
+    case "category_selection":
+      return "/category-selection";
+    case "category_reset":
+      return "/category-selection?mode=edit";
+    case "main":
+      if (tab === "search") return "/search";
+      if (tab === "register") return "/products/register";
+      if (tab === "chat") return "/chats";
+      if (tab === "mypage") return "/mypage";
+      return "/home";
+    case "product_list": {
+      params.set("type", productListType);
+      const query = params.toString();
+      const path = themeMode === "auction" ? "/auctions" : "/products";
+      return query ? `${path}?${query}` : path;
+    }
+    case "product_detail":
+      return safeProductId
+        ? `${themeMode === "auction" ? "/auctions" : "/products"}/${safeProductId}`
+        : themeMode === "auction"
+          ? "/auctions"
+          : "/products";
+    case "bidding_status":
+      return safeProductId
+        ? `/auctions/${safeProductId}/bidding-status`
+        : "/auctions";
+    case "payment":
+      return safeProductId
+        ? `/products/${safeProductId}/regular-payment`
+        : "/products";
+    case "receipt":
+      return safeProductId ? `/products/${safeProductId}/receipt` : "/products";
+    case "winning_bid_completion":
+      return safeProductId
+        ? `/auctions/${safeProductId}/winning-complete`
+        : "/notifications";
+    case "outbid_notification":
+      return safeProductId ? `/auctions/${safeProductId}/outbid` : "/notifications";
+    case "search_detail":
+      return "/search/detail";
+    case "wishlist":
+      return "/wishlist";
+    case "report":
+      return safeProductId ? `/products/${safeProductId}/report` : "/products";
+    case "regular_purchase":
+      return safeProductId
+        ? `/products/${safeProductId}/regular-purchase`
+        : "/products";
+    case "purchase_history":
+      return "/mypage/purchase-history";
+    case "sales_history":
+      return "/mypage/sales-history";
+    case "account_management":
+      return "/mypage/account-management";
+    case "notification_settings":
+      return "/notifications/settings";
+    case "notifications":
+      return "/notifications";
+    case "sales_management":
+      return "/mypage/sales-management";
+    case "my_bids":
+      return "/mypage/my-bids";
+    case "review":
+      return "/mypage/review";
+    case "write_review":
+      return "/mypage/review/write";
+    case "chat_room":
+      if (safeChatId) return `/chats/${safeChatId}`;
+      if (chatDraftProductId) return `/chats/new?productId=${chatDraftProductId}`;
+      return "/chats";
+    case "bid_placement_complete": {
+      const query =
+        typeof bidAmount === "number" && Number.isFinite(bidAmount)
+          ? `?bidPrice=${bidAmount}`
+          : "";
+      return safeProductId ? `/auctions/${safeProductId}/bid-complete${query}` : "/auctions";
+    }
+    default:
+      return "/";
+  }
+};
+
+const routeStateFromUrl = (url: URL): RouteState | null => {
+  const { pathname, searchParams } = url;
+  const readId = (index: number) => {
+    const value = Number(pathname.split("/")[index]);
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  };
+
+  if (pathname === "/" || pathname === "/home") {
+    return { screen: "main", tab: "home" };
+  }
+  if (pathname === "/login") return { screen: "login" };
+  if (pathname === "/signup") return { screen: "signup" };
+  if (pathname === "/find-id") return { screen: "find_id" };
+  if (pathname === "/find-password") return { screen: "find_password" };
+  if (pathname === "/email-auth") return { screen: "email_auth" };
+  if (pathname === "/terms") return { screen: "terms" };
+  if (pathname === "/region-setup") return { screen: "region_setup" };
+  if (pathname === "/profile-setup") return { screen: "profile_setup" };
+  if (pathname === "/category-selection") {
+    return {
+      screen: searchParams.get("mode") === "edit" ? "category_reset" : "category_selection",
+    };
+  }
+  if (pathname === "/search") return { screen: "main", tab: "search" };
+  if (pathname === "/search/detail") return { screen: "search_detail" };
+  if (pathname === "/wishlist") return { screen: "wishlist" };
+  if (pathname === "/chats") return { screen: "main", tab: "chat" };
+  if (pathname === "/chats/new") {
+    const productId = Number(searchParams.get("productId"));
+    return {
+      screen: "chat_room",
+      chatId: null,
+      chatDraftProductId: Number.isFinite(productId) ? productId : null,
+    };
+  }
+  if (/^\/chats\/\d+$/.test(pathname)) {
+    return { screen: "chat_room", chatId: readId(2) };
+  }
+  if (pathname === "/notifications") return { screen: "notifications" };
+  if (pathname === "/notifications/settings") {
+    return { screen: "notification_settings" };
+  }
+  if (pathname === "/mypage") return { screen: "main", tab: "mypage" };
+  if (pathname === "/mypage/edit-profile") return { screen: "edit_profile" };
+  if (pathname === "/mypage/edit-profile/location") {
+    return { screen: "edit_profile_region" };
+  }
+  if (pathname === "/mypage/account-management") {
+    return { screen: "account_management" };
+  }
+  if (pathname === "/mypage/purchase-history") {
+    return { screen: "purchase_history" };
+  }
+  if (pathname === "/mypage/sales-history") return { screen: "sales_history" };
+  if (pathname === "/mypage/sales-management") {
+    return { screen: "sales_management" };
+  }
+  if (pathname === "/mypage/my-bids") return { screen: "my_bids" };
+  if (pathname === "/mypage/review") return { screen: "review" };
+  if (pathname === "/mypage/review/write") return { screen: "write_review" };
+  if (pathname === "/products/register") return { screen: "main", tab: "register" };
+  if (pathname === "/products") {
+    return {
+      screen: "product_list",
+      themeMode: "regular",
+      productListType:
+        searchParams.get("type") === "closing_soon" ||
+        searchParams.get("type") === "recent"
+          ? (searchParams.get("type") as "closing_soon" | "recent")
+          : "all",
+      category: searchParams.get("category"),
+    };
+  }
+  if (/^\/products\/\d+\/report$/.test(pathname)) {
+    return { screen: "report", productId: readId(2), themeMode: "regular" };
+  }
+  if (/^\/products\/\d+\/regular-payment$/.test(pathname)) {
+    return { screen: "payment", productId: readId(2), themeMode: "regular" };
+  }
+  if (/^\/products\/\d+\/payment$/.test(pathname)) {
+    return { screen: "payment", productId: readId(2), themeMode: "regular" };
+  }
+  if (/^\/products\/\d+\/receipt$/.test(pathname)) {
+    return { screen: "receipt", productId: readId(2), themeMode: "regular" };
+  }
+  if (/^\/products\/\d+\/regular-purchase$/.test(pathname)) {
+    return { screen: "regular_purchase", productId: readId(2), themeMode: "regular" };
+  }
+  if (/^\/products\/\d+$/.test(pathname)) {
+    return { screen: "product_detail", productId: readId(2), themeMode: "regular" };
+  }
+  if (pathname === "/auctions") {
+    return {
+      screen: "product_list",
+      themeMode: "auction",
+      productListType:
+        searchParams.get("type") === "closing_soon" ||
+        searchParams.get("type") === "recent"
+          ? (searchParams.get("type") as "closing_soon" | "recent")
+          : "all",
+      category: searchParams.get("category"),
+    };
+  }
+  if (/^\/auctions\/\d+\/bidding-status$/.test(pathname)) {
+    return { screen: "bidding_status", productId: readId(2), themeMode: "auction" };
+  }
+  if (/^\/auctions\/\d+\/bid-complete$/.test(pathname)) {
+    return {
+      screen: "bid_placement_complete",
+      productId: readId(2),
+      themeMode: "auction",
+    };
+  }
+  if (/^\/auctions\/\d+\/winning-complete$/.test(pathname)) {
+    return {
+      screen: "winning_bid_completion",
+      productId: readId(2),
+      themeMode: "auction",
+    };
+  }
+  if (/^\/auctions\/\d+\/outbid$/.test(pathname)) {
+    return { screen: "outbid_notification", productId: readId(2), themeMode: "auction" };
+  }
+  if (/^\/auctions\/\d+$/.test(pathname)) {
+    return { screen: "product_detail", productId: readId(2), themeMode: "auction" };
+  }
+
+  return null;
+};
 
 export default function App() {
   const router = useRouter();
+  const isApplyingPopState = useRef(false);
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [emailAuthMode, setEmailAuthMode] = useState<"signup" | "profile">(
     "signup",
@@ -123,7 +408,7 @@ export default function App() {
   const [selectedChatDraftProductId, setSelectedChatDraftProductId] = useState<
     number | null
   >(null);
-  const [themeMode, setThemeMode] = useState<"regular" | "auction">("regular");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(readStoredThemeMode);
   const [productListType, setProductListType] = useState<
     "all" | "closing_soon" | "recent"
   >("all");
@@ -162,6 +447,103 @@ export default function App() {
 
   const navigateTo = (screen: Screen) => {
     setCurrentScreen(screen);
+  };
+
+  const applyRouteState = useCallback((routeState: RouteState) => {
+    setCurrentScreen(routeState.screen);
+
+    if (routeState.tab) {
+      setCurrentTab(routeState.tab);
+    }
+    if (routeState.productId !== undefined) {
+      setSelectedProductId(routeState.productId);
+    }
+    if (routeState.chatId !== undefined) {
+      setSelectedChatId(routeState.chatId);
+    }
+    if (routeState.chatDraftProductId !== undefined) {
+      setSelectedChatDraftProductId(routeState.chatDraftProductId);
+    }
+    if (routeState.themeMode) {
+      setThemeMode(routeState.themeMode);
+    }
+    if (routeState.productListType) {
+      setProductListType(routeState.productListType);
+    }
+    if (routeState.category !== undefined) {
+      setSelectedCategory(routeState.category);
+    }
+  }, []);
+
+  useEffect(() => {
+    const routeState = routeStateFromUrl(new URL(window.location.href));
+
+    if (routeState) {
+      isApplyingPopState.current = true;
+      applyRouteState(routeState);
+    }
+
+    const handlePopState = () => {
+      const routeState = routeStateFromUrl(new URL(window.location.href));
+
+      if (!routeState) {
+        return;
+      }
+
+      isApplyingPopState.current = true;
+      applyRouteState(routeState);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [applyRouteState]);
+
+  useEffect(() => {
+    writeStoredThemeMode(themeMode);
+  }, [themeMode]);
+
+  useEffect(() => {
+    const nextUrl = buildUrl(currentScreen, {
+      tab: currentTab,
+      productId:
+        currentScreen === "bid_placement_complete"
+          ? bidData?.productId ?? selectedProductId
+          : selectedProductId,
+      chatId: selectedChatId,
+      chatDraftProductId: selectedChatDraftProductId,
+      themeMode,
+      productListType,
+      category: selectedCategory,
+      bidAmount: bidData?.bidAmount,
+    });
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+
+    if (nextUrl === currentUrl) {
+      isApplyingPopState.current = false;
+      return;
+    }
+
+    if (isApplyingPopState.current) {
+      isApplyingPopState.current = false;
+      return;
+    }
+
+    window.history.pushState(null, "", nextUrl);
+  }, [
+    bidData,
+    currentScreen,
+    currentTab,
+    productListType,
+    selectedCategory,
+    selectedChatDraftProductId,
+    selectedChatId,
+    selectedProductId,
+    themeMode,
+  ]);
+
+  const handleTabChange = (tab: Tab) => {
+    setCurrentTab(tab);
+    navigateTo("main");
   };
 
   const navigateToProduct = (id: number) => {
@@ -525,7 +907,7 @@ export default function App() {
               <MainLayout
                 key="main"
                 activeTab={currentTab}
-                onTabChange={setCurrentTab}
+                onTabChange={handleTabChange}
                 onProductClick={navigateToCatalogItem}
                 onProductListClick={(type, category) => {
                   setProductListType(type);

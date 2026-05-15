@@ -19,12 +19,26 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+function hasFirebaseMessagingConfig() {
+  return Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.authDomain &&
+      firebaseConfig.projectId &&
+      firebaseConfig.messagingSenderId &&
+      firebaseConfig.appId,
+  );
+}
+
 function getFirebaseApp() {
   return getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);
 }
 
 export async function requestFcmToken() {
-  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+  if (
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !hasFirebaseMessagingConfig()
+  ) {
     return null;
   }
 
@@ -43,7 +57,7 @@ export async function requestFcmToken() {
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
   if (!vapidKey) {
-    throw new Error("NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured.");
+    return null;
   }
 
   const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
@@ -58,7 +72,7 @@ export async function requestFcmToken() {
 export async function listenForegroundFcmMessages(
   onReceive: (payload: MessagePayload) => void,
 ) {
-  if (typeof window === "undefined") {
+  if (typeof window === "undefined" || !hasFirebaseMessagingConfig()) {
     return () => {};
   }
 
