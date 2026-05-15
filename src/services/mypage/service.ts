@@ -6,6 +6,7 @@ import type { LocationFormValues } from "@/services/location/types";
 import * as mypageApi from "@/services/mypage/api";
 import { fetchSalesManagementCount } from "@/services/sales-management/service";
 import { fetchMyBuyingAuctionCount } from "@/services/buying-auction/service";
+import { fetchMyReceivedReviewRatingSummary } from "@/services/review/service";
 import type {
   AuctionEditDetailResponse,
   AuctionEditInitialData,
@@ -143,6 +144,7 @@ export function toMyPageProfileViewModel(
   profile: MyProfileResponse,
   sellingCount = profile.sellingCount,
   biddingCount = profile.biddingCount,
+  rating = profile.rating,
 ): MyPageProfileViewModel {
   return {
     id: profile.id,
@@ -152,7 +154,7 @@ export function toMyPageProfileViewModel(
     bio: profile.bio ?? "",
     profileImageUrl: resolveProfileImageUrl(profile.profileImageUrl),
     location: profile.location || "\uc9c0\uc5ed \ubbf8\uc124\uc815",
-    ratingLabel: `\ud3c9\uc810 ${profile.rating.toFixed(1)}`,
+    ratingLabel: `\ud3c9\uc810 ${rating.toFixed(1)}`,
     warningLabel: `\uacbd\uace0 ${profile.warningCount}\ud68c`,
     biddingCount,
     sellingCount,
@@ -229,12 +231,18 @@ export async function fetchMyPageProfile() {
   const profile = await mypageApi.getMyProfile();
 
   try {
-    const [sellingCount, biddingCount] = await Promise.all([
+    const [sellingCount, biddingCount, reviewRatingSummary] = await Promise.all([
       fetchSalesManagementCount(),
       fetchMyBuyingAuctionCount(),
+      fetchMyReceivedReviewRatingSummary(),
     ]);
 
-    return toMyPageProfileViewModel(profile, sellingCount, biddingCount);
+    return toMyPageProfileViewModel(
+      profile,
+      sellingCount,
+      biddingCount,
+      reviewRatingSummary.averageRating,
+    );
   } catch {
     return toMyPageProfileViewModel(profile);
   }

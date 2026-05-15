@@ -123,6 +123,7 @@ function toRoomDetailVM(response: CreateChatRoomResponse): ChatRoomDetailVM {
     roomId: response.roomId,
     opponentName: opponent?.nickname ?? "채팅방",
     productId: response.product.productId,
+    auctionId: response.product.auctionId ?? null,
     productName: response.product.name ?? `상품 #${response.product.productId}`,
     productImageUrl: response.product.thumbnailUrl ?? null,
     productStatusLabel:

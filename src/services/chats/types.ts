@@ -69,6 +69,7 @@ export interface ChatRoomProduct {
   name: string;
   thumbnailUrl: string | null;
   saleType?: ChatProductSaleType;
+  auctionId?: number | null;
   status?: ChatProductStatus;
 }
 
@@ -228,6 +229,7 @@ export interface ChatRoomDetailVM {
   roomId: number;
   opponentName: string;
   productId: number;
+  auctionId?: number | null;
   productName: string;
   productImageUrl: string | null;
   productStatusLabel: string;

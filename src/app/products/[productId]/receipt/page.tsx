@@ -15,7 +15,6 @@ export default function ReceiptPage() {
       key={`receipt-${purchaseId ?? "none"}`}
       purchaseId={purchaseId}
       onBack={() => router.back()}
-      onWriteReview={() => router.push("/mypage/review/write")}
       themeColor="#98E446"
     />
   );
