@@ -794,6 +794,15 @@ export default function App() {
               />
             )}
 
+            {currentScreen === "receipt" && (
+              <ReceiptScreen
+                key="receipt"
+                purchaseId={null}
+                onBack={() => navigateTo("main")}
+                onWriteReview={() => navigateTo("write_review")}
+                themeColor="#F64257"
+              />
+            )}
             {currentScreen === "write_review" && (
               <WriteReviewScreen
                 key="write_review"
@@ -803,6 +812,7 @@ export default function App() {
                   navigateTo("main");
                 }}
                 themeColor="#F64257"
+                productId={selectedProductId}
               />
             )}
             {currentScreen === "payment" && (
