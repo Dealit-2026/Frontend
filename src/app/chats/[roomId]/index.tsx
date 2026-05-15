@@ -54,6 +54,7 @@ export default function ChatRoomScreen({
 
   const [roomName, setRoomName] = useState("");
   const [productId, setProductId] = useState<number>(0);
+  const [auctionId, setAuctionId] = useState<number | null>(null);
   const [productName, setProductName] = useState("");
   const [productImageUrl, setProductImageUrl] = useState<string | null>(null);
   const [productStatusLabel, setProductStatusLabel] = useState("거래 중");
@@ -75,6 +76,7 @@ export default function ChatRoomScreen({
   const [purchaseActionMessage, setPurchaseActionMessage] = useState<
     string | null
   >(null);
+  const [showReviewPrompt, setShowReviewPrompt] = useState(false);
   const [currentMemberId, setCurrentMemberId] = useState<number | null>(null);
   const socketSubscriptionRef = useRef<ChatRoomSocketSubscription | null>(null);
   const isComposingRef = useRef(false);
@@ -131,6 +133,7 @@ export default function ChatRoomScreen({
 
         setRoomName(detail.room.opponentName);
         setProductId(detail.room.productId);
+        setAuctionId(detail.room.auctionId ?? null);
         setProductName(detail.room.productName);
         setProductImageUrl(detail.room.productImageUrl);
         setProductStatusLabel(detail.room.productStatusLabel);
@@ -333,6 +336,10 @@ export default function ChatRoomScreen({
           ? "발송 처리가 완료되었습니다."
           : "수령 확정이 완료되었습니다.";
       setPurchaseActionMessage(successMsg);
+
+      if (actionButton.actionType === "BUYER_CONFIRM" && productId > 0) {
+        setShowReviewPrompt(true);
+      }
     } catch (error: unknown) {
       console.error(error);
       if (error instanceof ApiRequestError) {
@@ -417,6 +424,7 @@ export default function ChatRoomScreen({
   const updateRoomMeta = (room: {
     opponentName: string;
     productId: number;
+    auctionId?: number | null;
     productName: string;
     productImageUrl: string | null;
     productStatusLabel: string;
@@ -424,6 +432,7 @@ export default function ChatRoomScreen({
   }) => {
     setRoomName(room.opponentName);
     setProductId(room.productId);
+    setAuctionId(room.auctionId ?? null);
     setProductName(room.productName);
     setProductImageUrl(room.productImageUrl);
     setProductStatusLabel(room.productStatusLabel);
@@ -451,6 +460,9 @@ export default function ChatRoomScreen({
           ? await markAuctionShipment(chatId)
           : await confirmAuctionReceipt(chatId);
       updateRoomMeta(room);
+      if (type === "CONFIRM_RECEIPT" && room.auctionId) {
+        setShowReviewPrompt(true);
+      }
       setTradeActionMessage(
         type === "SHIP"
           ? "발송 처리가 완료되었습니다. 구매자가 상품을 받은 뒤 수령확정을 진행할 수 있습니다."
@@ -646,6 +658,48 @@ export default function ChatRoomScreen({
           })
         )}
       </div>
+
+      {showReviewPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setShowReviewPrompt(false)}
+          />
+          <div className="relative w-full max-w-[320px] overflow-hidden rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="space-y-2 text-center">
+              <h3 className="text-lg font-bold text-gray-900">
+                리뷰 작성하시겠습니까?
+              </h3>
+              <p className="text-sm leading-relaxed text-gray-500">
+                거래가 완료되었습니다. 이번 거래에 대한 리뷰를 남겨주세요.
+              </p>
+            </div>
+            <div className="mt-6 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReviewPrompt(false)}
+                className="h-12 flex-1 rounded-2xl border border-gray-200 bg-white text-sm font-bold text-gray-600"
+              >
+                아니오
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReviewPrompt(false);
+                  const reviewUrl = auctionId
+                    ? `/mypage/review/write?auctionId=${auctionId}&displayProductId=${productId}`
+                    : `/mypage/review/write?productId=${productId}`;
+                  router.push(reviewUrl);
+                }}
+                className="h-12 flex-1 rounded-2xl text-sm font-bold text-black transition-opacity hover:opacity-90"
+                style={{ backgroundColor: themeColor }}
+              >
+                예
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t border-gray-100 flex items-center space-x-3">
         <button className="p-2 bg-gray-50 rounded-xl">

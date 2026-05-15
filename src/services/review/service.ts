@@ -1,4 +1,6 @@
 import * as reviewApi from "@/services/review/api";
+import { getAuctionDetail } from "@/services/auction/detail/api";
+import { getProductDetail } from "@/services/product/productDetail/api";
 import type {
   CreateReviewRequest,
   ReviewItemViewModel,
@@ -7,6 +9,26 @@ import type {
   ReviewMode,
   ReviewResponse,
 } from "@/services/review/types";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:8080";
+
+function resolveProductImageUrl(imageUrl: string | null | undefined) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (/^(data:|blob:|https?:\/\/)/.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${API_BASE_URL}${imageUrl}`;
+  }
+
+  return imageUrl;
+}
 
 function formatDateLabel(value: string) {
   const date = new Date(value);
@@ -34,6 +56,7 @@ function toReviewItemViewModel(
     productId: review.productId,
     auctionId: review.auctionId,
     productName: review.productName,
+    productImageUrl: null,
     partnerNickname:
       mode === "written" ? review.revieweeNickname : review.reviewerNickname,
     productTypeLabel: review.auctionId == null ? "일반" : "경매",
@@ -42,6 +65,38 @@ function toReviewItemViewModel(
     content: review.content,
     dateLabel: formatDateLabel(review.createdAt),
   };
+}
+
+async function attachProductImages(
+  reviews: ReviewItemViewModel[],
+): Promise<ReviewItemViewModel[]> {
+  const detailResults = await Promise.allSettled(
+    reviews.map((review) =>
+      review.auctionId
+        ? getAuctionDetail(review.auctionId).then((auction) => ({
+            name: auction.name,
+            imageUrl: auction.images?.[0]?.imageUrl ?? null,
+          }))
+        : getProductDetail(review.productId).then((product) => ({
+            name: product.name,
+            imageUrl: product.imageUrls?.[0] ?? null,
+          })),
+    ),
+  );
+
+  return reviews.map((review, index) => {
+    const result = detailResults[index];
+
+    if (result?.status !== "fulfilled") {
+      return review;
+    }
+
+    return {
+      ...review,
+      productName: result.value.name || review.productName,
+      productImageUrl: resolveProductImageUrl(result.value.imageUrl),
+    };
+  });
 }
 
 function toReviewListViewModel(
@@ -66,7 +121,17 @@ export async function fetchMyReviews(
       ? await reviewApi.getMyWrittenReviews()
       : await reviewApi.getMyReceivedReviews();
 
-  return toReviewListViewModel(response, mode);
+  const reviewList = toReviewListViewModel(response, mode);
+
+  return {
+    ...reviewList,
+    reviews: await attachProductImages(reviewList.reviews),
+  };
+}
+
+export async function fetchMyReceivedReviewRatingSummary() {
+  const response = await reviewApi.getMyReceivedReviews(0, 1);
+  return response.ratingSummary;
 }
 
 export function buildCreateReviewRequest(

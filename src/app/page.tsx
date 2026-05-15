@@ -799,7 +799,6 @@ export default function App() {
                 key="receipt"
                 purchaseId={null}
                 onBack={() => navigateTo("main")}
-                onWriteReview={() => navigateTo("write_review")}
                 themeColor="#F64257"
               />
             )}

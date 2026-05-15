@@ -28,8 +28,16 @@ function ReviewCard({ item }: { item: ReviewItemViewModel }) {
       </div>
 
       <div className="flex items-center space-x-4">
-        <div className="w-16 h-16 rounded-xl bg-gray-50 shrink-0 flex items-center justify-center">
-          <MessageCircle size={24} className="text-gray-300" />
+        <div className="w-16 h-16 rounded-xl bg-gray-50 shrink-0 flex items-center justify-center overflow-hidden">
+          {item.productImageUrl ? (
+            <img
+              src={item.productImageUrl}
+              alt={item.productName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <MessageCircle size={24} className="text-gray-300" />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-sm truncate mb-1">

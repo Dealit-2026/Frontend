@@ -10,11 +10,12 @@ function WriteReviewPageContent() {
   const searchParams = useSearchParams();
   const productIdParam = Number(searchParams.get("productId"));
   const auctionIdParam = Number(searchParams.get("auctionId"));
+  const displayProductIdParam = Number(searchParams.get("displayProductId"));
 
   return (
     <WriteReviewScreen
       onBack={() => router.back()}
-      onComplete={() => router.push("/mypage/review")}
+      onComplete={() => router.push("/")}
       themeColor="#98E446"
       productId={
         Number.isFinite(productIdParam) && productIdParam > 0
@@ -24,6 +25,11 @@ function WriteReviewPageContent() {
       auctionId={
         Number.isFinite(auctionIdParam) && auctionIdParam > 0
           ? auctionIdParam
+          : null
+      }
+      displayProductId={
+        Number.isFinite(displayProductIdParam) && displayProductIdParam > 0
+          ? displayProductIdParam
           : null
       }
     />

@@ -41,6 +41,7 @@ export interface ReviewItemViewModel {
   productId: number;
   auctionId: number | null;
   productName: string;
+  productImageUrl: string | null;
   partnerNickname: string;
   productTypeLabel: string;
   statusLabel: string;

@@ -1,17 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, MessageCircle, Star } from "lucide-react";
 import { motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
+import { getAuctionDetail } from "@/services/auction/detail/api";
+import { getProductDetail } from "@/services/product/productDetail/api";
 import { createReview } from "@/services/review/service";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
+  "http://localhost:8080";
+
+function resolveProductImageUrl(imageUrl: string | null | undefined) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  if (/^(data:|blob:|https?:\/\/)/.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  if (imageUrl.startsWith("/")) {
+    return `${API_BASE_URL}${imageUrl}`;
+  }
+
+  return imageUrl;
+}
 
 export default function WriteReviewScreen({
   onBack,
   onComplete,
   productId,
   auctionId = null,
+  displayProductId = null,
   productName = "거래 상품",
 }: {
   onBack: () => void;
@@ -20,12 +43,75 @@ export default function WriteReviewScreen({
   key?: string;
   productId?: number | null;
   auctionId?: number | null;
+  displayProductId?: number | null;
   productName?: string;
 }) {
   const [rating, setRating] = useState(5);
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [displayProductName, setDisplayProductName] = useState(productName);
+  const [displayProductImageUrl, setDisplayProductImageUrl] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    const targetProductId = displayProductId ?? productId;
+
+    if (auctionId != null) {
+      let ignore = false;
+
+      getAuctionDetail(auctionId)
+        .then((auction) => {
+          if (ignore) {
+            return;
+          }
+
+          setDisplayProductName(auction.name);
+          setDisplayProductImageUrl(
+            resolveProductImageUrl(auction.images?.[0]?.imageUrl),
+          );
+        })
+        .catch(() => {
+          if (!ignore) {
+            setDisplayProductName(productName);
+            setDisplayProductImageUrl(null);
+          }
+        });
+
+      return () => {
+        ignore = true;
+      };
+    }
+
+    if (targetProductId == null) {
+      setDisplayProductName(productName);
+      setDisplayProductImageUrl(null);
+      return;
+    }
+
+    let ignore = false;
+
+    getProductDetail(targetProductId)
+      .then((product) => {
+        if (ignore) {
+          return;
+        }
+
+        setDisplayProductName(product.name);
+        setDisplayProductImageUrl(resolveProductImageUrl(product.imageUrls?.[0]));
+      })
+      .catch(() => {
+        if (!ignore) {
+          setDisplayProductName(productName);
+          setDisplayProductImageUrl(null);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [auctionId, displayProductId, productId, productName]);
 
   const canSubmit =
     !isSubmitting &&
@@ -80,12 +166,20 @@ export default function WriteReviewScreen({
 
       <div className="flex-1 overflow-y-auto p-6 space-y-8">
         <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-2xl">
-          <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center shrink-0">
-            <MessageCircle size={24} className="text-gray-400" />
+          <div className="w-16 h-16 rounded-xl bg-gray-200 flex items-center justify-center shrink-0 overflow-hidden">
+            {displayProductImageUrl ? (
+              <img
+                src={displayProductImageUrl}
+                alt={displayProductName}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <MessageCircle size={24} className="text-gray-400" />
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-xs text-gray-500 mb-1">거래 완료 상품</p>
-            <p className="font-bold truncate">{productName}</p>
+            <p className="font-bold truncate">{displayProductName}</p>
           </div>
         </div>
 

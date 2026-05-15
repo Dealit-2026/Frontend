@@ -56,7 +56,7 @@ export default function ReceiptScreen({
 }: {
   purchaseId: number | null;
   onBack: () => void;
-  onWriteReview: () => void;
+  onWriteReview?: () => void;
   themeColor: string;
   key?: string;
 }) {
@@ -274,6 +274,7 @@ export default function ReceiptScreen({
               </button>
               <button
                 onClick={onWriteReview}
+                hidden
                 className="w-full h-14 bg-white border border-gray-200 text-black font-bold rounded-2xl"
               >
                 리뷰 작성하기
