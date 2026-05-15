@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { getErrorMessage } from "@/services/apiError";
+import { ApiRequestError, getErrorMessage } from "@/services/apiError";
 import {
   fetchAuctionDetail,
   getAuctionDisplayCurrentPrice,
@@ -43,6 +43,27 @@ type AuctionStatus =
   | "ENDED"
   | "NO_BID"
   | "SUCCESSFUL_BID";
+
+function getBidErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    switch (error.code) {
+      case "AUCTION_ENDED":
+        return "경매가 종료되어 입찰할 수 없습니다.";
+      case "BID_PRICE_BELOW_MINIMUM":
+        return "최소 입찰가 이상으로 입력해주세요.";
+      case "BID_PRICE_CHANGED":
+        return "최고 입찰가가 변경되었습니다. 다시 확인 후 입찰해주세요.";
+      case "INSUFFICIENT_BALANCE":
+        return "딜릿머니 잔액이 부족합니다.";
+      case "EMAIL_NOT_VERIFIED":
+        return "이메일 인증 후 입찰할 수 있습니다.";
+      default:
+        break;
+    }
+  }
+
+  return getErrorMessage(error, "입찰에 실패했습니다.");
+}
 
 interface ProductDetailScreenProps {
   productId: number | null;
@@ -470,7 +491,7 @@ export default function ProductDetailScreen({
         productImageUrl: getAuctionMainImageUrl(nextAuctionDetail),
       });
     } catch (error) {
-      showToast(getErrorMessage(error, "입찰에 실패했습니다."));
+      showToast(getBidErrorMessage(error));
     } finally {
       setIsBidSubmitting(false);
     }
