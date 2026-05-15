@@ -480,9 +480,9 @@ export default function ChatRoomScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col bg-white"
+      className="flex h-dvh max-h-dvh min-h-0 flex-1 flex-col overflow-hidden bg-white"
     >
-      <div className="h-16 flex items-center px-4 border-b border-gray-100">
+      <div className="h-16 shrink-0 flex items-center px-4 border-b border-gray-100">
         <button onClick={handleBack} className="p-2" aria-label="뒤로가기">
           <ChevronLeft size={24} />
         </button>
@@ -492,7 +492,7 @@ export default function ChatRoomScreen({
       </div>
 
       <div
-        className="p-4 border-b border-gray-50 flex items-center space-x-4 bg-gray-50/50 cursor-pointer hover:bg-gray-100 transition-colors"
+        className="shrink-0 p-4 border-b border-gray-50 flex items-center space-x-4 bg-gray-50/50 cursor-pointer hover:bg-gray-100 transition-colors"
         onClick={() => productId && handleProductClick(productId)}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
@@ -522,7 +522,7 @@ export default function ChatRoomScreen({
       </div>
 
       {showTradePanel && (
-        <div className="border-b border-gray-100 bg-white px-4 py-3">
+        <div className="shrink-0 border-b border-gray-100 bg-white px-4 py-3">
           {actionButtons?.notice && (
             <p className="text-xs leading-relaxed text-gray-600">
               {actionButtons.notice}
@@ -576,7 +576,7 @@ export default function ChatRoomScreen({
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {actionButton && (
           <div className="sticky top-0 z-10 -mx-6 px-6 pt-0 pb-3 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/80">
             {purchaseActionMessage && (
@@ -647,7 +647,7 @@ export default function ChatRoomScreen({
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-100 flex items-center space-x-3">
+      <div className="shrink-0 p-4 border-t border-gray-100 flex items-center space-x-3">
         <button className="p-2 bg-gray-50 rounded-xl">
           <PlusCircle size={24} className="text-gray-400" />
         </button>
@@ -684,7 +684,7 @@ export default function ChatRoomScreen({
         </button>
       </div>
       {sendError && (
-        <div className="px-4 pb-3 text-xs text-red-500">{sendError}</div>
+        <div className="shrink-0 px-4 pb-3 text-xs text-red-500">{sendError}</div>
       )}
     </motion.div>
   );
