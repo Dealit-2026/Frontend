@@ -45,6 +45,9 @@ export default function PurchaseHistoryScreen({
   themeColor: string;
   key?: string;
 }) {
+  console.log("[PH index] render");
+  const dedupeById = (items: any[]) =>
+    Array.from(new Map(items.map((item) => [item.id, item])).values());
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [purchases, setPurchases] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,9 +109,11 @@ export default function PurchaseHistoryScreen({
     try {
       const resp = await fetchMyPurchases(page, 20, statuses);
       if (!mounted) return;
-      setPurchases((prev) =>
-        page === 0 ? resp.content || [] : [...prev, ...(resp.content || [])],
-      );
+      setPurchases((prev) => {
+        const nextItems =
+          page === 0 ? resp.content || [] : [...prev, ...(resp.content || [])];
+        return dedupeById(nextItems);
+      });
       setHasNext(Boolean(resp.hasNext));
       nextPageRef.current = page + 1;
     } catch (e: any) {
@@ -186,7 +191,7 @@ export default function PurchaseHistoryScreen({
           selectedStatusesRef.current,
         );
         if (!mounted) return;
-        setPurchases((prev) => [...prev, ...(resp.content || [])]);
+        setPurchases((prev) => dedupeById([...prev, ...(resp.content || [])]));
         setHasNext(Boolean(resp.hasNext));
         nextPageRef.current = page + 1;
       } catch (e: any) {
@@ -387,7 +392,7 @@ export default function PurchaseHistoryScreen({
           </div>
         )}
 
-        {purchases.map((purchase) => (
+        {dedupeById(purchases).map((purchase) => (
           <div
             key={purchase.id}
             className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"

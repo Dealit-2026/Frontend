@@ -45,6 +45,9 @@ export default function SalesHistoryScreen({
   themeColor: string;
   key?: string;
 }) {
+  console.log("[SH index] render");
+  const dedupeById = (items: any[]) =>
+    Array.from(new Map(items.map((item) => [item.id, item])).values());
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [sales, setSales] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,9 +109,11 @@ export default function SalesHistoryScreen({
     try {
       const resp = await fetchMySales(page, 20, statuses);
       if (!mounted) return;
-      setSales((prev) =>
-        page === 0 ? resp.content || [] : [...prev, ...(resp.content || [])],
-      );
+      setSales((prev) => {
+        const nextItems =
+          page === 0 ? resp.content || [] : [...prev, ...(resp.content || [])];
+        return dedupeById(nextItems);
+      });
       setHasNext(Boolean(resp.hasNext));
       nextPageRef.current = page + 1;
     } catch (e: any) {
@@ -176,7 +181,7 @@ export default function SalesHistoryScreen({
       try {
         const resp = await fetchMySales(page, 20, selectedStatusesRef.current);
         if (!mounted) return;
-        setSales((prev) => [...prev, ...(resp.content || [])]);
+        setSales((prev) => dedupeById([...prev, ...(resp.content || [])]));
         setHasNext(Boolean(resp.hasNext));
         nextPageRef.current = page + 1;
       } catch (e: any) {
@@ -376,7 +381,7 @@ export default function SalesHistoryScreen({
           </div>
         )}
 
-        {sales.map((sale) => (
+        {dedupeById(sales).map((sale) => (
           <div
             key={sale.id}
             className="bg-white p-4 rounded-xl shadow-sm border border-gray-100"
