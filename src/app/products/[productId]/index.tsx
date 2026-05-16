@@ -322,8 +322,6 @@ export default function ProductDetailScreen({
         }
 
         setAuctionDetail(data);
-        setIsLiked(data.liked);
-        setFavoriteCount(data.favoriteCount);
         setAuctionClockOffsetMs(
           new Date(data.serverTime).getTime() - Date.now(),
         );
