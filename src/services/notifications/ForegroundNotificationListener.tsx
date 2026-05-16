@@ -10,14 +10,34 @@ import { requestFcmToken } from "./firebase";
 const FCM_TOKEN_STORAGE_KEY = "dealit:fcm-token";
 const AUTH_TOKEN_CHANGED_EVENT = "dealit:auth-token-changed";
 
+function appendReauctionPrompt(targetUrl: string) {
+  const url = new URL(targetUrl, window.location.origin);
+  url.searchParams.set("reauctionPrompt", "1");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function resolvePayloadTargetUrl(payload: { data?: Record<string, string>; fcmOptions?: { link?: string } }) {
   const data = payload.data || {};
+  const isNoBidAuctionNotification = data.type === "AUCTION_NO_BID";
 
-  if (data.targetUrl) return data.targetUrl;
-  if (payload.fcmOptions?.link) return payload.fcmOptions.link;
+  if (data.targetUrl) {
+    return isNoBidAuctionNotification
+      ? appendReauctionPrompt(data.targetUrl)
+      : data.targetUrl;
+  }
+  if (payload.fcmOptions?.link) {
+    return isNoBidAuctionNotification
+      ? appendReauctionPrompt(payload.fcmOptions.link)
+      : payload.fcmOptions.link;
+  }
   if (data.roomId) return `/chats/${data.roomId}`;
   if (data.productId) return `/products/${data.productId}`;
-  if (data.auctionId) return `/auctions/${data.auctionId}`;
+  if (data.auctionId) {
+    const targetUrl = `/auctions/${data.auctionId}`;
+    return isNoBidAuctionNotification
+      ? appendReauctionPrompt(targetUrl)
+      : targetUrl;
+  }
 
   return "/";
 }

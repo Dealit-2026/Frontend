@@ -26,6 +26,14 @@ function resolveNotificationTargetUrl(notification) {
   const fcmMessage = data.FCM_MSG || {};
   const fcmData = fcmMessage.data || {};
   const fcmOptions = fcmMessage.fcmOptions || fcmMessage.webpush?.fcmOptions || {};
+  const pushType = data.type || fcmData.type;
+  const isNoBidAuctionNotification = pushType === "AUCTION_NO_BID";
+
+  const appendReauctionPrompt = (targetUrl) => {
+    const url = new URL(targetUrl, self.location.origin);
+    url.searchParams.set("reauctionPrompt", "1");
+    return `${url.pathname}${url.search}${url.hash}`;
+  };
 
   const targetUrl =
     data.targetUrl ||
@@ -35,7 +43,9 @@ function resolveNotificationTargetUrl(notification) {
     fcmData.click_action;
 
   if (targetUrl) {
-    return targetUrl;
+    return isNoBidAuctionNotification
+      ? appendReauctionPrompt(targetUrl)
+      : targetUrl;
   }
 
   const roomId = data.roomId || fcmData.roomId;
@@ -50,7 +60,10 @@ function resolveNotificationTargetUrl(notification) {
 
   const auctionId = data.auctionId || fcmData.auctionId;
   if (auctionId) {
-    return `/auctions/${auctionId}`;
+    const auctionTargetUrl = `/auctions/${auctionId}`;
+    return isNoBidAuctionNotification
+      ? appendReauctionPrompt(auctionTargetUrl)
+      : auctionTargetUrl;
   }
 
   return "/";
