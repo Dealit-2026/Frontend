@@ -39,6 +39,8 @@ export interface AuctionDetailResponse {
   endsAt: string;
   serverTime: string;
   status: AuctionDetailStatus;
+  liked: boolean;
+  favoriteCount: number;
 }
 
 export interface CreateAuctionBidRequest {

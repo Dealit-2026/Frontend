@@ -4,6 +4,7 @@ import {
   handleUnauthorizedAccess,
 } from "@/services/auth/service";
 import type {
+  AuctionWishlistListResponse,
   WishlistListResponse,
   WishlistToggleResponse,
 } from "@/services/wishlist/types";
@@ -42,6 +43,30 @@ export async function getMyWishlist(
     await throwWishlistApiError(
       response,
       "찜 목록을 불러오지 못했습니다.",
+    );
+  }
+
+  return response.json();
+}
+
+export async function getMyAuctionWishlist(
+  page = 0,
+  size = 20,
+): Promise<AuctionWishlistListResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+  });
+  const response = await fetch(`${API_BASE}/mypage/wishlist/auctions?${params}`, {
+    method: "GET",
+    headers: getAuthorizationHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    await throwWishlistApiError(
+      response,
+      "경매 찜 목록을 불러오지 못했습니다.",
     );
   }
 
