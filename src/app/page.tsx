@@ -123,6 +123,7 @@ type RouteState = {
   themeMode?: ThemeMode;
   productListType?: "all" | "closing_soon" | "recent";
   category?: string | null;
+  categoryId?: number | null;
 };
 
 const getFiniteId = (value: number | null | undefined) =>
@@ -140,6 +141,7 @@ const buildUrl = (
     themeMode,
     productListType,
     category,
+    categoryId,
     bidAmount,
   }: {
     tab: Tab;
@@ -149,6 +151,7 @@ const buildUrl = (
     themeMode: ThemeMode;
     productListType: "all" | "closing_soon" | "recent";
     category: string | null;
+    categoryId: number | null;
     bidAmount?: number;
   },
 ) => {
@@ -158,6 +161,9 @@ const buildUrl = (
 
   if (category) {
     params.set("category", category);
+  }
+  if (categoryId) {
+    params.set("categoryId", String(categoryId));
   }
 
   switch (screen) {
@@ -334,6 +340,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
           ? (searchParams.get("type") as "closing_soon" | "recent")
           : "all",
       category: searchParams.get("category"),
+      categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
     };
   }
   if (/^\/products\/\d+\/report$/.test(pathname)) {
@@ -364,6 +371,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
           ? (searchParams.get("type") as "closing_soon" | "recent")
           : "all",
       category: searchParams.get("category"),
+      categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
     };
   }
   if (/^\/auctions\/\d+\/bidding-status$/.test(pathname)) {
@@ -413,6 +421,9 @@ export default function App() {
     "all" | "closing_soon" | "recent"
   >("all");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null,
+  );
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userLocationForm, setUserLocationForm] = useState<LocationFormValues>(
     createDefaultLocationForm(),
@@ -473,6 +484,9 @@ export default function App() {
     if (routeState.category !== undefined) {
       setSelectedCategory(routeState.category);
     }
+    if (routeState.categoryId !== undefined) {
+      setSelectedCategoryId(routeState.categoryId);
+    }
   }, []);
 
   useEffect(() => {
@@ -514,6 +528,7 @@ export default function App() {
       themeMode,
       productListType,
       category: selectedCategory,
+      categoryId: selectedCategoryId,
       bidAmount: bidData?.bidAmount,
     });
     const currentUrl = `${window.location.pathname}${window.location.search}`;
@@ -535,6 +550,7 @@ export default function App() {
     currentTab,
     productListType,
     selectedCategory,
+    selectedCategoryId,
     selectedChatDraftProductId,
     selectedChatId,
     selectedProductId,
@@ -911,7 +927,13 @@ export default function App() {
                 onProductClick={navigateToCatalogItem}
                 onProductListClick={(type, category) => {
                   setProductListType(type);
-                  setSelectedCategory(category || null);
+                  if (typeof category === "object" && category !== null) {
+                    setSelectedCategory(category.name);
+                    setSelectedCategoryId(category.id);
+                  } else {
+                    setSelectedCategory(category || null);
+                    setSelectedCategoryId(null);
+                  }
                   navigateTo("product_list");
                 }}
                 onNotificationClick={() => navigateTo("notifications")}
@@ -933,6 +955,7 @@ export default function App() {
                 onCategoryResetClick={() => navigateTo("category_reset")}
                 onSearchClick={() => {
                   setSelectedCategory(null);
+                  setSelectedCategoryId(null);
                   navigateTo("search_detail");
                 }}
                 onProfileEditClick={() => {
@@ -1008,19 +1031,26 @@ export default function App() {
                 onSearch={(keyword) => {
                   setProductListType("all");
                   setSelectedCategory(keyword);
+                  setSelectedCategoryId(null);
                   navigateTo("product_list");
                 }}
                 themeColor={themeColor}
-                initialCategory={selectedCategory}
+                initialCategory={
+                  selectedCategory && selectedCategoryId
+                    ? { id: selectedCategoryId, name: selectedCategory }
+                    : null
+                }
               />
             )}
             {currentScreen === "product_list" && (
               <ProductListScreen
                 key="product_list"
                 listType={productListType}
+                categoryId={selectedCategoryId}
                 categoryName={selectedCategory}
                 onBack={() => {
                   setSelectedCategory(null);
+                  setSelectedCategoryId(null);
                   navigateTo("main");
                 }}
                 onProductClick={navigateToCatalogItem}

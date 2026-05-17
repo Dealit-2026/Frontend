@@ -35,16 +35,17 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { Screen, Tab } from '../../../../types/index';
 import { ExploreIcon } from '../../../../components/common/ExploreIcon';
+import type { SelectedSearchCategory } from '../index';
 
-export default function SearchDetailScreen({ onBack, onSearch, themeColor, initialCategory }: { onBack: () => void; onSearch: (keyword: string) => void; themeColor: string; initialCategory?: string | null; key?: string }) {
+export default function SearchDetailScreen({ onBack, onSearch, themeColor, initialCategory }: { onBack: () => void; onSearch: (keyword: string) => void; themeColor: string; initialCategory?: SelectedSearchCategory | null; key?: string }) {
   const [recentSearches, setRecentSearches] = useState(['아이폰', '노트북', '가방']);
   const [inputValue, setInputValue] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory || null);
+  const [activeCategory, setActiveCategory] = useState<SelectedSearchCategory | null>(initialCategory || null);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && inputValue.trim()) {
       const keyword = inputValue.trim();
-      const finalSearch = activeCategory ? `${activeCategory} ${keyword}` : keyword;
+      const finalSearch = activeCategory ? `${activeCategory.name} ${keyword}` : keyword;
       if (!recentSearches.includes(finalSearch)) {
         setRecentSearches([finalSearch, ...recentSearches]);
       }
@@ -77,7 +78,7 @@ export default function SearchDetailScreen({ onBack, onSearch, themeColor, initi
           <div className="flex items-center flex-1 min-w-0 space-x-2">
             {activeCategory && (
               <div className="flex items-center space-x-1 px-2 py-1 bg-white border border-gray-200 rounded-full shrink-0">
-                <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap">{activeCategory}</span>
+                <span className="text-[10px] font-bold text-gray-700 whitespace-nowrap">{activeCategory.name}</span>
                 <button onClick={() => setActiveCategory(null)} className="p-0.5 hover:bg-gray-100 rounded-full">
                   <X size={10} className="text-gray-400" />
                 </button>
