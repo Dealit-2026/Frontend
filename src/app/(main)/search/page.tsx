@@ -10,7 +10,11 @@ export default function SearchPage() {
   return (
     <SearchScreen
       onBack={() => router.back()}
-      onSearch={() => router.push("/products")}
+      onCategorySelect={(category) =>
+        router.push(
+          `/products?categoryId=${category.id}&category=${encodeURIComponent(category.name)}`,
+        )
+      }
       onSearchDetailClick={() => router.push("/search/detail")}
       onRecentClick={() => router.push("/products")}
       themeColor="#98E446"

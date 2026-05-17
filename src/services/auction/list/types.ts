@@ -43,6 +43,6 @@ export interface AuctionListItemViewModel {
   auctionStatus: AuctionStatus;
   auctionStatusLabel: string;
   popularScore: number;
-  rank: number;
+  rank?: number;
   createdAt: string;
 }
