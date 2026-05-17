@@ -14,14 +14,17 @@ function ProductsPageContent() {
       ? categoryIdParam
       : null;
   const categoryName = searchParams.get("category");
+  const searchKeyword = searchParams.get("keyword");
 
   return (
     <ProductListScreen
       listType="all"
       categoryId={categoryId}
       categoryName={categoryName}
+      searchKeyword={searchKeyword}
       onBack={() => router.back()}
       onProductClick={(id) => router.push(`/products/${id}`)}
+      onAuctionClick={(id) => router.push(`/auctions/${id}`)}
       onSearchClick={() => router.push("/search")}
       themeColor="#98E446"
       mode="regular"

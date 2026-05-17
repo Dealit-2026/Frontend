@@ -29,6 +29,7 @@ export default function ProductListItem({
   product?: {
     productId: number;
     auctionId?: number;
+    saleType?: "REGULAR" | "AUCTION";
     name?: string;
     thumbnailUrl?: string | null;
     priceLabel?: string;

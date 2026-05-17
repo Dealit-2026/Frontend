@@ -10,7 +10,10 @@ export default function SearchDetailPage() {
   return (
     <SearchDetailScreen
       onBack={() => router.back()}
-      onSearch={() => router.push("/products")}
+      onSearch={(keyword) => {
+        const params = new URLSearchParams({ keyword });
+        router.push(`/products?${params.toString()}`);
+      }}
       themeColor="#98E446"
       initialCategory={null}
     />

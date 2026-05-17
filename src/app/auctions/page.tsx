@@ -14,14 +14,17 @@ function AuctionsPageContent() {
       ? categoryIdParam
       : null;
   const categoryName = searchParams.get("category");
+  const searchKeyword = searchParams.get("keyword");
 
   return (
     <AuctionListScreen
       listType="all"
       categoryId={categoryId}
       categoryName={categoryName}
+      searchKeyword={searchKeyword}
       onBack={() => router.back()}
       onProductClick={(id: number) => router.push(`/auctions/${id}`)}
+      onAuctionClick={(id: number) => router.push(`/auctions/${id}`)}
       onSearchClick={() => router.push("/search")}
       themeColor="#F64257"
     />

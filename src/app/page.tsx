@@ -124,6 +124,7 @@ type RouteState = {
   productListType?: "all" | "closing_soon" | "recent";
   category?: string | null;
   categoryId?: number | null;
+  searchKeyword?: string | null;
 };
 
 const getFiniteId = (value: number | null | undefined) =>
@@ -142,6 +143,7 @@ const buildUrl = (
     productListType,
     category,
     categoryId,
+    searchKeyword,
     bidAmount,
   }: {
     tab: Tab;
@@ -152,6 +154,7 @@ const buildUrl = (
     productListType: "all" | "closing_soon" | "recent";
     category: string | null;
     categoryId: number | null;
+    searchKeyword: string | null;
     bidAmount?: number;
   },
 ) => {
@@ -164,6 +167,9 @@ const buildUrl = (
   }
   if (categoryId) {
     params.set("categoryId", String(categoryId));
+  }
+  if (searchKeyword) {
+    params.set("keyword", searchKeyword);
   }
 
   switch (screen) {
@@ -341,6 +347,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
           : "all",
       category: searchParams.get("category"),
       categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
+      searchKeyword: searchParams.get("keyword"),
     };
   }
   if (/^\/products\/\d+\/report$/.test(pathname)) {
@@ -372,6 +379,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
           : "all",
       category: searchParams.get("category"),
       categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
+      searchKeyword: searchParams.get("keyword"),
     };
   }
   if (/^\/auctions\/\d+\/bidding-status$/.test(pathname)) {
@@ -424,6 +432,9 @@ export default function App() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
+  const [selectedSearchKeyword, setSelectedSearchKeyword] = useState<
+    string | null
+  >(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userLocationForm, setUserLocationForm] = useState<LocationFormValues>(
     createDefaultLocationForm(),
@@ -487,6 +498,9 @@ export default function App() {
     if (routeState.categoryId !== undefined) {
       setSelectedCategoryId(routeState.categoryId);
     }
+    if (routeState.searchKeyword !== undefined) {
+      setSelectedSearchKeyword(routeState.searchKeyword);
+    }
   }, []);
 
   useEffect(() => {
@@ -529,6 +543,7 @@ export default function App() {
       productListType,
       category: selectedCategory,
       categoryId: selectedCategoryId,
+      searchKeyword: selectedSearchKeyword,
       bidAmount: bidData?.bidAmount,
     });
     const currentUrl = `${window.location.pathname}${window.location.search}`;
@@ -551,6 +566,7 @@ export default function App() {
     productListType,
     selectedCategory,
     selectedCategoryId,
+    selectedSearchKeyword,
     selectedChatDraftProductId,
     selectedChatId,
     selectedProductId,
@@ -927,6 +943,7 @@ export default function App() {
                 onProductClick={navigateToCatalogItem}
                 onProductListClick={(type, category) => {
                   setProductListType(type);
+                  setSelectedSearchKeyword(null);
                   if (typeof category === "object" && category !== null) {
                     setSelectedCategory(category.name);
                     setSelectedCategoryId(category.id);
@@ -956,6 +973,7 @@ export default function App() {
                 onSearchClick={() => {
                   setSelectedCategory(null);
                   setSelectedCategoryId(null);
+                  setSelectedSearchKeyword(null);
                   navigateTo("search_detail");
                 }}
                 onProfileEditClick={() => {
@@ -1030,7 +1048,8 @@ export default function App() {
                 onBack={() => navigateTo("main")}
                 onSearch={(keyword) => {
                   setProductListType("all");
-                  setSelectedCategory(keyword);
+                  setSelectedSearchKeyword(keyword);
+                  setSelectedCategory(null);
                   setSelectedCategoryId(null);
                   navigateTo("product_list");
                 }}
@@ -1048,12 +1067,15 @@ export default function App() {
                 listType={productListType}
                 categoryId={selectedCategoryId}
                 categoryName={selectedCategory}
+                searchKeyword={selectedSearchKeyword}
                 onBack={() => {
                   setSelectedCategory(null);
                   setSelectedCategoryId(null);
+                  setSelectedSearchKeyword(null);
                   navigateTo("main");
                 }}
                 onProductClick={navigateToCatalogItem}
+                onAuctionClick={(id) => router.push(`/auctions/${id}`)}
                 onSearchClick={() => navigateTo("search_detail")}
                 themeColor={themeColor}
                 mode={themeMode}
