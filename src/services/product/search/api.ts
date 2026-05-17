@@ -131,11 +131,13 @@ export async function searchAuctionsByCategory({
 
 export async function searchIntegrated({
   keyword,
+  type,
   categoryId,
   page = 0,
   size = 20,
 }: {
   keyword?: string | null;
+  type?: "REGULAR" | "AUCTION" | null;
   categoryId?: number | null;
   page?: number;
   size?: number;
@@ -148,6 +150,9 @@ export async function searchIntegrated({
 
   if (normalizedKeyword) {
     params.set("keyword", normalizedKeyword);
+  }
+  if (type) {
+    params.set("type", type);
   }
   if (categoryId != null && categoryId > 0) {
     params.set("categoryId", String(categoryId));
@@ -171,10 +176,15 @@ export async function searchIntegrated({
 
 export async function getPopularSearchKeywords(
   size = 10,
+  type?: "REGULAR" | "AUCTION" | null,
 ): Promise<PopularSearchKeywordListResponse> {
   const params = new URLSearchParams({
     size: String(size),
   });
+
+  if (type) {
+    params.set("type", type);
+  }
 
   const response = await fetch(`${UNIFIED_SEARCH_API_BASE}/popular?${params}`, {
     method: "GET",

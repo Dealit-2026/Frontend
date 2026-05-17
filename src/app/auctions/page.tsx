@@ -4,6 +4,11 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import AuctionListScreen from "./index";
+import type { UnifiedSearchResultType } from "@/services/product/search/types";
+
+function parseSearchResultType(value: string | null): UnifiedSearchResultType | null {
+  return value === "REGULAR" || value === "AUCTION" ? value : null;
+}
 
 function AuctionsPageContent() {
   const router = useRouter();
@@ -15,6 +20,9 @@ function AuctionsPageContent() {
       : null;
   const categoryName = searchParams.get("category");
   const searchKeyword = searchParams.get("keyword");
+  const searchResultType = parseSearchResultType(
+    searchParams.get("searchType"),
+  );
 
   return (
     <AuctionListScreen
@@ -22,6 +30,7 @@ function AuctionsPageContent() {
       categoryId={categoryId}
       categoryName={categoryName}
       searchKeyword={searchKeyword}
+      searchResultType={searchResultType}
       onBack={() => router.back()}
       onProductClick={(id: number) => router.push(`/auctions/${id}`)}
       onAuctionClick={(id: number) => router.push(`/auctions/${id}`)}

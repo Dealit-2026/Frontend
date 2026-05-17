@@ -80,7 +80,7 @@ export default function MainLayout({
   onNotificationSettingsClick: () => void;
   onChatClick: (id: number) => void;
   onCategoryResetClick: () => void;
-  onSearchClick: () => void;
+  onSearchClick: (scope?: 'home' | 'explore') => void;
   onProfileEditClick: () => void;
   onLocationEditClick: () => void;
   onWishlistClick: () => void;
@@ -118,7 +118,7 @@ export default function MainLayout({
             onProductListClick={onProductListClick}
             onNotificationClick={onNotificationClick} 
             onCategoryResetClick={onCategoryResetClick}
-            onSearchClick={onSearchClick}
+            onSearchClick={() => onSearchClick('home')}
             onWishlistClick={onWishlistClick}
             mode={themeMode}
             onModeChange={onThemeChange}
@@ -131,7 +131,7 @@ export default function MainLayout({
             onCategorySelect={(category) => {
               onProductListClick('all', category);
             }}
-            onSearchDetailClick={onSearchClick}
+            onSearchDetailClick={() => onSearchClick('explore')}
             onRecentClick={() => onProductListClick('recent')}
             mode={themeMode}
             themeColor={themeColor} 

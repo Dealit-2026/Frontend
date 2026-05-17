@@ -17,6 +17,7 @@ import {
   fetchAuctionsByCategory,
   fetchProductsByCategory,
 } from "@/services/product/search/service";
+import type { UnifiedSearchResultType } from "@/services/product/search/types";
 import { fetchRegularWishlist } from "@/services/wishlist/service";
 
 type ProductListType = "all" | "closing_soon" | "recent";
@@ -26,6 +27,7 @@ export default function ProductListScreen({
   categoryId,
   categoryName,
   searchKeyword,
+  searchResultType,
   onBack,
   onProductClick,
   onAuctionClick,
@@ -37,6 +39,7 @@ export default function ProductListScreen({
   categoryId?: number | null;
   categoryName: string | null;
   searchKeyword?: string | null;
+  searchResultType?: UnifiedSearchResultType | null;
   onBack: () => void;
   onProductClick: (id: number) => void;
   onAuctionClick?: (id: number) => void;
@@ -94,6 +97,7 @@ export default function ProductListScreen({
     const request = shouldFetchKeywordList
       ? fetchIntegratedSearchResults({
           keyword: normalizedKeyword,
+          type: searchResultType,
           categoryId,
           page: 0,
           size: 20,
@@ -155,7 +159,7 @@ export default function ProductListScreen({
     return () => {
       ignore = true;
     };
-  }, [categoryId, categoryName, listType, mode, searchKeyword]);
+  }, [categoryId, categoryName, listType, mode, searchKeyword, searchResultType]);
 
   useEffect(() => {
     if (mode !== "regular") {

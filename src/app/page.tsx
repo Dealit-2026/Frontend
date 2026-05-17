@@ -113,6 +113,7 @@ import {
   writeStoredThemeMode,
   type ThemeMode,
 } from "@/services/themeMode";
+import type { UnifiedSearchResultType } from "@/services/product/search/types";
 
 type RouteState = {
   screen: Screen;
@@ -125,12 +126,18 @@ type RouteState = {
   category?: string | null;
   categoryId?: number | null;
   searchKeyword?: string | null;
+  searchResultType?: UnifiedSearchResultType | null;
 };
 
 const getFiniteId = (value: number | null | undefined) =>
   typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : null;
+
+const parseSearchResultType = (
+  value: string | null,
+): UnifiedSearchResultType | null =>
+  value === "REGULAR" || value === "AUCTION" ? value : null;
 
 const buildUrl = (
   screen: Screen,
@@ -144,6 +151,7 @@ const buildUrl = (
     category,
     categoryId,
     searchKeyword,
+    searchResultType,
     bidAmount,
   }: {
     tab: Tab;
@@ -155,6 +163,7 @@ const buildUrl = (
     category: string | null;
     categoryId: number | null;
     searchKeyword: string | null;
+    searchResultType: UnifiedSearchResultType | null;
     bidAmount?: number;
   },
 ) => {
@@ -170,6 +179,9 @@ const buildUrl = (
   }
   if (searchKeyword) {
     params.set("keyword", searchKeyword);
+  }
+  if (searchResultType) {
+    params.set("searchType", searchResultType);
   }
 
   switch (screen) {
@@ -348,6 +360,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
       category: searchParams.get("category"),
       categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
       searchKeyword: searchParams.get("keyword"),
+      searchResultType: parseSearchResultType(searchParams.get("searchType")),
     };
   }
   if (/^\/products\/\d+\/report$/.test(pathname)) {
@@ -380,6 +393,7 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
       category: searchParams.get("category"),
       categoryId: getFiniteId(Number(searchParams.get("categoryId"))),
       searchKeyword: searchParams.get("keyword"),
+      searchResultType: parseSearchResultType(searchParams.get("searchType")),
     };
   }
   if (/^\/auctions\/\d+\/bidding-status$/.test(pathname)) {
@@ -435,6 +449,8 @@ export default function App() {
   const [selectedSearchKeyword, setSelectedSearchKeyword] = useState<
     string | null
   >(null);
+  const [selectedSearchResultType, setSelectedSearchResultType] =
+    useState<UnifiedSearchResultType | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [userLocationForm, setUserLocationForm] = useState<LocationFormValues>(
     createDefaultLocationForm(),
@@ -501,6 +517,9 @@ export default function App() {
     if (routeState.searchKeyword !== undefined) {
       setSelectedSearchKeyword(routeState.searchKeyword);
     }
+    if (routeState.searchResultType !== undefined) {
+      setSelectedSearchResultType(routeState.searchResultType);
+    }
   }, []);
 
   useEffect(() => {
@@ -544,6 +563,7 @@ export default function App() {
       category: selectedCategory,
       categoryId: selectedCategoryId,
       searchKeyword: selectedSearchKeyword,
+      searchResultType: selectedSearchResultType,
       bidAmount: bidData?.bidAmount,
     });
     const currentUrl = `${window.location.pathname}${window.location.search}`;
@@ -567,6 +587,7 @@ export default function App() {
     selectedCategory,
     selectedCategoryId,
     selectedSearchKeyword,
+    selectedSearchResultType,
     selectedChatDraftProductId,
     selectedChatId,
     selectedProductId,
@@ -944,6 +965,7 @@ export default function App() {
                 onProductListClick={(type, category) => {
                   setProductListType(type);
                   setSelectedSearchKeyword(null);
+                  setSelectedSearchResultType(null);
                   if (typeof category === "object" && category !== null) {
                     setSelectedCategory(category.name);
                     setSelectedCategoryId(category.id);
@@ -970,10 +992,17 @@ export default function App() {
                   navigateTo("chat_room");
                 }}
                 onCategoryResetClick={() => navigateTo("category_reset")}
-                onSearchClick={() => {
+                onSearchClick={(scope = "home") => {
                   setSelectedCategory(null);
                   setSelectedCategoryId(null);
                   setSelectedSearchKeyword(null);
+                  setSelectedSearchResultType(
+                    scope === "explore"
+                      ? null
+                      : themeMode === "auction"
+                        ? "AUCTION"
+                        : "REGULAR",
+                  );
                   navigateTo("search_detail");
                 }}
                 onProfileEditClick={() => {
@@ -1059,6 +1088,7 @@ export default function App() {
                     ? { id: selectedCategoryId, name: selectedCategory }
                     : null
                 }
+                searchResultType={selectedSearchResultType}
               />
             )}
             {currentScreen === "product_list" && (
@@ -1072,8 +1102,10 @@ export default function App() {
                   setSelectedCategory(null);
                   setSelectedCategoryId(null);
                   setSelectedSearchKeyword(null);
+                  setSelectedSearchResultType(null);
                   navigateTo("main");
                 }}
+                searchResultType={selectedSearchResultType}
                 onProductClick={navigateToProduct}
                 onAuctionClick={(id) => router.push(`/auctions/${id}`)}
                 onSearchClick={() => navigateTo("search_detail")}

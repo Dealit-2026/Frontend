@@ -81,6 +81,7 @@ export interface UnifiedSearchItemResponse {
 
 export interface UnifiedSearchListResponse {
   keyword: string | null;
+  type: UnifiedSearchResultType | null;
   categoryId: number | null;
   content: UnifiedSearchItemResponse[];
   page: number;

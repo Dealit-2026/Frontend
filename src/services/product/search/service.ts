@@ -7,6 +7,7 @@ import type {
   SearchCategoryViewModel,
   SearchCategoryOptionResponse,
   UnifiedSearchItemResponse,
+  UnifiedSearchResultType,
 } from "@/services/product/search/types";
 
 const DEFAULT_CATEGORY_LABEL = "카테고리 없음";
@@ -168,17 +169,20 @@ export async function fetchProductsByCategory(
 
 export async function fetchIntegratedSearchResults({
   keyword,
+  type,
   categoryId,
   page = 0,
   size = 20,
 }: {
   keyword?: string | null;
+  type?: UnifiedSearchResultType | null;
   categoryId?: number | null;
   page?: number;
   size?: number;
 }): Promise<ProductSearchItemViewModel[]> {
   const response = await productSearchApi.searchIntegrated({
     keyword,
+    type,
     categoryId,
     page,
     size,
@@ -189,8 +193,9 @@ export async function fetchIntegratedSearchResults({
 
 export async function fetchPopularSearchKeywords(
   size = 10,
+  type?: UnifiedSearchResultType | null,
 ): Promise<PopularSearchKeywordViewModel[]> {
-  const response = await productSearchApi.getPopularSearchKeywords(size);
+  const response = await productSearchApi.getPopularSearchKeywords(size, type);
 
   return response.content.map((item, index) => ({
     rank: index + 1,

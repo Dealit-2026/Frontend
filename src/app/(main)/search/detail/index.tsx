@@ -5,7 +5,10 @@ import { ArrowLeft, Clock, Search, TrendingUp, X } from "lucide-react";
 import { motion } from "motion/react";
 
 import { fetchPopularSearchKeywords } from "@/services/product/search/service";
-import type { PopularSearchKeywordViewModel } from "@/services/product/search/types";
+import type {
+  PopularSearchKeywordViewModel,
+  UnifiedSearchResultType,
+} from "@/services/product/search/types";
 import type { SelectedSearchCategory } from "../index";
 
 const RECENT_SEARCH_STORAGE_KEY = "dealit_recent_searches";
@@ -43,11 +46,13 @@ export default function SearchDetailScreen({
   onBack,
   onSearch,
   initialCategory,
+  searchResultType = null,
 }: {
   onBack: () => void;
   onSearch: (keyword: string) => void;
   themeColor: string;
   initialCategory?: SelectedSearchCategory | null;
+  searchResultType?: UnifiedSearchResultType | null;
   key?: string;
 }) {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -68,7 +73,7 @@ export default function SearchDetailScreen({
     let isMounted = true;
 
     setIsLoadingPopularSearches(true);
-    fetchPopularSearchKeywords(10)
+    fetchPopularSearchKeywords(10, searchResultType)
       .then((keywords) => {
         if (isMounted) {
           setPopularSearches(keywords);
@@ -89,7 +94,7 @@ export default function SearchDetailScreen({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [searchResultType]);
 
   const saveRecentSearch = (keyword: string) => {
     const trimmedKeyword = keyword.trim();
