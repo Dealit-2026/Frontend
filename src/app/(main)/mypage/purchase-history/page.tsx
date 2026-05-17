@@ -7,5 +7,7 @@ import PurchaseHistoryScreen from "./index";
 export default function PurchaseHistoryPage() {
   const router = useRouter();
 
-  return <PurchaseHistoryScreen onBack={() => router.back()} themeColor="#98E446" />;
+  return (
+    <PurchaseHistoryScreen onBack={() => router.back()} themeColor="#98E446" />
+  );
 }
