@@ -1074,7 +1074,7 @@ export default function App() {
                   setSelectedSearchKeyword(null);
                   navigateTo("main");
                 }}
-                onProductClick={navigateToCatalogItem}
+                onProductClick={navigateToProduct}
                 onAuctionClick={(id) => router.push(`/auctions/${id}`)}
                 onSearchClick={() => navigateTo("search_detail")}
                 themeColor={themeColor}

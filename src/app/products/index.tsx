@@ -207,8 +207,12 @@ export default function ProductListScreen({
   };
 
   const handleProductClick = (product: any) => {
-    if (product.saleType === "AUCTION" && product.auctionId != null) {
-      onAuctionClick?.(product.auctionId);
+    const isAuctionProduct =
+      product.saleType === "AUCTION" ||
+      (!searchKeyword && mode === "auction" && product.auctionId != null);
+
+    if (isAuctionProduct) {
+      onAuctionClick?.(product.auctionId ?? product.productId);
       return;
     }
 
@@ -256,7 +260,12 @@ export default function ProductListScreen({
             <ProductListItem
               key={`${mode}-${product.auctionId ?? product.productId}`}
               product={product}
-              mode={product.saleType === "AUCTION" ? "auction" : mode}
+              mode={
+                product.saleType === "AUCTION" ||
+                (!searchKeyword && mode === "auction" && product.auctionId != null)
+                  ? "auction"
+                  : "regular"
+              }
               themeColor={themeColor}
               onProductClick={() => handleProductClick(product)}
               initialLiked={
