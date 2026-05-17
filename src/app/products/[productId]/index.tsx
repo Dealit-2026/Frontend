@@ -30,9 +30,9 @@ import type { AuctionEventStreamEvent } from "@/services/events/types";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
 import {
-  addRegularWishlist,
+  addWishlist,
   fetchRegularWishlist,
-  removeRegularWishlist,
+  removeWishlist,
 } from "@/services/wishlist/service";
 
 type AuctionStatus =
@@ -277,8 +277,14 @@ export default function ProductDetailScreen({
   }, [resolvedFavoriteCount]);
 
   useEffect(() => {
+    if (!isRegular && auctionDetail) {
+      setIsLiked(auctionDetail.liked);
+      setFavoriteCount(auctionDetail.favoriteCount);
+    }
+  }, [auctionDetail, isRegular]);
+
+  useEffect(() => {
     if (!isRegular || productId == null) {
-      setIsLiked(false);
       return;
     }
 
@@ -498,11 +504,13 @@ export default function ProductDetailScreen({
   };
 
   const handleWishlistClick = async () => {
-    if (!isRegular || productId == null || isWishlistSubmitting) {
+    const wishlistProductId = isRegular ? productId : auctionDetail?.productId;
+
+    if (wishlistProductId == null || isWishlistSubmitting) {
       return;
     }
 
-    if (!productData?.canFavorite && !isLiked) {
+    if (isRegular && !productData?.canFavorite && !isLiked) {
       showToast("찜할 수 없는 상품입니다.");
       return;
     }
@@ -511,8 +519,8 @@ export default function ProductDetailScreen({
 
     try {
       const result = isLiked
-        ? await removeRegularWishlist(productId)
-        : await addRegularWishlist(productId);
+        ? await removeWishlist(wishlistProductId)
+        : await addWishlist(wishlistProductId);
 
       setIsLiked(result.liked);
       setFavoriteCount(result.favoriteCount);
@@ -570,20 +578,18 @@ export default function ProductDetailScreen({
           <ChevronLeft size={24} />
         </button>
         <div className="flex space-x-2">
-          {isRegular && (
-            <button
-              onClick={handleWishlistClick}
-              disabled={isWishlistSubmitting}
-              className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
-              aria-label={isLiked ? "찜 취소" : "찜 추가"}
-            >
-              <Heart
-                size={20}
-                fill={isLiked ? "#FF3B30" : "none"}
-                color={isLiked ? "#FF3B30" : "currentColor"}
-              />
-            </button>
-          )}
+          <button
+            onClick={handleWishlistClick}
+            disabled={isWishlistSubmitting}
+            className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
+            aria-label={isLiked ? "찜 취소" : "찜 추가"}
+          >
+            <Heart
+              size={20}
+              fill={isLiked ? "#FF3B30" : "none"}
+              color={isLiked ? "#FF3B30" : "currentColor"}
+            />
+          </button>
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}

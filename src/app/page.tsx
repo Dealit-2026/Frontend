@@ -997,6 +997,7 @@ export default function App() {
                 key="wishlist"
                 onBack={() => navigateTo("main")}
                 onProductClick={navigateToProduct}
+                onAuctionClick={(id) => router.push(`/auctions/${id}`)}
                 themeColor={themeColor}
               />
             )}

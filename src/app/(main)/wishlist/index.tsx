@@ -1,23 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronLeft, Heart, Image as ImageIcon, MessageCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  Heart,
+  Image as ImageIcon,
+  MessageCircle,
+} from "lucide-react";
 import { motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
 import {
-  fetchRegularWishlist,
-  removeRegularWishlist,
+  fetchMyWishlist,
+  removeWishlist,
 } from "@/services/wishlist/service";
 import type { WishlistItemViewModel } from "@/services/wishlist/types";
 
 export default function WishlistScreen({
   onBack,
   onProductClick,
+  onAuctionClick,
   themeColor,
 }: {
   onBack: () => void;
   onProductClick: (id: number) => void;
+  onAuctionClick?: (id: number) => void;
   themeColor: string;
   key?: string;
 }) {
@@ -36,7 +43,7 @@ export default function WishlistScreen({
     setIsLoading(true);
     setErrorMessage("");
 
-    fetchRegularWishlist()
+    fetchMyWishlist()
       .then((items) => {
         if (!ignore) {
           setWishlistItems(items);
@@ -61,6 +68,15 @@ export default function WishlistScreen({
     };
   }, []);
 
+  const handleItemClick = (item: WishlistItemViewModel) => {
+    if (item.itemType === "AUCTION" && item.auctionId != null) {
+      onAuctionClick?.(item.auctionId);
+      return;
+    }
+
+    onProductClick(item.productId);
+  };
+
   const handleUnlike = async (productId: number) => {
     if (removingProductId !== null) {
       return;
@@ -70,7 +86,7 @@ export default function WishlistScreen({
     setErrorMessage("");
 
     try {
-      await removeRegularWishlist(productId);
+      await removeWishlist(productId);
       setWishlistItems((currentItems) =>
         currentItems.filter((item) => item.productId !== productId),
       );
@@ -114,14 +130,14 @@ export default function WishlistScreen({
         ) : wishlistItems.length > 0 ? (
           wishlistItems.map((item) => (
             <div
-              key={item.productId}
-              onClick={() => onProductClick(item.productId)}
+              key={`${item.itemType}-${item.productId}`}
+              onClick={() => handleItemClick(item)}
               role="button"
               tabIndex={0}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  onProductClick(item.productId);
+                  handleItemClick(item);
                 }
               }}
               className="flex items-center space-x-4 p-3 bg-white border border-gray-50 rounded-2xl hover:shadow-md transition-all cursor-pointer group"
@@ -140,7 +156,7 @@ export default function WishlistScreen({
                 )}
               </div>
               <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-2">
                   <h4 className="font-bold text-sm truncate text-gray-800">
                     {item.name}
                   </h4>
@@ -158,7 +174,7 @@ export default function WishlistScreen({
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 font-medium">
-                  판매가{" "}
+                  {item.itemType === "AUCTION" ? "현재가" : "판매가"}{" "}
                   <span className="text-sm font-bold text-black ml-1">
                     {item.priceLabel}
                   </span>
@@ -173,7 +189,7 @@ export default function WishlistScreen({
                   </div>
                   <div className="flex items-center space-x-1">
                     <MessageCircle size={10} />
-                    <span>일반 상품</span>
+                    <span>{item.metaLabel}</span>
                   </div>
                 </div>
               </div>
@@ -182,7 +198,7 @@ export default function WishlistScreen({
         ) : (
           <div className="flex flex-col items-center justify-center text-gray-400 space-y-4 h-[400px]">
             <Heart size={48} className="opacity-20" />
-            <p>찜한 일반 상품이 없습니다.</p>
+            <p>찜한 상품이 없습니다.</p>
           </div>
         )}
       </div>

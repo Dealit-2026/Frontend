@@ -12,6 +12,7 @@ import {
 import { getErrorMessage } from "@/services/apiError";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
+import { fetchRegularWishlist } from "@/services/wishlist/service";
 
 type ProductListType = "all" | "closing_soon" | "recent";
 
@@ -47,6 +48,9 @@ export default function ProductListScreen({
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -116,6 +120,55 @@ export default function ProductListScreen({
     };
   }, [categoryName, listType, mode]);
 
+  useEffect(() => {
+    if (mode !== "regular") {
+      setLikedProductIds(new Set());
+      return;
+    }
+
+    let ignore = false;
+
+    fetchRegularWishlist()
+      .then((items) => {
+        if (!ignore) {
+          setLikedProductIds(new Set(items.map((item) => item.productId)));
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setLikedProductIds(new Set());
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [mode]);
+
+  const handleWishlistChange = (
+    productId: number,
+    liked: boolean,
+    favoriteCount: number,
+  ) => {
+    setLikedProductIds((current) => {
+      const next = new Set(current);
+
+      if (liked) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+
+      return next;
+    });
+
+    setProducts((currentProducts) =>
+      currentProducts.map((item) =>
+        item.productId === productId ? { ...item, favoriteCount } : item,
+      ),
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -160,6 +213,10 @@ export default function ProductListScreen({
               mode={mode}
               themeColor={themeColor}
               onProductClick={onProductClick}
+              initialLiked={
+                mode === "regular" && likedProductIds.has(product.productId)
+              }
+              onWishlistChange={handleWishlistChange}
             />
           ))
         ) : (
