@@ -137,7 +137,7 @@ export default function AuctionDetailPage() {
       await declineReauction(auctionId);
       setShowReauctionPrompt(false);
       showToast("재경매 대기를 종료했어요.");
-      router.replace("/mypage/sales-management");
+      router.replace("/");
     } catch (error) {
       console.error("Failed to decline reauction:", error);
       setReauctionError("재등록 안 하기에 실패했습니다.");

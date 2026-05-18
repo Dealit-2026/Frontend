@@ -71,10 +71,7 @@ function AuctionRegisterPageContent() {
           reauctionSourceAuctionId || undefined
         }
         onComplete={(result) => {
-          const auctionId =
-            typeof result === "object" && result !== null && "auctionId" in result
-              ? Number(result.auctionId)
-              : 0;
+          const auctionId = getCreatedAuctionRouteId(result);
           router.replace(
             auctionId
               ? `/auctions/${auctionId}?fromReauction=1`
@@ -84,6 +81,22 @@ function AuctionRegisterPageContent() {
       />
     </AuctionRegisterRouteShell>
   );
+}
+
+function getCreatedAuctionRouteId(result: unknown) {
+  if (typeof result !== "object" || result === null) {
+    return 0;
+  }
+
+  if ("auctionId" in result) {
+    return Number(result.auctionId) || 0;
+  }
+
+  if ("productId" in result) {
+    return Number(result.productId) || 0;
+  }
+
+  return 0;
 }
 
 function AuctionRegisterRouteShell({ children }: { children: ReactNode }) {
