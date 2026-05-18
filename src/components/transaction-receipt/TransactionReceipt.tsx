@@ -300,7 +300,7 @@ export default function TransactionReceipt({
                 거래일자:
               </span>
               <span style={{ fontSize: 15, color: "#111", lineHeight: 1.6 }}>
-                {formatDate(data.purchasedAt ?? data.createdAt ?? data.paidAt)}
+                {formatDate(data.purchasedAt ?? data.paidAt)}
               </span>
             </div>
             <div

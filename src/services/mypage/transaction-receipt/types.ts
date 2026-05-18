@@ -24,6 +24,7 @@ export interface TransactionReceiptResponse {
   currency?: string;
   status: TransactionStatus;
   createdAt: string; // 주문 생성일
+  purchasedAt: string; // 구매 일자 (백엔드에서 제공)
   paidAt: string | null;
   shippedAt: string | null;
   completedAt: string | null;
