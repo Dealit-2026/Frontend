@@ -135,12 +135,21 @@ export async function fetchSearchCategoryOptions(): Promise<
 }
 
 export async function fetchSearchCategoryOptionsByMode(
-  mode: "regular" | "auction",
+  _mode: "regular" | "auction",
 ): Promise<SearchCategoryViewModel[]> {
-  const apiCategories =
-    mode === "auction"
-      ? await productSearchApi.getAuctionSearchCategories()
-      : await productSearchApi.getSearchCategories();
+  const [regularCategories, auctionCategories] = await Promise.all([
+    productSearchApi.getSearchCategories(),
+    productSearchApi.getAuctionSearchCategories(),
+  ]);
+  const categoriesById = new Map<number, SearchCategoryOptionResponse>();
+
+  for (const category of [...regularCategories, ...auctionCategories]) {
+    categoriesById.set(category.id, category);
+  }
+
+  const apiCategories = Array.from(categoriesById.values()).sort(
+    (left, right) => left.id - right.id,
+  );
   const apiViewModels = apiCategories
     .filter((category) => category.depth === 1)
     .map(toSearchCategoryViewModel);

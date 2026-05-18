@@ -12,11 +12,7 @@ import {
 import { getErrorMessage } from "@/services/apiError";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
-import {
-  fetchIntegratedSearchResults,
-  fetchAuctionsByCategory,
-  fetchProductsByCategory,
-} from "@/services/product/search/service";
+import { fetchIntegratedSearchResults } from "@/services/product/search/service";
 import type { UnifiedSearchResultType } from "@/services/product/search/types";
 import { fetchRegularWishlist } from "@/services/wishlist/service";
 
@@ -103,9 +99,11 @@ export default function ProductListScreen({
           size: 20,
         })
       : shouldFetchCategoryList
-        ? mode === "auction"
-        ? fetchAuctionsByCategory(categoryId, 0, 20)
-        : fetchProductsByCategory(categoryId, 0, 20)
+        ? fetchIntegratedSearchResults({
+            categoryId,
+            page: 0,
+            size: 20,
+          })
       : mode === "regular" && listType === "all"
         ? fetchPopularRegularProducts(10)
         : mode === "regular"
@@ -136,9 +134,7 @@ export default function ProductListScreen({
               shouldFetchKeywordList
                 ? "검색 결과를 불러오지 못했습니다."
                 : shouldFetchCategoryList
-                ? mode === "auction"
-                  ? "카테고리 경매를 불러오지 못했습니다."
-                  : "카테고리 상품을 불러오지 못했습니다."
+                ? "카테고리 검색 결과를 불러오지 못했습니다."
                 : mode === "regular" && listType === "all"
                   ? "실시간 인기 상품을 불러오지 못했습니다."
                   : mode === "regular"
@@ -162,7 +158,7 @@ export default function ProductListScreen({
   }, [categoryId, categoryName, listType, mode, searchKeyword, searchResultType]);
 
   useEffect(() => {
-    if (mode !== "regular") {
+    if (mode !== "regular" && !categoryId && !searchKeyword) {
       setLikedProductIds(new Set());
       return;
     }
@@ -184,7 +180,7 @@ export default function ProductListScreen({
     return () => {
       ignore = true;
     };
-  }, [mode]);
+  }, [categoryId, mode, searchKeyword]);
 
   const handleWishlistChange = (
     productId: number,
@@ -262,7 +258,7 @@ export default function ProductListScreen({
         ) : products.length > 0 ? (
           products.map((product) => (
             <ProductListItem
-              key={`${mode}-${product.auctionId ?? product.productId}`}
+              key={`${product.saleType ?? mode}-${product.auctionId ?? product.productId}`}
               product={product}
               mode={
                 product.saleType === "AUCTION" ||
@@ -273,7 +269,8 @@ export default function ProductListScreen({
               themeColor={themeColor}
               onProductClick={() => handleProductClick(product)}
               initialLiked={
-                mode === "regular" && likedProductIds.has(product.productId)
+                product.saleType !== "AUCTION" &&
+                likedProductIds.has(product.productId)
               }
               onWishlistChange={handleWishlistChange}
             />
