@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Landmark, Plus, ReceiptText, Wallet, X } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Landmark,
+  Plus,
+  ReceiptText,
+  Wallet,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
 import {
@@ -31,6 +41,8 @@ export default function DealitMoneyPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyMonth, setHistoryMonth] = useState(() => createMonthState());
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -98,10 +110,21 @@ export default function DealitMoneyPanel() {
     setModal(nextModal);
   };
 
+  const openHistory = () => {
+    setErrorMessage("");
+    setHistoryMonth(createMonthState());
+    setModal("history");
+  };
+
   const closeModal = () => {
     setModal(null);
     setAmountInput("");
     setErrorMessage("");
+    setIsMonthPickerOpen(false);
+  };
+
+  const addQuickAmount = (amount: number) => {
+    setAmountInput(String(parseWalletAmount(amountInput) + amount));
   };
 
   const handleSubmitAmount = async () => {
@@ -168,7 +191,7 @@ export default function DealitMoneyPanel() {
         <MoneyActionButton
           icon={<ReceiptText size={18} />}
           label="내역"
-          onClick={() => setModal("history")}
+          onClick={openHistory}
         />
         <MoneyActionButton
           icon={<Landmark size={18} />}
@@ -177,8 +200,26 @@ export default function DealitMoneyPanel() {
         />
       </div>
 
-      {modal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 p-6 text-black backdrop-blur-sm">
+      {modal === "history" && (
+        <WalletHistoryScreen
+          ledgers={ledgers}
+          isLoading={isHistoryLoading}
+          selectedMonth={historyMonth}
+          isMonthPickerOpen={isMonthPickerOpen}
+          onClose={closeModal}
+          onPreviousMonth={() => setHistoryMonth(shiftMonth(historyMonth, -1))}
+          onNextMonth={() => setHistoryMonth(shiftMonth(historyMonth, 1))}
+          onOpenMonthPicker={() => setIsMonthPickerOpen(true)}
+          onCloseMonthPicker={() => setIsMonthPickerOpen(false)}
+          onSelectMonth={(nextMonth) => {
+            setHistoryMonth(nextMonth);
+            setIsMonthPickerOpen(false);
+          }}
+        />
+      )}
+
+      {modal && modal !== "history" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6 text-black backdrop-blur-sm">
           <div className="w-full rounded-2xl bg-white p-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">{getModalTitle(modal)}</h2>
@@ -192,47 +233,49 @@ export default function DealitMoneyPanel() {
               </button>
             </div>
 
-            {modal === "history" ? (
-              <WalletHistoryContent
-                ledgers={ledgers}
-                isLoading={isHistoryLoading}
-              />
-            ) : (
-              <div className="mt-5 space-y-4">
-                <div className="grid grid-cols-2 gap-2">
-                  {QUICK_AMOUNTS.map((amount) => (
-                    <button
-                      key={amount}
-                      type="button"
-                      onClick={() => setAmountInput(String(amount))}
-                      className="h-11 rounded-lg bg-gray-100 text-sm font-bold hover:bg-gray-200"
-                    >
-                      {formatWon(amount)}
-                    </button>
-                  ))}
-                </div>
-                <input
-                  value={amountInput}
-                  onChange={(event) => setAmountInput(event.target.value)}
-                  inputMode="numeric"
-                  placeholder="금액 직접 입력"
-                  className="h-12 w-full rounded-lg border border-gray-200 px-4 text-base font-semibold outline-none focus:border-black"
-                />
-                {errorMessage && (
-                  <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">
-                    {errorMessage}
-                  </div>
-                )}
+            <div className="mt-5 space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_AMOUNTS.map((amount) => (
+                  <button
+                    key={amount}
+                    type="button"
+                    onClick={() => addQuickAmount(amount)}
+                    className="h-11 rounded-lg bg-gray-100 text-sm font-bold hover:bg-gray-200"
+                  >
+                    {formatWon(amount)}
+                  </button>
+                ))}
+              </div>
+              {modal === "withdraw" && (
                 <button
                   type="button"
-                  onClick={handleSubmitAmount}
-                  disabled={isSubmitting}
-                  className="h-12 w-full rounded-lg bg-black text-sm font-bold text-white disabled:bg-gray-300"
+                  onClick={() => setAmountInput(String(wallet?.balance ?? 0))}
+                  className="text-sm font-bold text-gray-700 underline underline-offset-4"
                 >
-                  {isSubmitting ? "처리 중" : getSubmitLabel(modal)}
+                  전액 입력
                 </button>
-              </div>
-            )}
+              )}
+              <input
+                value={amountInput}
+                onChange={(event) => setAmountInput(event.target.value)}
+                inputMode="numeric"
+                placeholder="금액 직접 입력"
+                className="h-12 w-full rounded-lg border border-gray-200 px-4 text-base font-semibold outline-none focus:border-black"
+              />
+              {errorMessage && (
+                <div className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-500">
+                  {errorMessage}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={handleSubmitAmount}
+                disabled={isSubmitting}
+                className="h-12 w-full rounded-lg bg-black text-sm font-bold text-white disabled:bg-gray-300"
+              >
+                {isSubmitting ? "처리 중" : getSubmitLabel(modal)}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -261,53 +304,263 @@ function MoneyActionButton({
   );
 }
 
-function WalletHistoryContent({
+type MonthState = {
+  year: number;
+  month: number;
+};
+
+function WalletHistoryScreen({
   ledgers,
   isLoading,
+  selectedMonth,
+  isMonthPickerOpen,
+  onClose,
+  onPreviousMonth,
+  onNextMonth,
+  onOpenMonthPicker,
+  onCloseMonthPicker,
+  onSelectMonth,
 }: {
   ledgers: WalletLedgerViewModel[];
   isLoading: boolean;
+  selectedMonth: MonthState;
+  isMonthPickerOpen: boolean;
+  onClose: () => void;
+  onPreviousMonth: () => void;
+  onNextMonth: () => void;
+  onOpenMonthPicker: () => void;
+  onCloseMonthPicker: () => void;
+  onSelectMonth: (month: MonthState) => void;
 }) {
-  if (isLoading) {
-    return <div className="py-12 text-center text-sm text-gray-400">불러오는 중</div>;
-  }
-
-  if (ledgers.length === 0) {
-    return (
-      <div className="py-12 text-center text-sm text-gray-400">
-        딜릿머니 내역이 없습니다.
-      </div>
-    );
-  }
+  const filteredLedgers = ledgers.filter((ledger) =>
+    isSameMonth(ledger.createdAt, selectedMonth),
+  );
 
   return (
-    <div className="mt-4 max-h-80 overflow-y-auto">
-      {ledgers.map((ledger) => (
-        <div
-          key={ledger.id}
-          className="flex items-center justify-between border-b border-gray-100 py-3 last:border-b-0"
-        >
-          <div className="min-w-0">
-            <div className="font-semibold">{ledger.typeLabel}</div>
-            <div className="mt-1 truncate text-xs text-gray-400">
-              {ledger.createdAtLabel || ledger.description}
-            </div>
-          </div>
-          <div className="text-right">
-            <div
-              className={`font-bold ${
-                ledger.isIncome ? "text-green-600" : "text-gray-900"
-              }`}
-            >
-              {ledger.amountLabel}
-            </div>
-            <div className="mt-1 text-xs text-gray-400">
-              잔액 {ledger.balanceAfterLabel}
-            </div>
-          </div>
+    <div className="fixed inset-0 z-50 bg-white text-black">
+      <div className="flex h-full flex-col px-5 pb-6 pt-7">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-black tracking-normal">사용 내역</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-2 text-gray-400 hover:bg-gray-100"
+            aria-label="닫기"
+          >
+            <X size={22} />
+          </button>
         </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onPreviousMonth}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-50"
+            aria-label="이전 달"
+          >
+            <ChevronLeft size={26} strokeWidth={1.9} />
+          </button>
+          <button
+            type="button"
+            onClick={onOpenMonthPicker}
+            className="flex items-center gap-1 rounded-full px-4 py-2 text-xl font-black tracking-normal hover:bg-gray-50"
+          >
+            {selectedMonth.month}월
+            <ChevronDown size={18} fill="currentColor" strokeWidth={2.4} />
+          </button>
+          <button
+            type="button"
+            onClick={onNextMonth}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-gray-400 hover:bg-gray-50"
+            aria-label="다음 달"
+          >
+            <ChevronRight size={26} strokeWidth={1.9} />
+          </button>
+        </div>
+
+        <div className="mt-8 flex-1 overflow-y-auto">
+          {isLoading ? (
+            <div className="py-12 text-center text-sm text-gray-400">
+              불러오는 중
+            </div>
+          ) : filteredLedgers.length === 0 ? (
+            <div className="py-12 text-center text-sm text-gray-400">
+              사용 내역이 없습니다.
+            </div>
+          ) : (
+            filteredLedgers.map((ledger) => (
+              <div
+                key={ledger.id}
+                className="flex items-start justify-between border-b border-gray-100 py-4 last:border-b-0"
+              >
+                <div className="min-w-0 pr-4">
+                  <div className="text-base font-bold leading-tight text-gray-900">
+                    {ledger.typeLabel}
+                  </div>
+                  <div className="mt-1.5 text-sm font-semibold leading-tight text-gray-400">
+                    {ledger.createdAtLabel}
+                  </div>
+                </div>
+                <div
+                  className={`whitespace-nowrap pt-0.5 text-right text-base font-black ${
+                    ledger.isIncome ? "text-[#F64257]" : "text-gray-950"
+                  }`}
+                >
+                  {ledger.amountLabel}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isMonthPickerOpen && (
+          <MonthPickerSheet
+            selectedMonth={selectedMonth}
+            onClose={onCloseMonthPicker}
+            onConfirm={onSelectMonth}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function MonthPickerSheet({
+  selectedMonth,
+  onClose,
+  onConfirm,
+}: {
+  selectedMonth: MonthState;
+  onClose: () => void;
+  onConfirm: (month: MonthState) => void;
+}) {
+  const [draftMonth, setDraftMonth] = useState(selectedMonth);
+
+  useEffect(() => {
+    setDraftMonth(selectedMonth);
+  }, [selectedMonth]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-10 flex items-end bg-black/35"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18 }}
+    >
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label="조회 기간 설정 닫기"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full rounded-t-3xl bg-white px-5 pb-6 pt-8 shadow-2xl"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 360, mass: 0.8 }}
+      >
+        <h3 className="text-xl font-black tracking-normal">
+          조회 기간 설정
+        </h3>
+        <p className="mt-2 text-sm font-semibold text-gray-500">
+          사용 내역을 월 별로 조회할 수 있어요.
+        </p>
+
+        <div className="mt-8 grid grid-cols-2 items-center gap-4 px-8 text-center">
+          <MonthPickerColumn
+            values={[
+              draftMonth.year - 1,
+              draftMonth.year,
+              draftMonth.year + 1,
+            ]}
+            selectedValue={draftMonth.year}
+            label={(value) => `${value}년`}
+            onSelect={(year) => setDraftMonth((prev) => ({ ...prev, year }))}
+          />
+          <MonthPickerColumn
+            values={[
+              normalizeMonth(draftMonth.month - 1),
+              draftMonth.month,
+              normalizeMonth(draftMonth.month + 1),
+            ]}
+            selectedValue={draftMonth.month}
+            label={(value) => `${value}월`}
+            onSelect={(month) => setDraftMonth((prev) => ({ ...prev, month }))}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onConfirm(draftMonth)}
+          className="mt-10 h-13 w-full rounded-xl bg-[#F64257] text-base font-black text-white shadow-sm"
+        >
+          확인
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function MonthPickerColumn({
+  values,
+  selectedValue,
+  label,
+  onSelect,
+}: {
+  values: number[];
+  selectedValue: number;
+  label: (value: number) => string;
+  onSelect: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      {values.map((value) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => onSelect(value)}
+          className={`block w-full rounded-xl py-2 text-lg font-black tracking-normal transition-colors ${
+            value === selectedValue ? "text-gray-950" : "text-gray-200"
+          }`}
+        >
+          {label(value)}
+        </button>
       ))}
     </div>
+  );
+}
+
+function createMonthState(date = new Date()): MonthState {
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+  };
+}
+
+function shiftMonth(monthState: MonthState, offset: number): MonthState {
+  const date = new Date(monthState.year, monthState.month - 1 + offset, 1);
+  return createMonthState(date);
+}
+
+function normalizeMonth(month: number) {
+  if (month < 1) {
+    return 12;
+  }
+  if (month > 12) {
+    return 1;
+  }
+  return month;
+}
+
+function isSameMonth(date: Date | null, monthState: MonthState) {
+  return (
+    date !== null &&
+    date.getFullYear() === monthState.year &&
+    date.getMonth() + 1 === monthState.month
   );
 }
 

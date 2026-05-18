@@ -20,7 +20,10 @@ export default function ProductDetailPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState({ message: "", visible: false });
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({
+    message: "",
+    visible: false,
+  });
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -111,27 +114,29 @@ export default function ProductDetailPage() {
   return (
     <>
       <EventStreamProvider enabled>
-        <ProductDetailScreen
-          productId={productId}
-          productData={productData}
-          onBack={() => router.back()}
-          onChatClick={handleChatClick}
-          onReportClick={() => router.push(`/products/${productId}/report`)}
-          onPurchaseClick={() =>
-            router.push(`/products/${productId}/regular-payment`)
-          }
-          onBidStatusClick={() =>
-            router.push(`/auctions/${productId}/bidding-status`)
-          }
-          onBidComplete={(data) =>
-            router.push(
-              `/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`,
-            )
-          }
-          themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
-          mode={productData.saleType === "AUCTION" ? "auction" : "regular"}
-          showToast={showToast}
-        />
+        <div className="relative h-screen overflow-hidden bg-white">
+          <ProductDetailScreen
+            productId={productId}
+            productData={productData}
+            onBack={() => router.back()}
+            onChatClick={handleChatClick}
+            onReportClick={() => router.push(`/products/${productId}/report`)}
+            onPurchaseClick={() =>
+              router.push(`/products/${productId}/regular-payment`)
+            }
+            onBidStatusClick={() =>
+              router.push(`/auctions/${productId}/bidding-status`)
+            }
+            onBidComplete={(data) =>
+              router.push(
+                `/auctions/${productId}/bid-complete?bidPrice=${data.bidAmount}`,
+              )
+            }
+            themeColor={productData.saleType === "AUCTION" ? "#F64257" : "#98E446"}
+            mode={productData.saleType === "AUCTION" ? "auction" : "regular"}
+            showToast={showToast}
+          />
+        </div>
       </EventStreamProvider>
       <Toast message={toast.message} visible={toast.visible} />
     </>

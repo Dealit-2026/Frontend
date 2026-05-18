@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ChevronLeft, 
+  ChevronDown,
   Check, 
   ChevronRight, 
   User, 
@@ -41,8 +42,17 @@ import {
   fetchAuctionDetail,
   getAuctionDisplayCurrentPrice,
 } from '@/services/auction/detail/service';
-import type { AuctionBidHistoryResponse, AuctionDetailResponse } from '@/services/auction/detail/types';
+import type { AuctionBidHistoryItem, AuctionBidHistoryResponse, AuctionDetailResponse } from '@/services/auction/detail/types';
 import { useEventStream } from '@/services/events/EventStreamProvider';
+
+type BidStatusTab = "history" | "ranking";
+
+type BidRankingItem = {
+  bidderId: number;
+  bidderNickname: string;
+  highestBid: AuctionBidHistoryItem;
+  bids: AuctionBidHistoryItem[];
+};
 
 function formatBidTime(value: string) {
   const date = new Date(value);
@@ -64,11 +74,28 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
   const [bidHistory, setBidHistory] = useState<AuctionBidHistoryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [activeTab, setActiveTab] = useState<BidStatusTab>("history");
+  const [expandedBidderIds, setExpandedBidderIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const { latestAuctionEvent } = useEventStream();
   const bids = bidHistory?.bids ?? [];
+  const bidRankings = buildBidRankings(bids);
   const currentDisplayPrice = bidHistory?.currentPrice ?? getAuctionDisplayCurrentPrice(auctionDetail);
   const bidCount = bidHistory?.bidCount ?? auctionDetail?.bidCount ?? 0;
   const priceHelperText = bidCount > 0 ? "현재 최고 입찰가" : "입찰 기록 없음";
+
+  const toggleBidderExpanded = (bidderId: number) => {
+    setExpandedBidderIds((previous) => {
+      const next = new Set(previous);
+      if (next.has(bidderId)) {
+        next.delete(bidderId);
+      } else {
+        next.add(bidderId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (auctionId == null) {
@@ -157,7 +184,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
         <h1 className="flex-1 text-center font-bold text-lg mr-10">입찰 현황</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="flex-1 overflow-y-auto pb-28 no-scrollbar">
         {/* Summary Header */}
         <div className="p-6 bg-gray-50/50 border-b border-gray-50">
           <div className="flex items-center justify-between mb-4">
@@ -177,11 +204,26 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
         {/* Bidding List */}
         <div className="p-6 space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-gray-900">입찰 기록</h3>
-            <span className="text-[10px] text-gray-400">최신순</span>
+            <div className="flex rounded-xl bg-gray-100 p-1">
+              <BidStatusTabButton
+                active={activeTab === "history"}
+                label="입찰 기록"
+                onClick={() => setActiveTab("history")}
+                activeColor={themeColor}
+              />
+              <BidStatusTabButton
+                active={activeTab === "ranking"}
+                label="입찰 순위"
+                onClick={() => setActiveTab("ranking")}
+                activeColor={themeColor}
+              />
+            </div>
+            <span className="text-[10px] text-gray-400">
+              {activeTab === "history" ? "최신순" : "최고가순"}
+            </span>
           </div>
 
-          {bids.length > 0 ? (
+          {activeTab === "history" && bids.length > 0 ? (
             <div className="space-y-4">
               {bids.map((bid, idx) => (
                 <div key={bid.bidId} className="relative">
@@ -217,23 +259,176 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                 </div>
               ))}
             </div>
+          ) : activeTab === "ranking" && bidRankings.length > 0 ? (
+            <div className="space-y-3">
+              {bidRankings.map((ranking, index) => {
+                const isExpanded = expandedBidderIds.has(ranking.bidderId);
+                const hasMultipleBids = ranking.bids.length > 1;
+
+                return (
+                  <div
+                    key={ranking.bidderId}
+                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
+                        style={{ backgroundColor: index === 0 ? themeColor : "#111827" }}
+                      >
+                        {index + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-black text-gray-950">
+                            {ranking.bidderNickname}
+                          </span>
+                          {index === 0 && (
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider text-white"
+                              style={{ backgroundColor: themeColor }}
+                            >
+                              Highest
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-1">
+                          <span
+                            className="text-lg font-black"
+                            style={{ color: index === 0 ? themeColor : "#111827" }}
+                          >
+                            ₩{ranking.highestBid.bidPrice.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] font-bold text-gray-400">
+                            최고 입찰가
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleBidderExpanded(ranking.bidderId)}
+                        disabled={!hasMultipleBids}
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 disabled:opacity-30"
+                        aria-label={`${ranking.bidderNickname} 입찰 내역 ${isExpanded ? "접기" : "펼치기"}`}
+                      >
+                        <ChevronDown
+                          size={18}
+                          className={`transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                    </div>
+
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
+                            {ranking.bids.map((bid) => (
+                              <div
+                                key={bid.bidId}
+                                className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2"
+                              >
+                                <span className="text-xs font-bold text-gray-500">
+                                  {formatBidTime(bid.bidAt)}
+                                </span>
+                                <span
+                                  className="text-sm font-black"
+                                  style={{ color: bid.bidId === ranking.highestBid.bidId ? themeColor : "#6B7280" }}
+                                >
+                                  ₩{bid.bidPrice.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
-              입찰 기록이 없습니다
+              {activeTab === "history" ? "입찰 기록이 없습니다" : "입찰 순위가 없습니다"}
             </div>
           )}
         </div>
       </div>
 
       {/* Bottom Action */}
-      <div className="p-6 border-t border-gray-50">
+      <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-gray-50 bg-white p-6">
         <button 
           onClick={onBack}
-          className="w-full h-14 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-colors"
+          className="w-full h-14 bg-gray-900 text-white font-bold rounded-2xl shadow-[0_8px_18px_rgba(15,23,42,0.18)] hover:bg-black transition-colors"
         >
           확인
         </button>
       </div>
     </motion.div>
   );
+}
+
+function BidStatusTabButton({
+  active,
+  label,
+  onClick,
+  activeColor,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  activeColor: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="h-9 rounded-lg px-4 text-sm font-black transition-colors"
+      style={{
+        backgroundColor: active ? "#FFFFFF" : "transparent",
+        color: active ? activeColor : "#9CA3AF",
+        boxShadow: active ? "0 1px 4px rgba(0, 0, 0, 0.06)" : "none",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
+  const groupedBids = new Map<number, AuctionBidHistoryItem[]>();
+
+  bids.forEach((bid) => {
+    const bidderBids = groupedBids.get(bid.bidderId) ?? [];
+    bidderBids.push(bid);
+    groupedBids.set(bid.bidderId, bidderBids);
+  });
+
+  return Array.from(groupedBids.entries())
+    .map(([bidderId, bidderBids]) => {
+      const sortedBids = [...bidderBids].sort((a, b) => {
+        if (b.bidPrice !== a.bidPrice) {
+          return b.bidPrice - a.bidPrice;
+        }
+        return new Date(b.bidAt).getTime() - new Date(a.bidAt).getTime();
+      });
+
+      return {
+        bidderId,
+        bidderNickname: sortedBids[0]?.bidderNickname ?? `입찰자 #${bidderId}`,
+        highestBid: sortedBids[0],
+        bids: sortedBids,
+      };
+    })
+    .filter((ranking): ranking is BidRankingItem => ranking.highestBid != null)
+    .sort((a, b) => {
+      if (b.highestBid.bidPrice !== a.highestBid.bidPrice) {
+        return b.highestBid.bidPrice - a.highestBid.bidPrice;
+      }
+      return new Date(b.highestBid.bidAt).getTime() - new Date(a.highestBid.bidAt).getTime();
+    });
 }
