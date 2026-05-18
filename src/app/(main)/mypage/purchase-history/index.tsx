@@ -81,6 +81,22 @@ export default function PurchaseHistoryScreen({
     return option ? option.label : code;
   };
 
+  const getPurchaseStatusGuide = (status: string) => {
+    if (status === "PAID") {
+      return "판매자가 아직 상품을 보내지 않았어요.";
+    }
+    if (status === "SHIPPED") {
+      return "상품이 배송 중입니다. 상품을 받은 이후 받았어요 버튼을 눌러주세요.";
+    }
+    if (status === "COMPLETED") {
+      return "거래가 완료되었습니다.";
+    }
+    if (status === "CANCELED") {
+      return "취소된 거래입니다.";
+    }
+    return "";
+  };
+
   function handleFilterToggle(statusCode: string) {
     setSelectedStatuses((prev) => {
       const newStatuses = prev.includes(statusCode)
@@ -423,6 +439,9 @@ export default function PurchaseHistoryScreen({
                 </span>
               </div>
             </div>
+            <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500">
+              {getPurchaseStatusGuide(purchase.status)}
+            </p>
             <button
               onClick={() => setSelectedItem({ ...purchase, history: [] })}
               className="w-full mt-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center space-x-1"

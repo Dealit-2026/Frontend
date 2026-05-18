@@ -81,6 +81,22 @@ export default function SalesHistoryScreen({
     return option ? option.label : code;
   };
 
+  const getSaleStatusGuide = (status: string) => {
+    if (status === "PAID") {
+      return "결제가 완료되었습니다. 상품 전달 후 보냈어요를 눌러주세요.";
+    }
+    if (status === "SHIPPED") {
+      return "상품을 보냈어요. 구매자의 수령확정을 기다리고 있습니다.";
+    }
+    if (status === "COMPLETED") {
+      return "거래가 완료되었습니다.";
+    }
+    if (status === "CANCELED") {
+      return "취소된 거래입니다.";
+    }
+    return "";
+  };
+
   function handleFilterToggle(statusCode: string) {
     setSelectedStatuses((prev) => {
       const newStatuses = prev.includes(statusCode)
@@ -410,6 +426,9 @@ export default function SalesHistoryScreen({
                 <span className="font-bold mt-1">{sale.amountFormatted}</span>
               </div>
             </div>
+            <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500">
+              {getSaleStatusGuide(sale.status)}
+            </p>
             <button
               onClick={() => setSelectedItem({ ...sale, history: [] })}
               className="w-full mt-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center space-x-1"

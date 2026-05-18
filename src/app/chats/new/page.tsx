@@ -17,7 +17,6 @@ function NewChatRoomPageContent() {
       chatId={null}
       draftProductId={parsedProductId}
       onBack={() => router.back()}
-      onProductClick={(id) => router.push(`/products/${id}`)}
       themeColor="#98E446"
     />
   );
