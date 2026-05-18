@@ -1,10 +1,13 @@
 import * as productSearchApi from "@/services/product/search/api";
 import type { AuctionListItemViewModel } from "@/services/auction/list/types";
 import type {
+  PopularSearchKeywordViewModel,
   ProductSearchItemResponse,
   ProductSearchItemViewModel,
   SearchCategoryViewModel,
   SearchCategoryOptionResponse,
+  UnifiedSearchItemResponse,
+  UnifiedSearchResultType,
 } from "@/services/product/search/types";
 
 const DEFAULT_CATEGORY_LABEL = "카테고리 없음";
@@ -75,6 +78,8 @@ function toProductSearchItemViewModel(
   item: ProductSearchItemResponse,
 ): ProductSearchItemViewModel {
   return {
+    saleType: "REGULAR",
+    auctionId: null,
     productId: item.productId,
     name: item.name,
     thumbnailUrl: item.thumbnailUrl,
@@ -85,6 +90,41 @@ function toProductSearchItemViewModel(
     viewCount: item.viewCount,
     favoriteCount: item.favoriteCount,
     createdAt: item.createdAt,
+  };
+}
+
+function getLastCategoryName(names: string[] | null | undefined) {
+  return names && names.length > 0
+    ? names[names.length - 1]
+    : DEFAULT_CATEGORY_LABEL;
+}
+
+function toUnifiedSearchItemViewModel(
+  item: UnifiedSearchItemResponse,
+): ProductSearchItemViewModel {
+  const isAuction = item.type === "AUCTION";
+  const price = isAuction ? item.currentPrice : item.price;
+
+  return {
+    saleType: item.type,
+    auctionId: item.auctionId,
+    productId: item.productId,
+    name: item.name,
+    thumbnailUrl: item.thumbnailUrl,
+    priceLabel: formatPrice(price ?? 0),
+    currentPriceLabel: isAuction ? formatPrice(price ?? 0) : undefined,
+    location: item.location ?? DEFAULT_LOCATION_LABEL,
+    categoryId: item.categoryId,
+    categoryName: getLastCategoryName(item.categoryNames),
+    viewCount: item.viewCount,
+    favoriteCount: item.favoriteCount,
+    createdAt: item.createdAt,
+    endAtLabel: item.endsAt ? formatEndAt(item.endsAt) : undefined,
+    auctionStatusLabel: isAuction
+      ? formatAuctionStatus(
+          (item.auctionStatus ?? "DRAFT") as AuctionListItemViewModel["auctionStatus"],
+        )
+      : undefined,
   };
 }
 
@@ -125,6 +165,44 @@ export async function fetchProductsByCategory(
     size,
   });
   return response.content.map(toProductSearchItemViewModel);
+}
+
+export async function fetchIntegratedSearchResults({
+  keyword,
+  type,
+  categoryId,
+  page = 0,
+  size = 20,
+}: {
+  keyword?: string | null;
+  type?: UnifiedSearchResultType | null;
+  categoryId?: number | null;
+  page?: number;
+  size?: number;
+}): Promise<ProductSearchItemViewModel[]> {
+  const response = await productSearchApi.searchIntegrated({
+    keyword,
+    type,
+    categoryId,
+    page,
+    size,
+  });
+
+  return response.content.map(toUnifiedSearchItemViewModel);
+}
+
+export async function fetchPopularSearchKeywords(
+  size = 10,
+  type?: UnifiedSearchResultType | null,
+): Promise<PopularSearchKeywordViewModel[]> {
+  const response = await productSearchApi.getPopularSearchKeywords(size, type);
+
+  return response.content.map((item, index) => ({
+    rank: index + 1,
+    keyword: item.keyword,
+    count: item.count,
+    hot: index < 3,
+  }));
 }
 
 function formatAuctionStatus(status: AuctionListItemViewModel["auctionStatus"]) {

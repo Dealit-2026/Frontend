@@ -13,9 +13,11 @@ import { getErrorMessage } from "@/services/apiError";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
 import {
+  fetchIntegratedSearchResults,
   fetchAuctionsByCategory,
   fetchProductsByCategory,
 } from "@/services/product/search/service";
+import type { UnifiedSearchResultType } from "@/services/product/search/types";
 import { fetchRegularWishlist } from "@/services/wishlist/service";
 
 type ProductListType = "all" | "closing_soon" | "recent";
@@ -24,8 +26,11 @@ export default function ProductListScreen({
   listType,
   categoryId,
   categoryName,
+  searchKeyword,
+  searchResultType,
   onBack,
   onProductClick,
+  onAuctionClick,
   onSearchClick,
   themeColor,
   mode,
@@ -33,15 +38,20 @@ export default function ProductListScreen({
   listType: ProductListType;
   categoryId?: number | null;
   categoryName: string | null;
+  searchKeyword?: string | null;
+  searchResultType?: UnifiedSearchResultType | null;
   onBack: () => void;
   onProductClick: (id: number) => void;
+  onAuctionClick?: (id: number) => void;
   onSearchClick: () => void;
   themeColor: string;
   mode: "regular" | "auction";
   key?: string | number;
 }) {
   const title =
-    categoryName ||
+    searchKeyword
+      ? `"${searchKeyword}" 검색 결과`
+      : categoryName ||
     (mode === "auction" && listType === "all"
       ? "실시간 인기 경매"
       : mode === "auction" && listType === "closing_soon"
@@ -60,9 +70,12 @@ export default function ProductListScreen({
 
   useEffect(() => {
     let ignore = false;
+    const normalizedKeyword = searchKeyword?.trim();
+    const shouldFetchKeywordList = Boolean(normalizedKeyword);
     const shouldFetchCategoryList =
-      typeof categoryId === "number" && categoryId > 0;
+      !shouldFetchKeywordList && typeof categoryId === "number" && categoryId > 0;
     const shouldFetchApiList =
+      !shouldFetchKeywordList &&
       !shouldFetchCategoryList &&
       !categoryName &&
       ((mode === "regular" &&
@@ -70,7 +83,7 @@ export default function ProductListScreen({
         (mode === "auction" &&
           (listType === "all" || listType === "closing_soon")));
 
-    if (!shouldFetchCategoryList && !shouldFetchApiList) {
+    if (!shouldFetchKeywordList && !shouldFetchCategoryList && !shouldFetchApiList) {
       setProducts([]);
       setErrorMessage("");
       return () => {
@@ -81,8 +94,16 @@ export default function ProductListScreen({
     setIsLoading(true);
     setErrorMessage("");
 
-    const request = shouldFetchCategoryList
-      ? mode === "auction"
+    const request = shouldFetchKeywordList
+      ? fetchIntegratedSearchResults({
+          keyword: normalizedKeyword,
+          type: searchResultType,
+          categoryId,
+          page: 0,
+          size: 20,
+        })
+      : shouldFetchCategoryList
+        ? mode === "auction"
         ? fetchAuctionsByCategory(categoryId, 0, 20)
         : fetchProductsByCategory(categoryId, 0, 20)
       : mode === "regular" && listType === "all"
@@ -97,7 +118,7 @@ export default function ProductListScreen({
       .then((nextProducts) => {
         if (!ignore) {
           setProducts(
-            shouldFetchCategoryList
+            shouldFetchKeywordList || shouldFetchCategoryList
               ? nextProducts
               : nextProducts.slice(
                   0,
@@ -112,7 +133,9 @@ export default function ProductListScreen({
           setErrorMessage(
             getErrorMessage(
               error,
-              shouldFetchCategoryList
+              shouldFetchKeywordList
+                ? "검색 결과를 불러오지 못했습니다."
+                : shouldFetchCategoryList
                 ? mode === "auction"
                   ? "카테고리 경매를 불러오지 못했습니다."
                   : "카테고리 상품을 불러오지 못했습니다."
@@ -136,7 +159,7 @@ export default function ProductListScreen({
     return () => {
       ignore = true;
     };
-  }, [categoryId, categoryName, listType, mode]);
+  }, [categoryId, categoryName, listType, mode, searchKeyword, searchResultType]);
 
   useEffect(() => {
     if (mode !== "regular") {
@@ -187,6 +210,19 @@ export default function ProductListScreen({
     );
   };
 
+  const handleProductClick = (product: any) => {
+    const isAuctionProduct =
+      product.saleType === "AUCTION" ||
+      (!searchKeyword && mode === "auction" && product.auctionId != null);
+
+    if (isAuctionProduct) {
+      onAuctionClick?.(product.auctionId ?? product.productId);
+      return;
+    }
+
+    onProductClick(product.productId);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 20 }}
@@ -228,9 +264,14 @@ export default function ProductListScreen({
             <ProductListItem
               key={`${mode}-${product.auctionId ?? product.productId}`}
               product={product}
-              mode={mode}
+              mode={
+                product.saleType === "AUCTION" ||
+                (!searchKeyword && mode === "auction" && product.auctionId != null)
+                  ? "auction"
+                  : "regular"
+              }
               themeColor={themeColor}
-              onProductClick={onProductClick}
+              onProductClick={() => handleProductClick(product)}
               initialLiked={
                 mode === "regular" && likedProductIds.has(product.productId)
               }
