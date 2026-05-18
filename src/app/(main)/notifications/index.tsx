@@ -112,6 +112,24 @@ function toUnreadTypeCountMap(
   );
 }
 
+function isNoBidAuctionNotification(notification: NotificationResponse) {
+  return (
+    notification.type === "AUCTION" &&
+    (notification.title.includes("유찰") ||
+      notification.content.includes("재등록"))
+  );
+}
+
+function appendReauctionPrompt(targetUrl: string) {
+  if (typeof window === "undefined") {
+    return targetUrl;
+  }
+
+  const url = new URL(targetUrl, window.location.origin);
+  url.searchParams.set("reauctionPrompt", "1");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export default function NotificationScreen({
   onBack,
   onChatClick,
@@ -268,10 +286,13 @@ export default function NotificationScreen({
 
     const targetUrl = notification.targetUrl?.trim();
     if (targetUrl) {
+      const resolvedTargetUrl = isNoBidAuctionNotification(notification)
+        ? appendReauctionPrompt(targetUrl)
+        : targetUrl;
       if (onTargetUrl) {
-        onTargetUrl(targetUrl);
+        onTargetUrl(resolvedTargetUrl);
       } else {
-        window.location.assign(targetUrl);
+        window.location.assign(resolvedTargetUrl);
       }
       return;
     }
