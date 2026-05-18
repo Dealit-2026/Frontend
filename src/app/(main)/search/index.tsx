@@ -1,73 +1,69 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  ChevronLeft,
-  Check,
-  ChevronRight,
-  User,
-  Camera,
   Search,
-  Home,
-  PlusCircle,
-  MessageCircle,
-  Heart,
-  Bell,
-  Filter,
-  Settings,
-  MoreVertical,
-  Send,
-  Star,
-  Clock,
-  ArrowUpRight,
-  X,
-  Trash2,
-  Eye,
-  Image as ImageIcon,
   ArrowLeft,
-  TrendingUp,
-  Sparkles,
-  Menu,
-  ShoppingBag,
-  Store,
-  Receipt,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 
-import { Screen, Tab } from "../../../types/index";
-import { ExploreIcon } from "../../../components/common/ExploreIcon";
+import { getErrorMessage } from "@/services/apiError";
+import { fetchSearchCategoryOptionsByMode } from "@/services/product/search/service";
+import type { SearchCategoryViewModel } from "@/services/product/search/types";
+
+export interface SelectedSearchCategory {
+  id: number;
+  name: string;
+}
 
 export default function SearchScreen({
   onBack,
-  onSearch,
+  onCategorySelect,
   onSearchDetailClick,
   onRecentClick,
-  themeColor,
+  mode = "regular",
 }: {
   onBack: () => void;
-  onSearch: (keyword: string) => void;
+  onCategorySelect: (category: SelectedSearchCategory) => void;
   onSearchDetailClick: () => void;
   onRecentClick: () => void;
-  themeColor: string;
+  mode?: "regular" | "auction";
+  themeColor?: string;
   key?: string;
 }) {
-  const categories = [
-    { name: "디지털기기", icon: "💻" },
-    { name: "생활가전", icon: "📺" },
-    { name: "가구/인테리어", icon: "🪑" },
-    { name: "유아동", icon: "👶" },
-    { name: "생활/가공식품", icon: "🍎" },
-    { name: "유아도서", icon: "📚" },
-    { name: "스포츠/레저", icon: "⚽" },
-    { name: "여성잡화", icon: "👜" },
-    { name: "여성의류", icon: "👗" },
-    { name: "남성패션/잡화", icon: "👔" },
-    { name: "게임/취미", icon: "🎮" },
-    { name: "뷰티/미용", icon: "💄" },
-    { name: "반려동물용품", icon: "🐶" },
-    { name: "도서/티켓/음반", icon: "💿" },
-    { name: "식물", icon: "🌿" },
-    { name: "기타", icon: "📦" },
-  ];
+  const [categories, setCategories] = useState<SearchCategoryViewModel[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [categoryLoadError, setCategoryLoadError] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+
+    setIsLoadingCategories(true);
+    setCategoryLoadError("");
+
+    fetchSearchCategoryOptionsByMode(mode)
+      .then((nextCategories) => {
+        if (!ignore) {
+          setCategories(nextCategories);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) {
+          setCategories([]);
+          setCategoryLoadError(
+            getErrorMessage(error, "검색 카테고리를 불러오지 못했습니다."),
+          );
+        }
+      })
+      .finally(() => {
+        if (!ignore) {
+          setIsLoadingCategories(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [mode]);
 
   return (
     <motion.div
@@ -105,23 +101,49 @@ export default function SearchScreen({
           <span className="text-gray-400 text-sm">검색어를 입력해 주세요.</span>
         </div>
 
-        {/* Category Section */}
         <div className="space-y-4">
           <h3 className="font-bold text-gray-900 text-lg">카테고리</h3>
-          <div className="grid grid-cols-4 gap-3">
-            {categories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => onSearch(cat.name)}
-                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-all active:scale-95"
-              >
-                <span className="text-2xl mb-2">{cat.icon}</span>
-                <span className="text-[10px] font-bold text-gray-700 text-center leading-tight">
-                  {cat.name}
-                </span>
-              </button>
-            ))}
-          </div>
+
+          {isLoadingCategories ? (
+            <div className="grid grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-[76px] rounded-2xl bg-gray-50 animate-pulse"
+                />
+              ))}
+            </div>
+          ) : categoryLoadError ? (
+            <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-500">
+              {categoryLoadError}
+            </div>
+          ) : (
+            <div className="grid grid-cols-4 gap-3">
+              {categories.map((category) => (
+                <button
+                  key={`${category.fromApi ? "api" : "mock"}-${category.categoryId}`}
+                  type="button"
+                  onClick={() =>
+                    onCategorySelect({
+                      id: category.categoryId,
+                      name: category.name,
+                    })
+                  }
+                  disabled={!category.enabled}
+                  className={`flex flex-col items-center justify-center py-2.5 rounded-xl border transition-all duration-200 ${
+                    category.enabled
+                      ? "bg-gray-50 border-transparent text-gray-500 hover:bg-gray-100"
+                      : "bg-gray-50 border-transparent text-gray-500 opacity-45 cursor-not-allowed"
+                  }`}
+                >
+                  <span className="text-xl mb-1">{category.icon}</span>
+                  <span className="text-[9px] font-bold text-gray-600">
+                    {category.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

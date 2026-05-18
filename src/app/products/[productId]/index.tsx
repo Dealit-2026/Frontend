@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
-import { getErrorMessage } from "@/services/apiError";
+import { ApiRequestError, getErrorMessage } from "@/services/apiError";
 import {
   fetchAuctionDetail,
   getAuctionDisplayCurrentPrice,
@@ -30,9 +30,9 @@ import type { AuctionEventStreamEvent } from "@/services/events/types";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
 import {
-  addRegularWishlist,
+  addWishlist,
   fetchRegularWishlist,
-  removeRegularWishlist,
+  removeWishlist,
 } from "@/services/wishlist/service";
 
 type AuctionStatus =
@@ -43,6 +43,27 @@ type AuctionStatus =
   | "ENDED"
   | "NO_BID"
   | "SUCCESSFUL_BID";
+
+function getBidErrorMessage(error: unknown) {
+  if (error instanceof ApiRequestError) {
+    switch (error.code) {
+      case "AUCTION_ENDED":
+        return "경매가 종료되어 입찰할 수 없습니다.";
+      case "BID_PRICE_BELOW_MINIMUM":
+        return "최소 입찰가 이상으로 입력해주세요.";
+      case "BID_PRICE_CHANGED":
+        return "최고 입찰가가 변경되었습니다. 다시 확인 후 입찰해주세요.";
+      case "INSUFFICIENT_BALANCE":
+        return "딜릿머니 잔액이 부족합니다.";
+      case "EMAIL_NOT_VERIFIED":
+        return "이메일 인증 후 입찰할 수 있습니다.";
+      default:
+        break;
+    }
+  }
+
+  return getErrorMessage(error, "입찰에 실패했습니다.");
+}
 
 interface ProductDetailScreenProps {
   productId: number | null;
@@ -256,8 +277,14 @@ export default function ProductDetailScreen({
   }, [resolvedFavoriteCount]);
 
   useEffect(() => {
+    if (!isRegular && auctionDetail) {
+      setIsLiked(auctionDetail.liked);
+      setFavoriteCount(auctionDetail.favoriteCount);
+    }
+  }, [auctionDetail, isRegular]);
+
+  useEffect(() => {
     if (!isRegular || productId == null) {
-      setIsLiked(false);
       return;
     }
 
@@ -470,18 +497,20 @@ export default function ProductDetailScreen({
         productImageUrl: getAuctionMainImageUrl(nextAuctionDetail),
       });
     } catch (error) {
-      showToast(getErrorMessage(error, "입찰에 실패했습니다."));
+      showToast(getBidErrorMessage(error));
     } finally {
       setIsBidSubmitting(false);
     }
   };
 
   const handleWishlistClick = async () => {
-    if (!isRegular || productId == null || isWishlistSubmitting) {
+    const wishlistProductId = isRegular ? productId : auctionDetail?.productId;
+
+    if (wishlistProductId == null || isWishlistSubmitting) {
       return;
     }
 
-    if (!productData?.canFavorite && !isLiked) {
+    if (isRegular && !productData?.canFavorite && !isLiked) {
       showToast("찜할 수 없는 상품입니다.");
       return;
     }
@@ -490,8 +519,8 @@ export default function ProductDetailScreen({
 
     try {
       const result = isLiked
-        ? await removeRegularWishlist(productId)
-        : await addRegularWishlist(productId);
+        ? await removeWishlist(wishlistProductId)
+        : await addWishlist(wishlistProductId);
 
       setIsLiked(result.liked);
       setFavoriteCount(result.favoriteCount);
@@ -549,20 +578,18 @@ export default function ProductDetailScreen({
           <ChevronLeft size={24} />
         </button>
         <div className="flex space-x-2">
-          {isRegular && (
-            <button
-              onClick={handleWishlistClick}
-              disabled={isWishlistSubmitting}
-              className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
-              aria-label={isLiked ? "찜 취소" : "찜 추가"}
-            >
-              <Heart
-                size={20}
-                fill={isLiked ? "#FF3B30" : "none"}
-                color={isLiked ? "#FF3B30" : "currentColor"}
-              />
-            </button>
-          )}
+          <button
+            onClick={handleWishlistClick}
+            disabled={isWishlistSubmitting}
+            className="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow-sm disabled:opacity-60"
+            aria-label={isLiked ? "찜 취소" : "찜 추가"}
+          >
+            <Heart
+              size={20}
+              fill={isLiked ? "#FF3B30" : "none"}
+              color={isLiked ? "#FF3B30" : "currentColor"}
+            />
+          </button>
           <div className="relative">
             <button
               onClick={() => setShowMoreMenu(!showMoreMenu)}

@@ -11,6 +11,7 @@ export default function WishlistPage() {
     <WishlistScreen
       onBack={() => router.back()}
       onProductClick={(id) => router.push(`/products/${id}`)}
+      onAuctionClick={(id) => router.push(`/auctions/${id}`)}
       themeColor="#98E446"
     />
   );

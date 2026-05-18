@@ -7,5 +7,7 @@ import SalesHistoryScreen from "./index";
 export default function SalesHistoryPage() {
   const router = useRouter();
 
-  return <SalesHistoryScreen onBack={() => router.back()} themeColor="#98E446" />;
+  return (
+    <SalesHistoryScreen onBack={() => router.back()} themeColor="#98E446" />
+  );
 }

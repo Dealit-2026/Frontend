@@ -1,5 +1,6 @@
 import * as wishlistApi from "@/services/wishlist/api";
 import type {
+  AuctionWishlistItemResponse,
   WishlistItemResponse,
   WishlistItemViewModel,
 } from "@/services/wishlist/types";
@@ -15,6 +16,8 @@ function toWishlistItemViewModel(
   item: WishlistItemResponse,
 ): WishlistItemViewModel {
   return {
+    itemType: "REGULAR",
+    auctionId: null,
     productId: item.productId,
     name: item.name,
     status: item.status,
@@ -24,12 +27,38 @@ function toWishlistItemViewModel(
     location: item.location ?? DEFAULT_LOCATION_LABEL,
     favoriteCount: item.favoriteCount,
     likedAt: item.likedAt,
+    metaLabel: "일반 상품",
   };
 }
 
-export async function fetchRegularWishlist(): Promise<
-  WishlistItemViewModel[]
-> {
+function toAuctionWishlistItemViewModel(
+  item: AuctionWishlistItemResponse,
+): WishlistItemViewModel {
+  return {
+    itemType: "AUCTION",
+    auctionId: item.auctionId,
+    productId: item.productId,
+    name: item.name,
+    status: item.auctionStatus,
+    thumbnailUrl: item.thumbnailUrl,
+    priceLabel: formatPrice(item.currentPrice),
+    categoryName: item.categoryName ?? DEFAULT_CATEGORY_LABEL,
+    location: item.location ?? DEFAULT_LOCATION_LABEL,
+    favoriteCount: item.favoriteCount,
+    likedAt: item.likedAt,
+    metaLabel: `경매 상품 · 입찰 ${item.bidCount}명`,
+  };
+}
+
+function sortByLikedAtDesc(
+  items: WishlistItemViewModel[],
+): WishlistItemViewModel[] {
+  return [...items].sort(
+    (a, b) => new Date(b.likedAt).getTime() - new Date(a.likedAt).getTime(),
+  );
+}
+
+export async function fetchRegularWishlist(): Promise<WishlistItemViewModel[]> {
   const response = await wishlistApi.getMyWishlist();
 
   return response.content
@@ -37,10 +66,33 @@ export async function fetchRegularWishlist(): Promise<
     .map(toWishlistItemViewModel);
 }
 
-export async function addRegularWishlist(productId: number) {
+export async function fetchAuctionWishlist(): Promise<WishlistItemViewModel[]> {
+  const response = await wishlistApi.getMyAuctionWishlist();
+
+  return response.content.map(toAuctionWishlistItemViewModel);
+}
+
+export async function fetchMyWishlist(): Promise<WishlistItemViewModel[]> {
+  const [regularItems, auctionItems] = await Promise.all([
+    fetchRegularWishlist(),
+    fetchAuctionWishlist(),
+  ]);
+
+  return sortByLikedAtDesc([...regularItems, ...auctionItems]);
+}
+
+export async function addWishlist(productId: number) {
   return wishlistApi.addWishlist(productId);
 }
 
-export async function removeRegularWishlist(productId: number) {
+export async function removeWishlist(productId: number) {
   return wishlistApi.removeWishlist(productId);
+}
+
+export async function addRegularWishlist(productId: number) {
+  return addWishlist(productId);
+}
+
+export async function removeRegularWishlist(productId: number) {
+  return removeWishlist(productId);
 }

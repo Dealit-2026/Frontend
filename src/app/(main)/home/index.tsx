@@ -46,6 +46,7 @@ import { fetchPopularRegularProducts } from "@/services/product/popular/service"
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import type { PopularProductItemViewModel } from "@/services/product/popular/types";
 import { useEventStream } from "@/services/events/EventStreamProvider";
+import { fetchRegularWishlist } from "@/services/wishlist/service";
 
 type PopularHomeItem = PopularProductItemViewModel | AuctionListItemViewModel;
 
@@ -95,6 +96,9 @@ export default function HomeScreen({
   const [hotProducts, setHotProducts] = useState<any[]>([]);
   const [isHotLoading, setIsHotLoading] = useState(false);
   const [hotErrorMessage, setHotErrorMessage] = useState("");
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const banners =
     mode === "regular"
       ? [
@@ -230,6 +234,65 @@ export default function HomeScreen({
       ignore = true;
     };
   }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "regular") {
+      setLikedProductIds(new Set());
+      return;
+    }
+
+    let ignore = false;
+
+    fetchRegularWishlist()
+      .then((items) => {
+        if (!ignore) {
+          setLikedProductIds(new Set(items.map((item) => item.productId)));
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setLikedProductIds(new Set());
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [mode]);
+
+  const handleWishlistChange = (
+    productId: number,
+    liked: boolean,
+    favoriteCount: number,
+  ) => {
+    setLikedProductIds((current) => {
+      const next = new Set(current);
+
+      if (liked) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+
+      return next;
+    });
+
+    const applyFavoriteCount = <T extends { productId: number; favoriteCount?: number }>(
+      item: T,
+    ): T =>
+      item.productId === productId ? { ...item, favoriteCount } : item;
+
+    setHotProducts((currentProducts) =>
+      currentProducts.map(applyFavoriteCount),
+    );
+    setPopularProducts((currentProducts) =>
+      currentProducts.map((item) =>
+        !isAuctionHomeItem(item) && item.productId === productId
+          ? { ...item, favoriteCount }
+          : item,
+      ),
+    );
+  };
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -582,6 +645,10 @@ export default function HomeScreen({
                     mode={mode}
                     themeColor={themeColor}
                     onProductClick={onProductClick}
+                    initialLiked={
+                      mode === "regular" && likedProductIds.has(p.productId)
+                    }
+                    onWishlistChange={handleWishlistChange}
                   />
                 ))}
               </div>

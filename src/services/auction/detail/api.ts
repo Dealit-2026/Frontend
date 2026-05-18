@@ -1,4 +1,4 @@
-import { ApiRequestError, getApiErrorMessage } from "@/services/apiError";
+import { ApiRequestError, getApiErrorDetail } from "@/services/apiError";
 import {
   getAuthorizationHeaders,
   handleUnauthorizedAccess,
@@ -20,10 +20,9 @@ async function throwProtectedApiError(
     handleUnauthorizedAccess();
   }
 
-  throw new ApiRequestError(
-    await getApiErrorMessage(response, fallbackMessage),
-    response.status,
-  );
+  const detail = await getApiErrorDetail(response, fallbackMessage);
+
+  throw new ApiRequestError(detail.message, response.status, detail.code);
 }
 
 export async function getAuctionDetail(

@@ -12,29 +12,46 @@ import {
 import { getErrorMessage } from "@/services/apiError";
 import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
+import {
+  fetchIntegratedSearchResults,
+  fetchAuctionsByCategory,
+  fetchProductsByCategory,
+} from "@/services/product/search/service";
+import type { UnifiedSearchResultType } from "@/services/product/search/types";
+import { fetchRegularWishlist } from "@/services/wishlist/service";
 
 type ProductListType = "all" | "closing_soon" | "recent";
 
 export default function ProductListScreen({
   listType,
+  categoryId,
   categoryName,
+  searchKeyword,
+  searchResultType,
   onBack,
   onProductClick,
+  onAuctionClick,
   onSearchClick,
   themeColor,
   mode,
 }: {
   listType: ProductListType;
+  categoryId?: number | null;
   categoryName: string | null;
+  searchKeyword?: string | null;
+  searchResultType?: UnifiedSearchResultType | null;
   onBack: () => void;
   onProductClick: (id: number) => void;
+  onAuctionClick?: (id: number) => void;
   onSearchClick: () => void;
   themeColor: string;
   mode: "regular" | "auction";
   key?: string | number;
 }) {
   const title =
-    categoryName ||
+    searchKeyword
+      ? `"${searchKeyword}" 검색 결과`
+      : categoryName ||
     (mode === "auction" && listType === "all"
       ? "실시간 인기 경매"
       : mode === "auction" && listType === "closing_soon"
@@ -47,17 +64,26 @@ export default function ProductListScreen({
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [likedProductIds, setLikedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     let ignore = false;
+    const normalizedKeyword = searchKeyword?.trim();
+    const shouldFetchKeywordList = Boolean(normalizedKeyword);
+    const shouldFetchCategoryList =
+      !shouldFetchKeywordList && typeof categoryId === "number" && categoryId > 0;
     const shouldFetchApiList =
+      !shouldFetchKeywordList &&
+      !shouldFetchCategoryList &&
       !categoryName &&
       ((mode === "regular" &&
         (listType === "all" || listType === "closing_soon")) ||
         (mode === "auction" &&
           (listType === "all" || listType === "closing_soon")));
 
-    if (!shouldFetchApiList) {
+    if (!shouldFetchKeywordList && !shouldFetchCategoryList && !shouldFetchApiList) {
       setProducts([]);
       setErrorMessage("");
       return () => {
@@ -68,8 +94,19 @@ export default function ProductListScreen({
     setIsLoading(true);
     setErrorMessage("");
 
-    const request =
-      mode === "regular" && listType === "all"
+    const request = shouldFetchKeywordList
+      ? fetchIntegratedSearchResults({
+          keyword: normalizedKeyword,
+          type: searchResultType,
+          categoryId,
+          page: 0,
+          size: 20,
+        })
+      : shouldFetchCategoryList
+        ? mode === "auction"
+        ? fetchAuctionsByCategory(categoryId, 0, 20)
+        : fetchProductsByCategory(categoryId, 0, 20)
+      : mode === "regular" && listType === "all"
         ? fetchPopularRegularProducts(10)
         : mode === "regular"
           ? fetchHotRegularProducts(8)
@@ -81,10 +118,12 @@ export default function ProductListScreen({
       .then((nextProducts) => {
         if (!ignore) {
           setProducts(
-            nextProducts.slice(
-              0,
-              mode === "regular" && listType === "all" ? 10 : 8,
-            ),
+            shouldFetchKeywordList || shouldFetchCategoryList
+              ? nextProducts
+              : nextProducts.slice(
+                  0,
+                  mode === "regular" && listType === "all" ? 10 : 8,
+                ),
           );
         }
       })
@@ -94,13 +133,19 @@ export default function ProductListScreen({
           setErrorMessage(
             getErrorMessage(
               error,
-              mode === "regular" && listType === "all"
-                ? "실시간 인기 상품을 불러오지 못했습니다."
-                : mode === "regular"
-                  ? "핫한 상품을 불러오지 못했습니다."
-                  : listType === "all"
-                    ? "실시간 인기 경매를 불러오지 못했습니다."
-                    : "마감 임박 경매를 불러오지 못했습니다.",
+              shouldFetchKeywordList
+                ? "검색 결과를 불러오지 못했습니다."
+                : shouldFetchCategoryList
+                ? mode === "auction"
+                  ? "카테고리 경매를 불러오지 못했습니다."
+                  : "카테고리 상품을 불러오지 못했습니다."
+                : mode === "regular" && listType === "all"
+                  ? "실시간 인기 상품을 불러오지 못했습니다."
+                  : mode === "regular"
+                    ? "핫한 상품을 불러오지 못했습니다."
+                    : listType === "all"
+                      ? "실시간 인기 경매를 불러오지 못했습니다."
+                      : "마감 임박 경매를 불러오지 못했습니다.",
             ),
           );
         }
@@ -114,7 +159,69 @@ export default function ProductListScreen({
     return () => {
       ignore = true;
     };
-  }, [categoryName, listType, mode]);
+  }, [categoryId, categoryName, listType, mode, searchKeyword, searchResultType]);
+
+  useEffect(() => {
+    if (mode !== "regular") {
+      setLikedProductIds(new Set());
+      return;
+    }
+
+    let ignore = false;
+
+    fetchRegularWishlist()
+      .then((items) => {
+        if (!ignore) {
+          setLikedProductIds(new Set(items.map((item) => item.productId)));
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setLikedProductIds(new Set());
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [mode]);
+
+  const handleWishlistChange = (
+    productId: number,
+    liked: boolean,
+    favoriteCount: number,
+  ) => {
+    setLikedProductIds((current) => {
+      const next = new Set(current);
+
+      if (liked) {
+        next.add(productId);
+      } else {
+        next.delete(productId);
+      }
+
+      return next;
+    });
+
+    setProducts((currentProducts) =>
+      currentProducts.map((item) =>
+        item.productId === productId ? { ...item, favoriteCount } : item,
+      ),
+    );
+  };
+
+  const handleProductClick = (product: any) => {
+    const isAuctionProduct =
+      product.saleType === "AUCTION" ||
+      (!searchKeyword && mode === "auction" && product.auctionId != null);
+
+    if (isAuctionProduct) {
+      onAuctionClick?.(product.auctionId ?? product.productId);
+      return;
+    }
+
+    onProductClick(product.productId);
+  };
 
   return (
     <motion.div
@@ -157,9 +264,18 @@ export default function ProductListScreen({
             <ProductListItem
               key={`${mode}-${product.auctionId ?? product.productId}`}
               product={product}
-              mode={mode}
+              mode={
+                product.saleType === "AUCTION" ||
+                (!searchKeyword && mode === "auction" && product.auctionId != null)
+                  ? "auction"
+                  : "regular"
+              }
               themeColor={themeColor}
-              onProductClick={onProductClick}
+              onProductClick={() => handleProductClick(product)}
+              initialLiked={
+                mode === "regular" && likedProductIds.has(product.productId)
+              }
+              onWishlistChange={handleWishlistChange}
             />
           ))
         ) : (

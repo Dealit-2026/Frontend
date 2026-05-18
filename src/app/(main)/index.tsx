@@ -37,7 +37,7 @@ import { Screen, Tab } from '../../types/index';
 import { ExploreIcon } from '../../components/common/ExploreIcon';
 import AuctionRegisterScreen from '../products/register/AuctionRegisterScreen';
 import HomeScreen from './home';
-import SearchScreen from './search';
+import SearchScreen, { type SelectedSearchCategory } from './search';
 import RegularRegisterScreen from '../products/register/RegularRegisterScreen';
 import ChatListScreen from '../chats';
 import MyPageScreen from './mypage';
@@ -73,14 +73,14 @@ export default function MainLayout({
   activeTab: Tab; 
   onTabChange: (tab: Tab) => void;
   onProductClick: (id: number) => void;
-  onProductListClick: (type: 'all' | 'closing_soon' | 'recent', category?: string) => void;
+  onProductListClick: (type: 'all' | 'closing_soon' | 'recent', category?: SelectedSearchCategory | string) => void;
   onNotificationClick: () => void;
   onReviewClick: () => void;
   onSalesManagementClick: () => void;
   onNotificationSettingsClick: () => void;
   onChatClick: (id: number) => void;
   onCategoryResetClick: () => void;
-  onSearchClick: () => void;
+  onSearchClick: (scope?: 'home' | 'explore') => void;
   onProfileEditClick: () => void;
   onLocationEditClick: () => void;
   onWishlistClick: () => void;
@@ -118,7 +118,7 @@ export default function MainLayout({
             onProductListClick={onProductListClick}
             onNotificationClick={onNotificationClick} 
             onCategoryResetClick={onCategoryResetClick}
-            onSearchClick={onSearchClick}
+            onSearchClick={() => onSearchClick('home')}
             onWishlistClick={onWishlistClick}
             mode={themeMode}
             onModeChange={onThemeChange}
@@ -128,11 +128,12 @@ export default function MainLayout({
         {displayTab === 'search' && (
           <SearchScreen 
             onBack={() => onTabChange('home')} 
-            onSearch={(keyword) => {
-              onProductListClick('all', keyword);
+            onCategorySelect={(category) => {
+              onProductListClick('all', category);
             }}
-            onSearchDetailClick={onSearchClick}
+            onSearchDetailClick={() => onSearchClick('explore')}
             onRecentClick={() => onProductListClick('recent')}
+            mode={themeMode}
             themeColor={themeColor} 
           />
         )}

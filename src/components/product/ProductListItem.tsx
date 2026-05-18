@@ -23,11 +23,13 @@ export default function ProductListItem({
   onProductClick,
   initialLiked = false,
   onUnlike,
+  onWishlistChange,
 }: {
   i?: number;
   product?: {
     productId: number;
     auctionId?: number;
+    saleType?: "REGULAR" | "AUCTION";
     name?: string;
     thumbnailUrl?: string | null;
     priceLabel?: string;
@@ -52,6 +54,7 @@ export default function ProductListItem({
   onProductClick: (id: number) => void;
   initialLiked?: boolean;
   onUnlike?: () => void;
+  onWishlistChange?: (productId: number, liked: boolean, favoriteCount: number) => void;
   key?: string | number;
 }) {
   const useData = product !== undefined && product !== null;
@@ -79,6 +82,10 @@ export default function ProductListItem({
   const [displayFavoriteCount, setDisplayFavoriteCount] = useState(
     product?.favoriteCount ?? 132,
   );
+
+  useEffect(() => {
+    setIsLiked(initialLiked);
+  }, [initialLiked]);
 
   useEffect(() => {
     if (useData) {
@@ -201,6 +208,9 @@ export default function ProductListItem({
 
       setIsLiked(result.liked);
       setDisplayFavoriteCount(result.favoriteCount);
+      onWishlistChange?.(productId, result.liked, result.favoriteCount);
+    } catch {
+      // Keep the card stable when the backend rejects the toggle.
     } finally {
       setIsWishlistSubmitting(false);
     }
@@ -231,7 +241,8 @@ export default function ProductListItem({
             <h4 className="font-bold text-sm truncate text-gray-800">{name}</h4>
             <button
               onClick={handleLikeClick}
-              className="p-1"
+              disabled={isWishlistSubmitting}
+              className="p-1 disabled:opacity-50"
               aria-label="찜하기"
             >
               <Heart
