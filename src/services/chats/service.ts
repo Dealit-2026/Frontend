@@ -39,6 +39,20 @@ import type {
  * 내부 유틸
  * ========================= */
 
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
+
+function resolveChatProductImageUrl(
+  imageUrl: string | null | undefined,
+): string | null {
+  if (!imageUrl) return null;
+  // data:, blob:, http(s):// 은 그대로 사용
+  if (/^(data:|blob:|https?:\/\/)/.test(imageUrl)) return imageUrl;
+  // 상대 경로이면 API_BASE_URL을 붙임
+  if (imageUrl.startsWith("/")) return `${API_BASE_URL}${imageUrl}`;
+  return imageUrl;
+}
+
 function toProductTypeLabel(type: ChatRoomType): "Deal it!" | "일반 판매" {
   return type === "AUCTION" ? "Deal it!" : "일반 판매";
 }
@@ -125,7 +139,7 @@ function toRoomDetailVM(response: CreateChatRoomResponse): ChatRoomDetailVM {
     productId: response.product.productId,
     auctionId: response.product.auctionId ?? null,
     productName: response.product.name ?? `상품 #${response.product.productId}`,
-    productImageUrl: response.product.thumbnailUrl ?? null,
+    productImageUrl: resolveChatProductImageUrl(response.product.thumbnailUrl),
     productStatusLabel:
       response.chatType === "AUCTION" ? "Deal it! 거래" : "거래 중",
     chatType: response.chatType,
