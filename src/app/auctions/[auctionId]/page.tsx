@@ -144,6 +144,12 @@ export default function AuctionDetailPage() {
                   >
                     게시글 수정하기
                   </button>
+                  <button
+                    onClick={() => {}}
+                    className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-gray-500 transition-colors hover:bg-gray-200"
+                  >
+                    재등록 안 하기
+                  </button>
                 </div>
               </div>
             </div>
