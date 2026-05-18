@@ -1253,10 +1253,6 @@ export default function App() {
                 key="chat_room"
                 chatId={selectedChatId}
                 onBack={() => navigateTo("main")}
-                onProductClick={(id) => {
-                  setSelectedProductId(id);
-                  navigateTo("product_detail");
-                }}
                 themeColor={themeColor}
               />
             )}
