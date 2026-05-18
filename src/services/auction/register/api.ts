@@ -12,6 +12,8 @@ import {
   RecommendCategoryResponse,
   RecommendPriceRequest,
   RecommendPriceResponse,
+  ReauctionPreviewResponse,
+  ReauctionResponse,
   SaveAuctionDraftRequest,
   SaveAuctionDraftResponse,
   UpdateAuctionRequest,
@@ -194,4 +196,60 @@ export async function patchAuction(
   }
 
   return response.json();
+}
+
+export async function getReauctionPreview(
+  auctionId: number,
+): Promise<ReauctionPreviewResponse> {
+  const response = await fetch(
+    `${AUCTIONS_API_BASE}/${auctionId}/reauction-preview`,
+    {
+      method: "GET",
+      headers: getAuthorizationHeaders(),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    await throwProtectedApiError(
+      response,
+      "재경매 정보를 불러오지 못했습니다.",
+    );
+  }
+
+  return response.json();
+}
+
+export async function postReauction(
+  auctionId: number,
+  payload: CreateAuctionRequest,
+): Promise<ReauctionResponse> {
+  const response = await fetch(`${AUCTIONS_API_BASE}/${auctionId}/reauction`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthorizationHeaders(),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "재경매 등록에 실패했습니다.");
+  }
+
+  return response.json();
+}
+
+export async function patchDeclineReauction(auctionId: number): Promise<void> {
+  const response = await fetch(
+    `${AUCTIONS_API_BASE}/${auctionId}/reauction/decline`,
+    {
+      method: "PATCH",
+      headers: getAuthorizationHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    await throwProtectedApiError(response, "재등록 안 하기에 실패했습니다.");
+  }
 }
