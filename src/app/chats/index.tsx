@@ -329,18 +329,12 @@ export default function ChatListScreen({
                       {chat.productName}
                     </span>
                     <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        chat.productTypeLabel === "Deal it!"
-                          ? "bg-red-50 text-red-500"
-                          : ""
-                      }`}
+                      className="text-[10px] font-bold px-1.5 py-0.5 rounded"
                       style={
-                        chat.productTypeLabel !== "Deal it!"
-                          ? {
-                              backgroundColor: `${themeColor}15`,
-                              color: themeColor,
-                            }
-                          : undefined
+                        chat.chatType === "AUCTION" ||
+                        chat.productTypeLabel === "Deal it!"
+                          ? { backgroundColor: "#FEF2F2", color: "#EF4444" }
+                          : { backgroundColor: "#F1FBE8", color: "#65C91F" }
                       }
                     >
                       {chat.productTypeLabel}
