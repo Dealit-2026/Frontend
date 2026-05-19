@@ -54,6 +54,8 @@ type BidRankingItem = {
   bids: AuctionBidHistoryItem[];
 };
 
+const EMPTY_BIDS: AuctionBidHistoryItem[] = [];
+
 function formatBidTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -79,8 +81,8 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
     () => new Set(),
   );
   const { latestAuctionEvent } = useEventStream();
-  const bids = bidHistory?.bids ?? [];
-  const bidRankings = buildBidRankings(bids);
+  const bids = bidHistory?.bids ?? EMPTY_BIDS;
+  const bidRankings = React.useMemo(() => buildBidRankings(bids), [bids]);
   const currentDisplayPrice = bidHistory?.currentPrice ?? getAuctionDisplayCurrentPrice(auctionDetail);
   const bidCount = bidHistory?.bidCount ?? auctionDetail?.bidCount ?? 0;
   const priceHelperText = bidCount > 0 ? "현재 최고 입찰가" : "입찰 기록 없음";
