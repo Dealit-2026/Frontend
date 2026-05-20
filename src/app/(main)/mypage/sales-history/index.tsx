@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   Check,
@@ -46,6 +47,7 @@ export default function SalesHistoryScreen({
   key?: string;
 }) {
   console.log("[SH index] render");
+  const router = useRouter();
   const dedupeById = (items: any[]) =>
     Array.from(new Map(items.map((item) => [item.id, item])).values());
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -430,7 +432,10 @@ export default function SalesHistoryScreen({
               {getSaleStatusGuide(sale.status)}
             </p>
             <button
-              onClick={() => setSelectedItem({ ...sale, history: [] })}
+              onClick={() => {
+                setSelectedItem(null);
+                router.push(`/mypage/sales-history/${sale.id}/receipt`);
+              }}
               className="w-full mt-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 text-sm font-medium rounded-lg transition-colors flex items-center justify-center space-x-1"
             >
               <span>자세히 보기</span>
