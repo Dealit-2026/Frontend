@@ -8,6 +8,7 @@ import {
   getAuctionCategories,
   recommendAuctionPrice,
   registerAuction,
+  reauctionAuction,
   saveAuctionDraft,
   updateAuction,
   uploadAuctionImage,
@@ -24,11 +25,15 @@ import {
 type RegisterScreenProps = ComponentProps<typeof RegisterScreen>;
 
 export default function AuctionRegisterScreen(
-  props: Omit<RegisterScreenProps, "getCategories" | "servicesByType">,
+  props: Omit<RegisterScreenProps, "getCategories" | "servicesByType"> & {
+    reauctionSourceAuctionId?: number;
+  },
 ) {
+  const { reauctionSourceAuctionId, ...screenProps } = props;
+
   return (
     <RegisterScreen
-      {...props}
+      {...screenProps}
       getCategories={getAuctionCategories}
       mode="auction"
       servicesByType={{
@@ -47,7 +52,9 @@ export default function AuctionRegisterScreen(
           deleteImage: deleteAuctionImage,
           saveDraft: saveAuctionDraft,
           recommendPrice: recommendAuctionPrice,
-          register: registerAuction,
+          register: reauctionSourceAuctionId
+            ? (draft) => reauctionAuction(reauctionSourceAuctionId, draft)
+            : registerAuction,
           update: (draft, initialData) =>
             updateAuction(initialData.auctionId, draft),
         },

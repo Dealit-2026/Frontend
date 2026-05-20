@@ -7,6 +7,8 @@ import type {
   CreateAuctionRequest,
   ProductImagePayload,
   ProductSaleType,
+  ReauctionPreviewResponse,
+  ReauctionResponse,
   RecommendCategoryRequest,
   RecommendPriceRequest,
   SaleType,
@@ -127,7 +129,7 @@ export function createDraft(
       ...createDefaultAuctionForm(),
       ...draft.auction,
       startPrice,
-      bidUnit: calculateBidUnit(startPrice),
+      bidUnit: draft.auction?.bidUnit ?? calculateBidUnit(startPrice),
       durationDays:
         draft.auction?.durationDays ?? createDefaultAuctionForm().durationDays,
     },
@@ -165,6 +167,7 @@ export function toProductImagePayload(
 // Number 변환과 nullable 처리는 여기서 수행한다.
 export function buildCreateAuctionRequest(
   draft: AuctionRegisterDraft,
+  options?: { preserveSourceAuctionPeriod?: boolean },
 ): CreateAuctionRequest {
   return {
     name: draft.name,
@@ -181,7 +184,9 @@ export function buildCreateAuctionRequest(
     minimumBidAmount:
       draft.saleType === "auction" ? Number(draft.auction.bidUnit || 0) : null,
     auctionDurationDays:
-      draft.saleType === "auction" ? draft.auction.durationDays : null,
+      draft.saleType === "auction" && !options?.preserveSourceAuctionPeriod
+        ? draft.auction.durationDays
+        : null,
     allowOffer: draft.allowOffer,
     images: normalizeImagePayload(draft.images),
     location: draft.location,
@@ -283,6 +288,51 @@ export async function updateAuction(
   draft: AuctionRegisterDraft,
 ) {
   return auctionApi.patchAuction(auctionId, buildUpdateAuctionRequest(draft));
+}
+
+export async function getReauctionPreview(auctionId: number) {
+  return auctionApi.getReauctionPreview(auctionId);
+}
+
+export async function reauctionAuction(
+  auctionId: number,
+  draft: AuctionRegisterDraft,
+  options?: { preserveSourceAuctionPeriod?: boolean },
+): Promise<ReauctionResponse> {
+  return auctionApi.postReauction(
+    auctionId,
+    buildCreateAuctionRequest(draft, options),
+  );
+}
+
+export async function declineReauction(auctionId: number) {
+  return auctionApi.patchDeclineReauction(auctionId);
+}
+
+export function createDraftFromReauctionPreview(
+  preview: ReauctionPreviewResponse,
+): AuctionRegisterDraft {
+  const startPrice = String(preview.startPrice ?? "");
+  const bidUnit = String(
+    preview.minimumBidAmount ?? calculateBidUnit(startPrice),
+  );
+
+  return createDraft({
+    saleType: "auction",
+    name: preview.name,
+    description: preview.description,
+    categoryId: preview.categoryId,
+    categoryName: preview.categoryName ?? "",
+    price: startPrice,
+    startPrice,
+    location: preview.location,
+    images: preview.images,
+    auction: {
+      startPrice,
+      bidUnit,
+      durationDays: preview.auctionDurationDays || 3,
+    },
+  });
 }
 
 // 공용 등록 화면에서 사용하는 상품 등록용 함수명.

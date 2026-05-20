@@ -26,10 +26,11 @@ import { fetchMyLocationForm } from "@/services/mypage/service";
 
 export interface RegisterScreenProps {
   onBack?: () => void;
-  onComplete?: () => void;
+  onComplete?: (result?: unknown) => void;
   themeColor?: string;
   mode?: SaleType;
   initialData?: any;
+  submitMode?: "create" | "edit";
   getCategories: () => Promise<ProductCategory[]>;
   servicesByType: Record<SaleType, RegisterScreenServices>;
 }
@@ -141,6 +142,7 @@ export default function RegisterScreen({
   onComplete,
   mode = "regular",
   initialData,
+  submitMode,
   getCategories,
   servicesByType,
 }: RegisterScreenProps) {
@@ -184,7 +186,7 @@ export default function RegisterScreen({
       ...defaultAuction,
       ...initialData?.auction,
       startPrice: initialPriceValue,
-      bidUnit: calculateBidUnit(initialPriceValue),
+      bidUnit: initialData?.auction?.bidUnit ?? calculateBidUnit(initialPriceValue),
       durationDays,
     };
   });
@@ -200,7 +202,8 @@ export default function RegisterScreen({
   const hasLoadedDraftRef = useRef(false);
 
   const themeColor = saleType === "regular" ? "#98E446" : "#F64257";
-  const isEditMode = !!initialData;
+  const isEditMode = submitMode ? submitMode === "edit" : !!initialData;
+  const isPrefillCreateMode = submitMode === "create" && !!initialData;
   const auctionFieldContent = getAuctionFieldContent(saleType);
   const handleBack = onBack ?? (() => router.back());
   const handleComplete = onComplete ?? (() => router.push("/"));
@@ -246,13 +249,13 @@ export default function RegisterScreen({
   const currentServices = servicesByType[saleType];
 
   useEffect(() => {
-    if (!isEditMode) {
+    if (!isEditMode && !isPrefillCreateMode) {
       const savedDraft = localStorage.getItem("product_draft");
       if (savedDraft) {
         setShowLoadDraftModal(true);
       }
     }
-  }, [isEditMode]);
+  }, [isEditMode, isPrefillCreateMode]);
 
   useEffect(() => {
     if (isEditMode) {
@@ -429,13 +432,16 @@ export default function RegisterScreen({
           return;
         }
 
-        await currentServices.update(draft, initialData);
+        const result = await currentServices.update(draft, initialData);
+        localStorage.removeItem("product_draft");
+        handleComplete(result);
+        return;
       } else {
-        await currentServices.register(draft);
+        const result = await currentServices.register(draft);
+        localStorage.removeItem("product_draft");
+        handleComplete(result);
+        return;
       }
-
-      localStorage.removeItem("product_draft");
-      handleComplete();
     } catch (error) {
       console.error("Failed to submit product", error);
       showErrorMessage(
@@ -530,7 +536,7 @@ export default function RegisterScreen({
       return;
     }
 
-    if (targetImage.imageId > 0 && !isEditMode) {
+    if (targetImage.imageId > 0 && !isEditMode && !isPrefillCreateMode) {
       setDeletingImageIds((currentIds) => [...currentIds, targetImage.imageId]);
 
       try {
@@ -553,7 +559,7 @@ export default function RegisterScreen({
         })),
     );
 
-    if (targetImage.imageId > 0 && !isEditMode) {
+    if (targetImage.imageId > 0 && !isEditMode && !isPrefillCreateMode) {
       setDeletingImageIds((currentIds) =>
         currentIds.filter((imageId) => imageId !== targetImage.imageId),
       );
