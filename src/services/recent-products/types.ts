@@ -32,5 +32,6 @@ export interface RecentProductItemViewModel {
   favoriteCount: number;
   createdAt: string;
   viewedAt: string;
+  recentViewedLabel: string;
   auctionStatusLabel?: string;
 }

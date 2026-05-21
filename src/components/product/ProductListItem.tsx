@@ -49,6 +49,7 @@ export default function ProductListItem({
     popularScore?: number;
     rank?: number;
     createdAt?: string;
+    recentViewedLabel?: string;
     canFavorite?: boolean;
   };
   mode: "regular" | "auction";
@@ -77,6 +78,7 @@ export default function ProductListItem({
   const chatCount = useData ? (product!.chatCount ?? 0) : 0;
   const bidCount = useData ? (product!.bidCount ?? 0) : 0;
   const rank = useData ? (product!.rank ?? null) : null;
+  const recentViewedLabel = useData ? product!.recentViewedLabel : undefined;
   const isTopRank = rank === 1;
   const showRankLabel = rank != null && rank >= 1 && rank <= 3;
 
@@ -240,6 +242,12 @@ export default function ProductListItem({
             {product?.location ?? "지역 정보 없음"}
           </p>
 
+          {recentViewedLabel && (
+            <p className="text-[10px] font-medium text-gray-400">
+              {recentViewedLabel}
+            </p>
+          )}
+
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 font-medium">
             <div className="flex items-center space-x-1 whitespace-nowrap">
               <Gavel size={10} />
@@ -304,6 +312,12 @@ export default function ProductListItem({
               {priceLabel}
             </span>
           </p>
+
+          {recentViewedLabel && (
+            <p className="text-[10px] font-medium text-gray-400">
+              {recentViewedLabel}
+            </p>
+          )}
 
           <div className="flex items-center space-x-3 text-[10px] text-gray-400 font-medium">
             <div className="flex items-center space-x-1">
