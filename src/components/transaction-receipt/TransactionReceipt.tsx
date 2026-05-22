@@ -8,6 +8,10 @@ import {
   getSalesReceipt,
 } from "../../services/mypage/transaction-receipt";
 import type { TransactionReceiptResponse } from "../../services/mypage/transaction-receipt";
+import {
+  getMyReceivedReviews,
+  getMyWrittenReviews,
+} from "@/services/review/api";
 
 interface Props {
   mode: "purchase" | "sale";
@@ -26,6 +30,8 @@ export default function TransactionReceipt({
   const [data, setData] = useState<TransactionReceiptResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+  const [writtenReviewExists, setWrittenReviewExists] = useState(false);
+  const [receivedReviewExists, setReceivedReviewExists] = useState(false);
 
   useEffect(() => {
     let aborted = false;
@@ -38,7 +44,64 @@ export default function TransactionReceipt({
           mode === "purchase"
             ? await getPurchaseReceipt(id)
             : await getSalesReceipt(id);
-        if (!aborted) setData(res);
+
+        if (!aborted) {
+          setData(res);
+          setWrittenReviewExists(false);
+          setReceivedReviewExists(false);
+
+          if (mode === "purchase") {
+            try {
+              const writtenReviews = await getMyWrittenReviews(0, 200);
+              const hasMatchingReview = writtenReviews.content.some(
+                (review) => {
+                  if (res.productType === "AUCTION") {
+                    return (
+                      review.auctionId != null &&
+                      res.auctionId != null &&
+                      review.auctionId === res.auctionId
+                    );
+                  }
+
+                  return review.productId === res.productId;
+                },
+              );
+
+              if (!aborted) {
+                setWrittenReviewExists(hasMatchingReview);
+              }
+            } catch {
+              if (!aborted) {
+                setWrittenReviewExists(false);
+              }
+            }
+          } else {
+            try {
+              const receivedReviews = await getMyReceivedReviews(0, 200);
+              const hasMatchingReview = receivedReviews.content.some(
+                (review) => {
+                  if (res.productType === "AUCTION") {
+                    return (
+                      review.auctionId != null &&
+                      res.auctionId != null &&
+                      review.auctionId === res.auctionId
+                    );
+                  }
+
+                  return review.productId === res.productId;
+                },
+              );
+
+              if (!aborted) {
+                setReceivedReviewExists(hasMatchingReview);
+              }
+            } catch {
+              if (!aborted) {
+                setReceivedReviewExists(false);
+              }
+            }
+          }
+        }
       } catch (e: any) {
         if (!aborted) setError(e);
       } finally {
@@ -189,6 +252,30 @@ export default function TransactionReceipt({
     }
   };
 
+  const isSellerShipped =
+    data.sellerShipped === true ||
+    data.status === "SHIPPED" ||
+    data.status === "COMPLETED";
+
+  const isBuyerConfirmed =
+    data.buyerConfirmed === true || data.status === "COMPLETED";
+
+  const isCompleted =
+    data.completed === true ||
+    data.status === "COMPLETED" ||
+    Boolean(data.completedAt);
+
+  const isReviewAvailable =
+    data.reviewAvailable === true ||
+    (data.reviewAvailable === undefined && isCompleted && !data.reviewWritten);
+
+  const hasWrittenReview =
+    data.reviewWritten === true || (mode === "purchase" && writtenReviewExists);
+  const canWriteReview =
+    mode === "purchase" && isReviewAvailable && !hasWrittenReview;
+  const hasReceivedReview =
+    data.reviewReceived === true || (mode === "sale" && receivedReviewExists);
+
   return (
     <div
       style={{
@@ -255,6 +342,24 @@ export default function TransactionReceipt({
                   </div>
                   <div style={{ color: "#6b7280", marginTop: 8, fontSize: 14 }}>
                     {getProductTypeLabel(data.productType)}
+                    {data.productType === "AUCTION" && data.auctionId ? (
+                      <button
+                        onClick={() =>
+                          router.push(`/auctions/${data.auctionId}`)
+                        }
+                        style={{
+                          marginLeft: 8,
+                          padding: "2px 6px",
+                          fontSize: 12,
+                          borderRadius: 6,
+                          border: "1px solid #e5e7eb",
+                          background: "#fff",
+                          cursor: "pointer",
+                        }}
+                      >
+                        경매 상세
+                      </button>
+                    ) : null}
                   </div>
                 </div>
                 <div style={{ fontWeight: 900, fontSize: 20 }}>
@@ -408,7 +513,72 @@ export default function TransactionReceipt({
                 거래 완료:
               </span>
               <span style={{ fontSize: 15, color: "#111", lineHeight: 1.6 }}>
-                {data.completedAt ? "완료" : "진행 중"}
+                {isCompleted ? "완료" : "진행 중"}
+              </span>
+            </div>
+            <div style={{ display: "block", width: "100%", padding: "12px 0" }}>
+              <span
+                style={{
+                  fontWeight: 600,
+                  display: "inline-block",
+                  minWidth: 140,
+                  marginRight: 12,
+                  fontSize: 15,
+                }}
+              >
+                리뷰:
+              </span>
+              <span style={{ fontSize: 15, color: "#111", lineHeight: 1.6 }}>
+                {mode === "purchase" ? (
+                  hasWrittenReview ? (
+                    <button
+                      type="button"
+                      disabled
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        color: "#9ca3af",
+                        cursor: "not-allowed",
+                        fontSize: 14,
+                      }}
+                    >
+                      리뷰를 작성했습니다
+                    </button>
+                  ) : canWriteReview ? (
+                    <button
+                      onClick={() => {
+                        const params = new URLSearchParams();
+                        params.set("productId", String(data.productId));
+                        if (data.productType === "AUCTION" && data.auctionId) {
+                          params.set("auctionId", String(data.auctionId));
+                        }
+                        router.push(
+                          `/mypage/review/write?${params.toString()}`,
+                        );
+                      }}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        border: "1px solid #e5e7eb",
+                        background: "#fff",
+                        cursor: "pointer",
+                        fontSize: 14,
+                      }}
+                    >
+                      리뷰 작성
+                    </button>
+                  ) : (
+                    "리뷰 작성 불가"
+                  )
+                ) : (
+                  <span>
+                    {hasReceivedReview
+                      ? "리뷰가 작성되었습니다"
+                      : "리뷰가 아직 달리지 않았습니다"}
+                  </span>
+                )}
               </span>
             </div>
           </div>

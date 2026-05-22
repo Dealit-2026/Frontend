@@ -34,6 +34,11 @@ export interface TransactionReceiptResponse {
   counterpartNickname: string | null; // 예: 판매자명(구매 영수증에서는 판매자)
   seller: Participant;
   buyer: Participant;
+  auctionId?: number | null;
+  completed?: boolean;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
+  reviewReceived?: boolean;
   // 추가 정보 (결제수단 등) - optional
   meta?: Record<string, unknown> | null;
 }
