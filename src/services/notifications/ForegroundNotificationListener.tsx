@@ -46,6 +46,22 @@ function openNotificationTarget(targetUrl: string) {
   window.location.assign(new URL(targetUrl, window.location.origin).href);
 }
 
+function shouldSuppressForegroundNotification(payload: {
+  data?: Record<string, string>;
+}) {
+  const data = payload.data || {};
+  if (data.type !== "CHAT_MESSAGE") {
+    return false;
+  }
+
+  const pathname = window.location.pathname;
+  if (pathname === "/chats") {
+    return true;
+  }
+
+  return Boolean(data.roomId && pathname === `/chats/${data.roomId}`);
+}
+
 export function ForegroundNotificationListener() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -83,6 +99,10 @@ export function ForegroundNotificationListener() {
 
     listenForegroundFcmMessages((payload) => {
       console.log("foreground FCM message received:", payload);
+
+      if (shouldSuppressForegroundNotification(payload)) {
+        return;
+      }
 
       if (Notification.permission !== "granted") {
         return;
