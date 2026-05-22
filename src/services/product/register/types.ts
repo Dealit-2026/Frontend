@@ -74,11 +74,17 @@ export interface SaveRegularProductDraftResponse {
 export interface RecommendRegularProductCategoryRequest {
   name: string;
   description: string;
+  topCategoryId: number;
+  imageUrls: string[];
 }
 
 export interface RecommendRegularProductCategoryResponse {
   categoryId: number;
   categoryName: string;
+  categoryPathIds: number[];
+  categoryNames: string[];
+  confidence?: number | null;
+  reason?: string | null;
 }
 
 export interface RecommendRegularProductPriceRequest {

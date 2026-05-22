@@ -221,13 +221,17 @@ export function buildSaveAuctionDraftRequest(
   };
 }
 
-// 카테고리 AI 추천 요청은 현재 입력된 상품명/설명만 사용한다.
+// 카테고리 AI 추천 요청은 선택된 대분류 하위 후보와 상품 정보를 사용한다.
 export function buildRecommendCategoryRequest(
-  draft: Pick<AuctionRegisterDraft, "name" | "description">,
+  draft: Pick<AuctionRegisterDraft, "name" | "description" | "images"> & {
+    topCategoryId: number;
+  },
 ): RecommendCategoryRequest {
   return {
     name: draft.name.trim(),
     description: draft.description.trim(),
+    topCategoryId: draft.topCategoryId,
+    imageUrls: draft.images.map((image) => image.imageUrl),
   };
 }
 
@@ -264,7 +268,9 @@ export async function saveAuctionDraft(draft: AuctionRegisterDraft) {
 
 // 카테고리 추천 요청 위임.
 export async function recommendAuctionCategory(
-  draft: Pick<AuctionRegisterDraft, "name" | "description">,
+  draft: Pick<AuctionRegisterDraft, "name" | "description" | "images"> & {
+    topCategoryId: number;
+  },
 ) {
   return auctionApi.recommendAuctionCategory(
     buildRecommendCategoryRequest(draft),
@@ -354,7 +360,9 @@ export async function saveProductDraft(draft: AuctionRegisterDraft) {
 }
 
 export async function recommendProductCategory(
-  draft: Pick<AuctionRegisterDraft, "name" | "description">,
+  draft: Pick<AuctionRegisterDraft, "name" | "description" | "images"> & {
+    topCategoryId: number;
+  },
 ) {
   return recommendAuctionCategory(draft);
 }

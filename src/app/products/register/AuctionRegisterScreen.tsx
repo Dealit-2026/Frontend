@@ -6,6 +6,7 @@ import RegisterScreen from "./RegisterScreen";
 import {
   deleteAuctionImage,
   getAuctionCategories,
+  recommendAuctionCategory,
   recommendAuctionPrice,
   registerAuction,
   reauctionAuction,
@@ -16,6 +17,7 @@ import {
 import {
   deleteRegularProductImage,
   getRegularProductCategories,
+  recommendRegularProductCategory,
   recommendRegularProductPrice,
   registerRegularProduct,
   saveRegularProductDraft,
@@ -42,6 +44,7 @@ export default function AuctionRegisterScreen(
           uploadImage: uploadRegularProductImage,
           deleteImage: deleteRegularProductImage,
           saveDraft: saveRegularProductDraft,
+          recommendCategory: recommendRegularProductCategory,
           recommendPrice: ({ name, description }) =>
             recommendRegularProductPrice({ name, description }),
           register: registerRegularProduct,
@@ -51,6 +54,7 @@ export default function AuctionRegisterScreen(
           uploadImage: uploadAuctionImage,
           deleteImage: deleteAuctionImage,
           saveDraft: saveAuctionDraft,
+          recommendCategory: recommendAuctionCategory,
           recommendPrice: recommendAuctionPrice,
           register: reauctionSourceAuctionId
             ? (draft) => reauctionAuction(reauctionSourceAuctionId, draft)

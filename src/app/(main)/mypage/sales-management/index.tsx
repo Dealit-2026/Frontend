@@ -19,6 +19,7 @@ import RegisterScreen from "../../../products/register/RegisterScreen";
 import {
   deleteAuctionImage,
   getAuctionCategories,
+  recommendAuctionCategory,
   recommendAuctionPrice,
   saveAuctionDraft,
   uploadAuctionImage,
@@ -26,6 +27,7 @@ import {
 import {
   deleteRegularProductImage,
   getRegularProductCategories,
+  recommendRegularProductCategory,
   recommendRegularProductPrice,
   saveRegularProductDraft,
   uploadRegularProductImage,
@@ -200,6 +202,7 @@ export default function SalesManagementScreen({
             uploadImage: uploadRegularProductImage,
             deleteImage: deleteRegularProductImage,
             saveDraft: saveRegularProductDraft,
+            recommendCategory: recommendRegularProductCategory,
             recommendPrice: ({ name, description }) =>
               recommendRegularProductPrice({ name, description }),
             register: (draft) =>
@@ -218,6 +221,7 @@ export default function SalesManagementScreen({
             uploadImage: uploadAuctionImage,
             deleteImage: deleteAuctionImage,
             saveDraft: saveAuctionDraft,
+            recommendCategory: recommendAuctionCategory,
             recommendPrice: recommendAuctionPrice,
             register: (draft) =>
               updateAuctionSalesManagementProduct(

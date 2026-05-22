@@ -52,6 +52,15 @@ export interface RegisterScreenServices {
     recommendedPrice: number;
     startPrice?: number | null;
   }>;
+  recommendCategory: (draft: {
+    name: string;
+    description: string;
+    images: ProductImagePayload[];
+    topCategoryId: number;
+  }) => Promise<{
+    categoryId: number;
+    categoryPathIds?: number[];
+  }>;
   register: (draft: AuctionRegisterDraft) => Promise<unknown>;
 }
 
@@ -194,6 +203,7 @@ export default function RegisterScreen({
   const [deletingImageIds, setDeletingImageIds] = useState<number[]>([]);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecommendingCategory, setIsRecommendingCategory] = useState(false);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [categoryLoadError, setCategoryLoadError] = useState<string | null>(
     null,
@@ -497,6 +507,55 @@ export default function RegisterScreen({
     }
   };
 
+  const handleRecommendCategory = async () => {
+    if (!selectedPrimaryCategoryId) {
+      showErrorMessage("대분류를 먼저 선택해 주세요.");
+      return;
+    }
+
+    if (!name.trim()) {
+      showErrorMessage("상품명을 입력해 주세요.");
+      return;
+    }
+
+    if (!description.trim()) {
+      showErrorMessage("상품 설명을 입력해 주세요.");
+      return;
+    }
+
+    setIsRecommendingCategory(true);
+    try {
+      const recommendation = await currentServices.recommendCategory({
+        name,
+        description,
+        images: getEffectiveImages(),
+        topCategoryId: selectedPrimaryCategoryId,
+      });
+      const recommendedLeafCategoryId =
+        recommendation.categoryPathIds?.at(-1) ?? recommendation.categoryId;
+      const matchedPath = findCategoryPathByLeafId(
+        categories,
+        recommendedLeafCategoryId,
+      );
+
+      if (!matchedPath) {
+        showErrorMessage("추천된 카테고리를 현재 목록에서 찾지 못했습니다.");
+        return;
+      }
+
+      setSelectedPrimaryCategoryId(matchedPath.primary.id);
+      setSelectedSecondaryCategoryId(matchedPath.secondary.id);
+      setSelectedTertiaryCategoryId(matchedPath.tertiary.id);
+      setPendingCategoryId(null);
+      setShowCategoryError(false);
+    } catch (error) {
+      console.error("Failed to recommend category", error);
+      showErrorMessage("카테고리 추천에 실패했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setIsRecommendingCategory(false);
+    }
+  };
+
   const handleLoadDraft = () => {
     try {
       const savedDraft = localStorage.getItem("product_draft");
@@ -647,6 +706,7 @@ export default function RegisterScreen({
       deletingImageIds={deletingImageIds}
       isSavingDraft={isSavingDraft}
       isSubmitting={isSubmitting}
+      isRecommendingCategory={isRecommendingCategory}
       isLoadingCategories={isLoadingCategories}
       categoryLoadError={categoryLoadError}
       showCategoryError={shouldShowCategoryError}
@@ -665,6 +725,7 @@ export default function RegisterScreen({
       onImageButtonClick={handleImageButtonClick}
       onImageUpload={handleImageUpload}
       onRemoveImage={handleRemoveImage}
+      onRecommendCategory={handleRecommendCategory}
       onRecommendPrice={handleRecommendPrice}
       onSaveDraft={handleSaveDraft}
       onDiscardDraft={handleDiscardDraft}
