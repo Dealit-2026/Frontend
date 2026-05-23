@@ -37,7 +37,10 @@ export default function AuctionDetailPage() {
   const [reauctionAction, setReauctionAction] = useState<
     "same" | "decline" | null
   >(null);
-  const [toast, setToast] = useState({ message: "", visible: false });
+  const [toast, setToast] = useState<{ message: string; visible: boolean }>({
+    message: "",
+    visible: false,
+  });
   const isFromReauction = searchParams.get("fromReauction") === "1";
 
   useEffect(() => {
@@ -148,136 +151,138 @@ export default function AuctionDetailPage() {
   return (
     <>
       <EventStreamProvider enabled>
-        <AuctionDetailScreen
-          productId={auctionId}
-          onBack={() => {
-            if (isFromReauction) {
-              router.replace("/");
-              return;
+        <div className="relative h-screen overflow-hidden bg-white">
+          <AuctionDetailScreen
+            productId={auctionId}
+            onBack={() => {
+              if (isFromReauction) {
+                router.replace("/");
+                return;
+              }
+              router.back();
+            }}
+            onBidStatusClick={() =>
+              router.push(`/auctions/${auctionId}/bidding-status`)
             }
-            router.back();
-          }}
-          onBidStatusClick={() =>
-            router.push(`/auctions/${auctionId}/bidding-status`)
-          }
-          onChatClick={handleChatClick}
-          onReportClick={() => router.push(`/products/${auctionId}/report`)}
-          onPurchaseClick={() => router.push(`/products/${auctionId}/payment`)}
-          onBidComplete={(data: BidCompleteData) => {
-            router.replace(
-              `/auctions/${auctionId}/bid-complete?bidPrice=${data.bidAmount}`,
-            );
-          }}
-          themeColor="#F64257"
-          mode="auction"
-          showToast={showToast}
-        />
-        {showReauctionPrompt && (
-          <div className="fixed inset-0 z-[100] flex justify-center bg-white text-[#17181d]">
-            <div className="flex h-full w-full max-w-[430px] flex-col px-7 pb-8 pt-5">
-              <div className="flex h-14 items-center justify-between">
-                <button
-                  onClick={() => {
-                    router.back();
-                  }}
-                  className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-[#17181d]"
-                  aria-label="뒤로가기"
-                >
-                  <ChevronLeft size={34} strokeWidth={2.4} />
-                </button>
-                <div className="h-11 w-11" />
-              </div>
-
-              <div className="mt-7 space-y-6">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <h2 className="whitespace-nowrap text-[clamp(22px,6vw,28px)] font-black leading-tight tracking-[-0.02em] text-[#17181d]">
-                      유찰된 경매를 다시 올려볼까요?
-                    </h2>
-                    <p className="text-base font-bold leading-relaxed text-gray-500">
-                      3일 안에 선택하지 않으면 재경매 대기가 자동 종료돼요.
-                    </p>
-                  </div>
+            onChatClick={handleChatClick}
+            onReportClick={() => router.push(`/products/${auctionId}/report`)}
+            onPurchaseClick={() => router.push(`/products/${auctionId}/payment`)}
+            onBidComplete={(data: BidCompleteData) => {
+              router.replace(
+                `/auctions/${auctionId}/bid-complete?bidPrice=${data.bidAmount}`,
+              );
+            }}
+            themeColor="#F64257"
+            mode="auction"
+            showToast={showToast}
+          />
+          {showReauctionPrompt && (
+            <div className="fixed inset-0 z-[100] flex justify-center bg-white text-[#17181d]">
+              <div className="flex h-full w-full max-w-[430px] flex-col px-7 pb-8 pt-5">
+                <div className="flex h-14 items-center justify-between">
+                  <button
+                    onClick={() => {
+                      router.back();
+                    }}
+                    className="-ml-2 flex h-11 w-11 items-center justify-center rounded-full text-[#17181d]"
+                    aria-label="뒤로가기"
+                  >
+                    <ChevronLeft size={34} strokeWidth={2.4} />
+                  </button>
+                  <div className="h-11 w-11" />
                 </div>
 
-                {reauctionError && (
-                  <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
-                    {reauctionError}
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {}}
-                  className="w-full rounded-2xl bg-gray-100 p-4 text-left transition-colors hover:bg-gray-200"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xs font-bold text-gray-500">
-                      {reauctionPreview?.images?.[0]?.imageUrl ? (
-                        <img
-                          src={reauctionPreview.images[0].imageUrl}
-                          alt={reauctionPreview.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        "유찰"
-                      )}
+                <div className="mt-7 space-y-6">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <h2 className="whitespace-nowrap text-[clamp(22px,6vw,28px)] font-black leading-tight tracking-[-0.02em] text-[#17181d]">
+                        유찰된 경매를 다시 올려볼까요?
+                      </h2>
+                      <p className="text-base font-bold leading-relaxed text-gray-500">
+                        3일 안에 선택하지 않으면 재경매 대기가 자동 종료돼요.
+                      </p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-lg font-bold text-[#17181d]">
-                        {isReauctionLoading
-                          ? "재경매 정보 확인 중"
-                          : reauctionPreview?.name ?? `유찰된 경매 #${auctionId}`}
-                      </p>
-                      <p className="mt-1 text-xl font-black text-[#17181d]">
-                        재경매 대기
-                      </p>
-                      {reauctionPreview?.reauctionExpiresAt && (
-                        <p className="mt-1 text-xs font-bold text-gray-400">
-                          {new Intl.DateTimeFormat("ko-KR", {
-                            month: "2-digit",
-                            day: "2-digit",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }).format(new Date(reauctionPreview.reauctionExpiresAt))}
-                          까지 가능
+                  </div>
+
+                  {reauctionError && (
+                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                      {reauctionError}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    className="w-full rounded-2xl bg-gray-100 p-4 text-left transition-colors hover:bg-gray-200"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xs font-bold text-gray-500">
+                        {reauctionPreview?.images?.[0]?.imageUrl ? (
+                          <img
+                            src={reauctionPreview.images[0].imageUrl}
+                            alt={reauctionPreview.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          "유찰"
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-lg font-bold text-[#17181d]">
+                          {isReauctionLoading
+                            ? "재경매 정보 확인 중"
+                            : reauctionPreview?.name ?? `유찰된 경매 #${auctionId}`}
                         </p>
-                      )}
+                        <p className="mt-1 text-xl font-black text-[#17181d]">
+                          재경매 대기
+                        </p>
+                        {reauctionPreview?.reauctionExpiresAt && (
+                          <p className="mt-1 text-xs font-bold text-gray-400">
+                            {new Intl.DateTimeFormat("ko-KR", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(new Date(reauctionPreview.reauctionExpiresAt))}
+                            까지 가능
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </button>
-              </div>
+                  </button>
+                </div>
 
-              <div className="mt-3 space-y-3">
-                <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={handleReauctionSame}
-                    disabled={!reauctionPreview || reauctionAction !== null}
-                    className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-[#17181d] transition-colors hover:bg-gray-200"
-                  >
-                    {reauctionAction === "same" ? "등록 중" : "그대로 올리기"}
-                  </button>
-                  <button
-                    onClick={() =>
-                      router.push(`/auctions/register?reauctionSourceId=${auctionId}`)
-                    }
-                    disabled={!reauctionPreview || reauctionAction !== null}
-                    className="h-14 rounded-2xl bg-[#F64257] text-sm font-black text-white transition-opacity hover:opacity-90"
-                  >
-                    게시글 수정하기
-                  </button>
-                  <button
-                    onClick={handleDeclineReauction}
-                    disabled={reauctionAction !== null}
-                    className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-gray-500 transition-colors hover:bg-gray-200"
-                  >
-                    {reauctionAction === "decline" ? "처리 중" : "재등록 안 하기"}
-                  </button>
+                <div className="mt-3 space-y-3">
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      onClick={handleReauctionSame}
+                      disabled={!reauctionPreview || reauctionAction !== null}
+                      className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-[#17181d] transition-colors hover:bg-gray-200"
+                    >
+                      {reauctionAction === "same" ? "등록 중" : "그대로 올리기"}
+                    </button>
+                    <button
+                      onClick={() =>
+                        router.push(`/auctions/register?reauctionSourceId=${auctionId}`)
+                      }
+                      disabled={!reauctionPreview || reauctionAction !== null}
+                      className="h-14 rounded-2xl bg-[#F64257] text-sm font-black text-white transition-opacity hover:opacity-90"
+                    >
+                      게시글 수정하기
+                    </button>
+                    <button
+                      onClick={handleDeclineReauction}
+                      disabled={reauctionAction !== null}
+                      className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-gray-500 transition-colors hover:bg-gray-200"
+                    >
+                      {reauctionAction === "decline" ? "처리 중" : "재등록 안 하기"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </EventStreamProvider>
       <Toast message={toast.message} visible={toast.visible} />
     </>

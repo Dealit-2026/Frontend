@@ -467,7 +467,8 @@ export default function App() {
   const [selectedChatDraftProductId, setSelectedChatDraftProductId] = useState<
     number | null
   >(null);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(readStoredThemeMode);
+  const [themeMode, setThemeMode] = useState<ThemeMode>("regular");
+  const [isThemeModeReady, setIsThemeModeReady] = useState(false);
   const [productListType, setProductListType] = useState<
     "all" | "closing_soon" | "recent"
   >("all");
@@ -557,7 +558,13 @@ export default function App() {
     if (routeState) {
       isApplyingPopState.current = true;
       applyRouteState(routeState);
+      if (!routeState.themeMode) {
+        setThemeMode(readStoredThemeMode());
+      }
+    } else {
+      setThemeMode(readStoredThemeMode());
     }
+    setIsThemeModeReady(true);
 
     const handlePopState = () => {
       const routeState = routeStateFromUrl(new URL(window.location.href));
@@ -575,8 +582,12 @@ export default function App() {
   }, [applyRouteState]);
 
   useEffect(() => {
+    if (!isThemeModeReady) {
+      return;
+    }
+
     writeStoredThemeMode(themeMode);
-  }, [themeMode]);
+  }, [isThemeModeReady, themeMode]);
 
   useEffect(() => {
     const nextUrl = buildUrl(currentScreen, {
@@ -724,8 +735,8 @@ export default function App() {
 
   return (
     <EventStreamProvider enabled={currentScreen !== "login"}>
-      <div className="min-h-screen bg-white flex justify-center px-4 font-sans text-[#141414]">
-        <div className="w-full max-w-180 mx-auto bg-white overflow-hidden relative flex flex-col shrink-0">
+      <div className="h-screen overflow-hidden bg-white flex justify-center px-4 font-sans text-[#141414]">
+        <div className="h-full w-full max-w-180 mx-auto bg-white overflow-hidden relative flex flex-col shrink-0">
           <AnimatePresence mode="wait">
             {currentScreen === "login" && (
               <LoginScreen
@@ -1316,6 +1327,19 @@ export default function App() {
                 onComplete={() => navigateTo("receipt")}
                 themeColor="#F64257"
               />
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {toast.visible && (
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 18 }}
+                transition={{ duration: 0.18 }}
+                className="pointer-events-none absolute bottom-20 left-4 right-4 z-[120] rounded-xl bg-black/85 px-4 py-3 text-center text-sm font-bold text-white shadow-lg"
+              >
+                {toast.message}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>

@@ -19,6 +19,7 @@ export interface WalletLedgerViewModel {
   amountLabel: string;
   balanceAfterLabel: string;
   description: string;
+  createdAt: Date | null;
   createdAtLabel: string;
   isIncome: boolean;
 }
@@ -53,6 +54,7 @@ export function toWalletLedgerViewModel(
     amountLabel: `${isIncome ? "+" : "-"}${formatWon(Math.abs(ledger.amount))}`,
     balanceAfterLabel: formatWon(ledger.balanceAfter),
     description: ledger.description,
+    createdAt: parseWalletDate(ledger.createdAt),
     createdAtLabel: formatWalletDate(ledger.createdAt),
     isIncome,
   };
@@ -62,8 +64,8 @@ export async function fetchWallet() {
   return toWalletViewModel(await walletApi.getWallet());
 }
 
-export async function fetchWalletLedgers() {
-  const response = await walletApi.getWalletLedgers();
+export async function fetchWalletLedgers(page = 0, size = 100) {
+  const response = await walletApi.getWalletLedgers(page, size);
   return response.content.map(toWalletLedgerViewModel);
 }
 
@@ -78,7 +80,7 @@ export async function withdrawDealitMoney(amount: number) {
 function getWalletLedgerTypeLabel(type: WalletLedgerType) {
   switch (type) {
     case "TEMP_CHARGE":
-      return "충전";
+      return "딜릿머니 충전";
     case "REFUND":
       return "환불";
     case "WITHDRAWAL":
@@ -95,19 +97,25 @@ function getWalletLedgerTypeLabel(type: WalletLedgerType) {
 }
 
 function formatWalletDate(value: string | null) {
-  if (!value) {
+  const date = parseWalletDate(value);
+  if (!date) {
     return "";
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+
+  return `${year}.${month}.${day} | ${hour}:${minute}`;
+}
+
+function parseWalletDate(value: string | null) {
+  if (!value) {
+    return null;
   }
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
