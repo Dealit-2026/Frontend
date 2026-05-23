@@ -134,6 +134,11 @@ export default function SalesManagementScreen({
   };
 
   const handleEditClick = async (product: SalesManagementItemViewModel) => {
+    if (product.type === "auction" && product.status === "NO_BID") {
+      router.push(`/auctions/${product.auctionId ?? product.productId}?reauctionPrompt=1`);
+      return;
+    }
+
     if (!product.editable || editingProductId) {
       return;
     }
@@ -161,6 +166,11 @@ export default function SalesManagementScreen({
 
   const handleItemClick = (product: SalesManagementItemViewModel) => {
     if (product.type === "auction") {
+      if (product.status === "NO_BID") {
+        router.push(`/auctions/${product.auctionId ?? product.productId}?reauctionPrompt=1`);
+        return;
+      }
+
       router.push(`/auctions/${product.auctionId ?? product.productId}`);
       return;
     }
@@ -330,7 +340,11 @@ export default function SalesManagementScreen({
                   disabled={!item.editable || editingProductId === item.id}
                   className="h-14 bg-gray-50 rounded-xl text-sm font-bold transition-colors disabled:text-gray-300 enabled:hover:bg-gray-100"
                 >
-                  {editingProductId === item.id ? "불러오는 중" : "수정"}
+                  {editingProductId === item.id
+                    ? "불러오는 중"
+                    : item.type === "auction" && item.status === "NO_BID"
+                      ? "재경매"
+                      : "수정"}
                 </button>
                 <button
                   type="button"

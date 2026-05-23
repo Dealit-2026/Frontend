@@ -242,7 +242,9 @@ const buildUrl = (
         ? `/auctions/${safeProductId}/winning-complete`
         : "/notifications";
     case "outbid_notification":
-      return safeProductId ? `/auctions/${safeProductId}/outbid` : "/notifications";
+      return safeProductId
+        ? `/auctions/${safeProductId}/outbid`
+        : "/notifications";
     case "search_detail":
       return "/search/detail";
     case "wishlist":
@@ -273,14 +275,17 @@ const buildUrl = (
       return "/mypage/review/write";
     case "chat_room":
       if (safeChatId) return `/chats/${safeChatId}`;
-      if (chatDraftProductId) return `/chats/new?productId=${chatDraftProductId}`;
+      if (chatDraftProductId)
+        return `/chats/new?productId=${chatDraftProductId}`;
       return "/chats";
     case "bid_placement_complete": {
       const query =
         typeof bidAmount === "number" && Number.isFinite(bidAmount)
           ? `?bidPrice=${bidAmount}`
           : "";
-      return safeProductId ? `/auctions/${safeProductId}/bid-complete${query}` : "/auctions";
+      return safeProductId
+        ? `/auctions/${safeProductId}/bid-complete${query}`
+        : "/auctions";
     }
     default:
       return "/";
@@ -307,7 +312,10 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
   if (pathname === "/profile-setup") return { screen: "profile_setup" };
   if (pathname === "/category-selection") {
     return {
-      screen: searchParams.get("mode") === "edit" ? "category_reset" : "category_selection",
+      screen:
+        searchParams.get("mode") === "edit"
+          ? "category_reset"
+          : "category_selection",
     };
   }
   if (pathname === "/search") return { screen: "main", tab: "search" };
@@ -347,7 +355,8 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
   if (pathname === "/mypage/my-bids") return { screen: "my_bids" };
   if (pathname === "/mypage/review") return { screen: "review" };
   if (pathname === "/mypage/review/write") return { screen: "write_review" };
-  if (pathname === "/products/register") return { screen: "main", tab: "register" };
+  if (pathname === "/products/register")
+    return { screen: "main", tab: "register" };
   if (pathname === "/products") {
     return {
       screen: "product_list",
@@ -376,10 +385,18 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
     return { screen: "receipt", productId: readId(2), themeMode: "regular" };
   }
   if (/^\/products\/\d+\/regular-purchase$/.test(pathname)) {
-    return { screen: "regular_purchase", productId: readId(2), themeMode: "regular" };
+    return {
+      screen: "regular_purchase",
+      productId: readId(2),
+      themeMode: "regular",
+    };
   }
   if (/^\/products\/\d+$/.test(pathname)) {
-    return { screen: "product_detail", productId: readId(2), themeMode: "regular" };
+    return {
+      screen: "product_detail",
+      productId: readId(2),
+      themeMode: "regular",
+    };
   }
   if (pathname === "/auctions") {
     return {
@@ -397,7 +414,11 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
     };
   }
   if (/^\/auctions\/\d+\/bidding-status$/.test(pathname)) {
-    return { screen: "bidding_status", productId: readId(2), themeMode: "auction" };
+    return {
+      screen: "bidding_status",
+      productId: readId(2),
+      themeMode: "auction",
+    };
   }
   if (/^\/auctions\/\d+\/bid-complete$/.test(pathname)) {
     return {
@@ -414,10 +435,18 @@ const routeStateFromUrl = (url: URL): RouteState | null => {
     };
   }
   if (/^\/auctions\/\d+\/outbid$/.test(pathname)) {
-    return { screen: "outbid_notification", productId: readId(2), themeMode: "auction" };
+    return {
+      screen: "outbid_notification",
+      productId: readId(2),
+      themeMode: "auction",
+    };
   }
   if (/^\/auctions\/\d+$/.test(pathname)) {
-    return { screen: "product_detail", productId: readId(2), themeMode: "auction" };
+    return {
+      screen: "product_detail",
+      productId: readId(2),
+      themeMode: "auction",
+    };
   }
 
   return null;
@@ -565,7 +594,7 @@ export default function App() {
       tab: currentTab,
       productId:
         currentScreen === "bid_placement_complete"
-          ? bidData?.productId ?? selectedProductId
+          ? (bidData?.productId ?? selectedProductId)
           : selectedProductId,
       chatId: selectedChatId,
       chatDraftProductId: selectedChatDraftProductId,
@@ -615,7 +644,9 @@ export default function App() {
   };
 
   const navigateToCatalogItem = (id: number) => {
-    router.push(themeMode === "auction" ? `/auctions/${id}` : `/products/${id}`);
+    router.push(
+      themeMode === "auction" ? `/auctions/${id}` : `/products/${id}`,
+    );
   };
 
   const openProductChat = async () => {
@@ -1264,10 +1295,6 @@ export default function App() {
                 key="chat_room"
                 chatId={selectedChatId}
                 onBack={() => navigateTo("main")}
-                onProductClick={(id) => {
-                  setSelectedProductId(id);
-                  navigateTo("product_detail");
-                }}
                 themeColor={themeColor}
               />
             )}

@@ -46,7 +46,7 @@ function getAuctionStatusLabel(status: string) {
   }
 
   if (status === "NO_BID") {
-    return "유찰";
+    return "재경매 대기";
   }
 
   return "경매 종료";

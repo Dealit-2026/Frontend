@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, PackageCheck, PlusCircle, Send, Truck } from "lucide-react";
+import {
+  ChevronLeft,
+  PackageCheck,
+  PlusCircle,
+  Send,
+  Truck,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useRouter } from "next/navigation";
 
@@ -36,7 +42,6 @@ interface ChatRoomScreenProps {
   draftProductId?: number | null;
   purchaseId?: number | null;
   onBack?: () => void;
-  onProductClick?: (id: number) => void;
   themeColor: string;
 }
 
@@ -45,7 +50,6 @@ export default function ChatRoomScreen({
   draftProductId = null,
   purchaseId: _purchaseId = null,
   onBack,
-  onProductClick,
   themeColor,
 }: ChatRoomScreenProps) {
   const router = useRouter();
@@ -53,6 +57,7 @@ export default function ChatRoomScreen({
   const [isError, setIsError] = useState(false);
 
   const [roomName, setRoomName] = useState("");
+  const [chatType, setChatType] = useState<"GENERAL" | "AUCTION" | null>(null);
   const [productId, setProductId] = useState<number>(0);
   const [auctionId, setAuctionId] = useState<number | null>(null);
   const [productName, setProductName] = useState("");
@@ -66,7 +71,9 @@ export default function ChatRoomScreen({
   const [draftMessage, setDraftMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
-  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(null);
+  const [tradeActionMessage, setTradeActionMessage] = useState<string | null>(
+    null,
+  );
   const [tradeActionLoading, setTradeActionLoading] = useState<
     "SHIP" | "CONFIRM_RECEIPT" | null
   >(null);
@@ -107,6 +114,7 @@ export default function ChatRoomScreen({
       setIsLoading(false);
       setIsError(false);
       setRoomName("채팅방");
+      setChatType(null);
       setProductId(draftProductId ?? 0);
       setProductName(draftProductId ? `상품 #${draftProductId}` : "상품 정보");
       setProductImageUrl(null);
@@ -132,6 +140,7 @@ export default function ChatRoomScreen({
         if (!mounted) return;
 
         setRoomName(detail.room.opponentName);
+        setChatType(detail.room.chatType ?? null);
         setProductId(detail.room.productId);
         setAuctionId(detail.room.auctionId ?? null);
         setProductName(detail.room.productName);
@@ -277,12 +286,15 @@ export default function ChatRoomScreen({
     router.back();
   };
 
-  const handleProductClick = (id: number) => {
-    if (onProductClick) {
-      onProductClick(id);
+  const handleProductClick = () => {
+    if (chatType === "AUCTION" && auctionId) {
+      router.push(`/auctions/${auctionId}`);
       return;
     }
-    router.push(`/products/${id}`);
+
+    if (productId) {
+      router.push(`/products/${productId}`);
+    }
   };
 
   const getTradeActionErrorMessage = (code: string | null) => {
@@ -370,6 +382,7 @@ export default function ChatRoomScreen({
       if (roomId == null && draftProductId) {
         const room = await createChatRoom({ productId: draftProductId });
         roomId = room.roomId;
+        setChatType(room.chatType ?? null);
         setRoomName(
           room.participants.find((participant) => participant.role === "SELLER")
             ?.nickname ?? "채팅방",
@@ -443,12 +456,16 @@ export default function ChatRoomScreen({
     if (chatId == null || tradeActionLoading) return;
 
     if (type === "SHIP" && !actionButtons?.canShip) {
-      setTradeActionMessage("발송 처리 가능 시간이 지났거나 현재 발송 처리할 수 없는 상태입니다.");
+      setTradeActionMessage(
+        "발송 처리 가능 시간이 지났거나 현재 발송 처리할 수 없는 상태입니다.",
+      );
       return;
     }
 
     if (type === "CONFIRM_RECEIPT" && !actionButtons?.canConfirmReceipt) {
-      setTradeActionMessage("아직 판매자가 '보냈어요'를 누르기 전입니다. 발송 처리 후 수령확정할 수 있습니다.");
+      setTradeActionMessage(
+        "아직 판매자가 '보냈어요'를 누르기 전입니다. 발송 처리 후 수령확정할 수 있습니다.",
+      );
       return;
     }
 
@@ -505,7 +522,7 @@ export default function ChatRoomScreen({
 
       <div
         className="shrink-0 p-4 border-b border-gray-50 flex items-center space-x-4 bg-gray-50/50 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => productId && handleProductClick(productId)}
+        onClick={handleProductClick}
       >
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 shrink-0">
           {productImageUrl ? (
@@ -544,7 +561,9 @@ export default function ChatRoomScreen({
             {actionButtons?.shipButtonType === "SHIP" && (
               <button
                 type="button"
-                aria-disabled={!actionButtons.canShip || tradeActionLoading !== null}
+                aria-disabled={
+                  !actionButtons.canShip || tradeActionLoading !== null
+                }
                 onClick={() => void handleTradeAction("SHIP")}
                 className={`inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold ${
                   actionButtons.canShip && tradeActionLoading === null
@@ -560,17 +579,20 @@ export default function ChatRoomScreen({
               <button
                 type="button"
                 aria-disabled={
-                  !actionButtons.canConfirmReceipt || tradeActionLoading !== null
+                  !actionButtons.canConfirmReceipt ||
+                  tradeActionLoading !== null
                 }
                 onClick={() => void handleTradeAction("CONFIRM_RECEIPT")}
                 className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3 text-xs font-bold text-white"
                 style={{
                   backgroundColor:
-                    actionButtons.canConfirmReceipt && tradeActionLoading === null
+                    actionButtons.canConfirmReceipt &&
+                    tradeActionLoading === null
                       ? themeColor
                       : "#e5e7eb",
                   color:
-                    actionButtons.canConfirmReceipt && tradeActionLoading === null
+                    actionButtons.canConfirmReceipt &&
+                    tradeActionLoading === null
                       ? "#ffffff"
                       : "#6b7280",
                 }}
@@ -599,7 +621,9 @@ export default function ChatRoomScreen({
             <button
               onClick={() => void handlePurchaseTradeAction()}
               disabled={
-                purchaseActionLoading || !actionButton.enabled || !roomPurchaseId
+                purchaseActionLoading ||
+                !actionButton.enabled ||
+                !roomPurchaseId
               }
               className="w-full h-12 rounded-xl font-bold text-sm border border-gray-200 bg-black text-white disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-200"
             >
@@ -660,7 +684,7 @@ export default function ChatRoomScreen({
       </div>
 
       {showReviewPrompt && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => setShowReviewPrompt(false)}
@@ -738,7 +762,9 @@ export default function ChatRoomScreen({
         </button>
       </div>
       {sendError && (
-        <div className="shrink-0 px-4 pb-3 text-xs text-red-500">{sendError}</div>
+        <div className="shrink-0 px-4 pb-3 text-xs text-red-500">
+          {sendError}
+        </div>
       )}
     </motion.div>
   );

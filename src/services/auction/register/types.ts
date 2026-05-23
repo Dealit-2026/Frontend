@@ -90,6 +90,30 @@ export interface AuctionUpdateRequest {
   images: ProductImagePayload[];
 }
 
+export interface ReauctionPreviewResponse {
+  productId: number;
+  auctionId: number;
+  name: string;
+  description: string;
+  categoryId: number;
+  categoryName: string | null;
+  location: string;
+  images: ProductImagePayload[];
+  startPrice: number;
+  minimumBidAmount: number | null;
+  auctionDurationDays: number;
+  auctionStatus: "NO_BID";
+  noBidAt: string | null;
+  reauctionExpiresAt: string;
+  remainingSeconds: number;
+}
+
+export interface ReauctionResponse {
+  sourceAuctionId: number;
+  productId: number;
+  auctionId: number;
+}
+
 // 등록 성공 직후 필요한 최소 응답.
 // 상세 페이지 렌더링 데이터는 별도 상세 조회 응답으로 분리한다.
 export interface AuctionCreateResponse {

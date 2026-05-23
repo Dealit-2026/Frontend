@@ -9,6 +9,13 @@ import AuctionDetailScreen from "./index";
 import { findExistingChatRoomByProductId } from "@/services/chats/service";
 import { fetchAuctionDetail } from "@/services/auction/detail/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
+import {
+  createDraftFromReauctionPreview,
+  declineReauction,
+  getReauctionPreview,
+  reauctionAuction,
+} from "@/services/auction/register/service";
+import type { ReauctionPreviewResponse } from "@/services/auction/register/types";
 
 type BidCompleteData = {
   bidAmount: number;
@@ -23,16 +30,54 @@ export default function AuctionDetailPage() {
   const [showReauctionPrompt, setShowReauctionPrompt] = useState(
     () => searchParams.get("reauctionPrompt") === "1",
   );
+  const [reauctionPreview, setReauctionPreview] =
+    useState<ReauctionPreviewResponse | null>(null);
+  const [reauctionError, setReauctionError] = useState("");
+  const [isReauctionLoading, setIsReauctionLoading] = useState(false);
+  const [reauctionAction, setReauctionAction] = useState<
+    "same" | "decline" | null
+  >(null);
   const [toast, setToast] = useState<{ message: string; visible: boolean }>({
     message: "",
     visible: false,
   });
+  const isFromReauction = searchParams.get("fromReauction") === "1";
 
   useEffect(() => {
     if (searchParams.get("reauctionPrompt") === "1") {
       setShowReauctionPrompt(true);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!showReauctionPrompt) {
+      return;
+    }
+
+    let isMounted = true;
+    setIsReauctionLoading(true);
+    setReauctionError("");
+    getReauctionPreview(auctionId)
+      .then((preview) => {
+        if (isMounted) {
+          setReauctionPreview(preview);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setReauctionError("재경매 가능 기간이 지났거나 정보를 불러오지 못했습니다.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsReauctionLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [auctionId, showReauctionPrompt]);
 
   const showToast = (message: string) => {
     setToast({ message, visible: true });
@@ -63,13 +108,59 @@ export default function AuctionDetailPage() {
     }
   };
 
+  const handleReauctionSame = async () => {
+    if (!reauctionPreview || reauctionAction) {
+      return;
+    }
+
+    try {
+      setReauctionAction("same");
+      const draft = createDraftFromReauctionPreview(reauctionPreview);
+      const result = await reauctionAuction(auctionId, draft, {
+        preserveSourceAuctionPeriod: true,
+      });
+      router.replace(`/auctions/${result.auctionId}?fromReauction=1`);
+    } catch (error) {
+      console.error("Failed to reauction:", error);
+      setReauctionError("재경매 등록에 실패했습니다.");
+      setReauctionAction(null);
+    }
+  };
+
+  const handleDeclineReauction = async () => {
+    if (reauctionAction) {
+      return;
+    }
+    if (!window.confirm("재등록하지 않으면 이 경매는 종료 처리돼요.")) {
+      return;
+    }
+
+    try {
+      setReauctionAction("decline");
+      await declineReauction(auctionId);
+      setShowReauctionPrompt(false);
+      showToast("재경매 대기를 종료했어요.");
+      router.replace("/");
+    } catch (error) {
+      console.error("Failed to decline reauction:", error);
+      setReauctionError("재등록 안 하기에 실패했습니다.");
+      setReauctionAction(null);
+    }
+  };
+
   return (
     <>
       <EventStreamProvider enabled>
         <div className="relative h-screen overflow-hidden bg-white">
           <AuctionDetailScreen
             productId={auctionId}
-            onBack={() => router.back()}
+            onBack={() => {
+              if (isFromReauction) {
+                router.replace("/");
+                return;
+              }
+              router.back();
+            }}
             onBidStatusClick={() =>
               router.push(`/auctions/${auctionId}/bidding-status`)
             }
@@ -108,10 +199,16 @@ export default function AuctionDetailPage() {
                         유찰된 경매를 다시 올려볼까요?
                       </h2>
                       <p className="text-base font-bold leading-relaxed text-gray-500">
-                        지금 선택하면 게시글을 수정하거나 그대로 다시 준비할 수 있어요.
+                        3일 안에 선택하지 않으면 재경매 대기가 자동 종료돼요.
                       </p>
                     </div>
                   </div>
+
+                  {reauctionError && (
+                    <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-500">
+                      {reauctionError}
+                    </div>
+                  )}
 
                   <button
                     type="button"
@@ -120,15 +217,36 @@ export default function AuctionDetailPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-xs font-bold text-gray-500">
-                        유찰
+                        {reauctionPreview?.images?.[0]?.imageUrl ? (
+                          <img
+                            src={reauctionPreview.images[0].imageUrl}
+                            alt={reauctionPreview.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          "유찰"
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-lg font-bold text-[#17181d]">
-                          유찰된 경매 #{auctionId}
+                          {isReauctionLoading
+                            ? "재경매 정보 확인 중"
+                            : reauctionPreview?.name ?? `유찰된 경매 #${auctionId}`}
                         </p>
                         <p className="mt-1 text-xl font-black text-[#17181d]">
                           재경매 대기
                         </p>
+                        {reauctionPreview?.reauctionExpiresAt && (
+                          <p className="mt-1 text-xs font-bold text-gray-400">
+                            {new Intl.DateTimeFormat("ko-KR", {
+                              month: "2-digit",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }).format(new Date(reauctionPreview.reauctionExpiresAt))}
+                            까지 가능
+                          </p>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -137,22 +255,27 @@ export default function AuctionDetailPage() {
                 <div className="mt-3 space-y-3">
                   <div className="grid grid-cols-1 gap-3">
                     <button
-                      onClick={() => {}}
+                      onClick={handleReauctionSame}
+                      disabled={!reauctionPreview || reauctionAction !== null}
                       className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-[#17181d] transition-colors hover:bg-gray-200"
                     >
-                      그대로 올리기
+                      {reauctionAction === "same" ? "등록 중" : "그대로 올리기"}
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={() =>
+                        router.push(`/auctions/register?reauctionSourceId=${auctionId}`)
+                      }
+                      disabled={!reauctionPreview || reauctionAction !== null}
                       className="h-14 rounded-2xl bg-[#F64257] text-sm font-black text-white transition-opacity hover:opacity-90"
                     >
                       게시글 수정하기
                     </button>
                     <button
-                      onClick={() => {}}
+                      onClick={handleDeclineReauction}
+                      disabled={reauctionAction !== null}
                       className="h-14 rounded-2xl bg-gray-100 text-sm font-black text-gray-500 transition-colors hover:bg-gray-200"
                     >
-                      재등록 안 하기
+                      {reauctionAction === "decline" ? "처리 중" : "재등록 안 하기"}
                     </button>
                   </div>
                 </div>
