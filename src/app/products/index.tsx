@@ -14,7 +14,8 @@ import { fetchHotRegularProducts } from "@/services/product/hotList/service";
 import { fetchPopularRegularProducts } from "@/services/product/popular/service";
 import { fetchIntegratedSearchResults } from "@/services/product/search/service";
 import type { UnifiedSearchResultType } from "@/services/product/search/types";
-import { fetchRegularWishlist } from "@/services/wishlist/service";
+import { fetchRecentProducts } from "@/services/recent-products/service";
+import { fetchMyWishlist } from "@/services/wishlist/service";
 
 type ProductListType = "all" | "closing_soon" | "recent";
 
@@ -48,18 +49,21 @@ export default function ProductListScreen({
     searchKeyword
       ? `"${searchKeyword}" 검색 결과`
       : categoryName ||
-    (mode === "auction" && listType === "all"
-      ? "실시간 인기 경매"
-      : mode === "auction" && listType === "closing_soon"
-        ? "마감 임박 경매"
-        : mode === "regular" && listType === "all"
-          ? "실시간 인기 상품"
-          : mode === "regular" && listType === "closing_soon"
-            ? "핫한 상품"
-            : "상품 목록");
+        (listType === "recent"
+          ? "최근 본 상품"
+          : mode === "auction" && listType === "all"
+            ? "실시간 인기 경매"
+            : mode === "auction" && listType === "closing_soon"
+              ? "마감 임박 경매"
+              : mode === "regular" && listType === "all"
+                ? "실시간 인기 상품"
+                : mode === "regular" && listType === "closing_soon"
+                  ? "핫한 상품"
+                  : "상품 목록");
   const [products, setProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [wishlistErrorMessage, setWishlistErrorMessage] = useState("");
   const [likedProductIds, setLikedProductIds] = useState<Set<number>>(
     () => new Set(),
   );
@@ -70,16 +74,27 @@ export default function ProductListScreen({
     const shouldFetchKeywordList = Boolean(normalizedKeyword);
     const shouldFetchCategoryList =
       !shouldFetchKeywordList && typeof categoryId === "number" && categoryId > 0;
+    const shouldFetchRecentList =
+      !shouldFetchKeywordList &&
+      !shouldFetchCategoryList &&
+      !categoryName &&
+      listType === "recent";
     const shouldFetchApiList =
       !shouldFetchKeywordList &&
       !shouldFetchCategoryList &&
+      !shouldFetchRecentList &&
       !categoryName &&
       ((mode === "regular" &&
         (listType === "all" || listType === "closing_soon")) ||
         (mode === "auction" &&
           (listType === "all" || listType === "closing_soon")));
 
-    if (!shouldFetchKeywordList && !shouldFetchCategoryList && !shouldFetchApiList) {
+    if (
+      !shouldFetchKeywordList &&
+      !shouldFetchCategoryList &&
+      !shouldFetchRecentList &&
+      !shouldFetchApiList
+    ) {
       setProducts([]);
       setErrorMessage("");
       return () => {
@@ -89,6 +104,7 @@ export default function ProductListScreen({
 
     setIsLoading(true);
     setErrorMessage("");
+    setWishlistErrorMessage("");
 
     const request = shouldFetchKeywordList
       ? fetchIntegratedSearchResults({
@@ -104,6 +120,8 @@ export default function ProductListScreen({
             page: 0,
             size: 20,
           })
+      : shouldFetchRecentList
+        ? fetchRecentProducts(20)
       : mode === "regular" && listType === "all"
         ? fetchPopularRegularProducts(10)
         : mode === "regular"
@@ -116,7 +134,7 @@ export default function ProductListScreen({
       .then((nextProducts) => {
         if (!ignore) {
           setProducts(
-            shouldFetchKeywordList || shouldFetchCategoryList
+            shouldFetchKeywordList || shouldFetchCategoryList || shouldFetchRecentList
               ? nextProducts
               : nextProducts.slice(
                   0,
@@ -135,6 +153,8 @@ export default function ProductListScreen({
                 ? "검색 결과를 불러오지 못했습니다."
                 : shouldFetchCategoryList
                 ? "카테고리 검색 결과를 불러오지 못했습니다."
+                : shouldFetchRecentList
+                  ? "최근 본 상품을 불러오지 못했습니다."
                 : mode === "regular" && listType === "all"
                   ? "실시간 인기 상품을 불러오지 못했습니다."
                   : mode === "regular"
@@ -158,14 +178,14 @@ export default function ProductListScreen({
   }, [categoryId, categoryName, listType, mode, searchKeyword, searchResultType]);
 
   useEffect(() => {
-    if (mode !== "regular" && !categoryId && !searchKeyword) {
+    if (mode !== "regular" && !categoryId && !searchKeyword && listType !== "recent") {
       setLikedProductIds(new Set());
       return;
     }
 
     let ignore = false;
 
-    fetchRegularWishlist()
+    fetchMyWishlist()
       .then((items) => {
         if (!ignore) {
           setLikedProductIds(new Set(items.map((item) => item.productId)));
@@ -180,7 +200,7 @@ export default function ProductListScreen({
     return () => {
       ignore = true;
     };
-  }, [categoryId, mode, searchKeyword]);
+  }, [categoryId, listType, mode, searchKeyword]);
 
   const handleWishlistChange = (
     productId: number,
@@ -204,6 +224,13 @@ export default function ProductListScreen({
         item.productId === productId ? { ...item, favoriteCount } : item,
       ),
     );
+  };
+
+  const showWishlistError = (message: string) => {
+    setWishlistErrorMessage(message);
+    window.setTimeout(() => {
+      setWishlistErrorMessage("");
+    }, 3000);
   };
 
   const handleProductClick = (product: any) => {
@@ -249,6 +276,11 @@ export default function ProductListScreen({
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+        {wishlistErrorMessage && (
+          <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-500">
+            {wishlistErrorMessage}
+          </div>
+        )}
         {isLoading ? (
           <EmptyState message={`${title}을 불러오는 중입니다`} />
         ) : errorMessage ? (
@@ -268,11 +300,13 @@ export default function ProductListScreen({
               }
               themeColor={themeColor}
               onProductClick={() => handleProductClick(product)}
-              initialLiked={
-                product.saleType !== "AUCTION" &&
-                likedProductIds.has(product.productId)
-              }
+              initialLiked={likedProductIds.has(product.productId)}
               onWishlistChange={handleWishlistChange}
+              onWishlistError={showWishlistError}
+              showWishlistButton={
+                product.saleType === "AUCTION" ||
+                (!searchKeyword && mode === "auction" && product.auctionId != null)
+              }
             />
           ))
         ) : (
@@ -280,6 +314,8 @@ export default function ProductListScreen({
             message={
               categoryName
                 ? "검색 결과가 없습니다"
+                : listType === "recent"
+                  ? "최근 본 상품이 없습니다"
                 : mode === "regular"
                   ? "표시할 일반 상품이 없습니다"
                   : "등록된 경매 상품이 없습니다"

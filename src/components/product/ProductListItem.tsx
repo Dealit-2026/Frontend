@@ -24,6 +24,8 @@ export default function ProductListItem({
   initialLiked = false,
   onUnlike,
   onWishlistChange,
+  onWishlistError,
+  showWishlistButton = false,
 }: {
   i?: number;
   product?: {
@@ -47,6 +49,7 @@ export default function ProductListItem({
     popularScore?: number;
     rank?: number;
     createdAt?: string;
+    recentViewedLabel?: string;
     canFavorite?: boolean;
   };
   mode: "regular" | "auction";
@@ -55,6 +58,8 @@ export default function ProductListItem({
   initialLiked?: boolean;
   onUnlike?: () => void;
   onWishlistChange?: (productId: number, liked: boolean, favoriteCount: number) => void;
+  onWishlistError?: (message: string) => void;
+  showWishlistButton?: boolean;
   key?: string | number;
 }) {
   const useData = product !== undefined && product !== null;
@@ -73,6 +78,7 @@ export default function ProductListItem({
   const chatCount = useData ? (product!.chatCount ?? 0) : 0;
   const bidCount = useData ? (product!.bidCount ?? 0) : 0;
   const rank = useData ? (product!.rank ?? null) : null;
+  const recentViewedLabel = useData ? product!.recentViewedLabel : undefined;
   const isTopRank = rank === 1;
   const showRankLabel = rank != null && rank >= 1 && rank <= 3;
 
@@ -94,6 +100,65 @@ export default function ProductListItem({
       setDisplayFavoriteCount(132);
     }
   }, [useData, product?.favoriteCount]);
+
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (isWishlistSubmitting) {
+      return;
+    }
+
+    if (isLiked && onUnlike) {
+      setShowConfirm(true);
+      return;
+    }
+
+    if (!useData) {
+      setIsLiked(!isLiked);
+      setDisplayFavoriteCount((currentCount) =>
+        isLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
+      );
+      return;
+    }
+
+    if (product?.canFavorite === false && !isLiked) {
+      return;
+    }
+
+    setIsWishlistSubmitting(true);
+
+    const previousLiked = isLiked;
+    const previousFavoriteCount = displayFavoriteCount;
+    const optimisticLiked = !isLiked;
+    const optimisticFavoriteCount = optimisticLiked
+      ? displayFavoriteCount + 1
+      : Math.max(0, displayFavoriteCount - 1);
+
+    setIsLiked(optimisticLiked);
+    setDisplayFavoriteCount(optimisticFavoriteCount);
+    onWishlistChange?.(productId, optimisticLiked, optimisticFavoriteCount);
+
+    try {
+      const result = isLiked
+        ? await removeRegularWishlist(productId)
+        : await addRegularWishlist(productId);
+
+      setIsLiked(result.liked);
+      setDisplayFavoriteCount(result.favoriteCount);
+      onWishlistChange?.(productId, result.liked, result.favoriteCount);
+    } catch (error) {
+      setIsLiked(previousLiked);
+      setDisplayFavoriteCount(previousFavoriteCount);
+      onWishlistChange?.(productId, previousLiked, previousFavoriteCount);
+      onWishlistError?.(
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : "찜 처리에 실패했습니다.",
+      );
+    } finally {
+      setIsWishlistSubmitting(false);
+    }
+  };
 
   if (mode === "auction") {
     const currentPriceLabel = useData
@@ -129,18 +194,41 @@ export default function ProductListItem({
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex justify-between items-start gap-2">
             <h4 className="font-bold text-sm truncate text-gray-800">{name}</h4>
-            {showRankLabel && (
-              <div
-                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-                  isTopRank
-                    ? "bg-red-50 text-red-500"
-                    : "bg-gray-50 text-gray-500"
-                }`}
-              >
-                {rank}위
-              </div>
-            )}
+            <div className="flex shrink-0 items-center gap-1">
+              {showRankLabel && (
+                <div
+                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                    isTopRank
+                      ? "bg-red-50 text-red-500"
+                      : "bg-gray-50 text-gray-500"
+                  }`}
+                >
+                  {rank}위
+                </div>
+              )}
+              {showWishlistButton && (
+                <button
+                  onClick={handleLikeClick}
+                  disabled={isWishlistSubmitting}
+                  className="p-1 disabled:opacity-50"
+                  aria-label="찜하기"
+                >
+                  <Heart
+                    size={16}
+                    fill={isLiked ? "#FF3B30" : "none"}
+                    color={isLiked ? "#FF3B30" : "#D1D5DB"}
+                  />
+                </button>
+              )}
+            </div>
           </div>
+
+          {showWishlistButton && (
+            <div className="flex items-center space-x-1 text-[10px] text-gray-400 font-medium">
+              <Heart size={10} />
+              <span>{displayFavoriteCount}</span>
+            </div>
+          )}
 
           <p className="text-xs text-gray-500 font-medium">
             현재 입찰가{" "}
@@ -153,6 +241,12 @@ export default function ProductListItem({
             {product?.categoryName ?? "카테고리 없음"} ·{" "}
             {product?.location ?? "지역 정보 없음"}
           </p>
+
+          {recentViewedLabel && (
+            <p className="text-[10px] font-medium text-gray-400">
+              {recentViewedLabel}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-gray-400 font-medium">
             <div className="flex items-center space-x-1 whitespace-nowrap">
@@ -174,47 +268,6 @@ export default function ProductListItem({
       </div>
     );
   }
-
-  const handleLikeClick = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (isWishlistSubmitting) {
-      return;
-    }
-
-    if (isLiked && onUnlike) {
-      setShowConfirm(true);
-      return;
-    }
-
-    if (!useData) {
-      setIsLiked(!isLiked);
-      setDisplayFavoriteCount((currentCount) =>
-        isLiked ? Math.max(0, currentCount - 1) : currentCount + 1,
-      );
-      return;
-    }
-
-    if (product?.canFavorite === false && !isLiked) {
-      return;
-    }
-
-    setIsWishlistSubmitting(true);
-
-    try {
-      const result = isLiked
-        ? await removeRegularWishlist(productId)
-        : await addRegularWishlist(productId);
-
-      setIsLiked(result.liked);
-      setDisplayFavoriteCount(result.favoriteCount);
-      onWishlistChange?.(productId, result.liked, result.favoriteCount);
-    } catch {
-      // Keep the card stable when the backend rejects the toggle.
-    } finally {
-      setIsWishlistSubmitting(false);
-    }
-  };
 
   return (
     <>
@@ -259,6 +312,12 @@ export default function ProductListItem({
               {priceLabel}
             </span>
           </p>
+
+          {recentViewedLabel && (
+            <p className="text-[10px] font-medium text-gray-400">
+              {recentViewedLabel}
+            </p>
+          )}
 
           <div className="flex items-center space-x-3 text-[10px] text-gray-400 font-medium">
             <div className="flex items-center space-x-1">
