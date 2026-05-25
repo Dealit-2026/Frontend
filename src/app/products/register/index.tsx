@@ -50,6 +50,7 @@ export interface RegisterScreenViewProps {
   deletingImageIds: number[];
   isSavingDraft: boolean;
   isSubmitting: boolean;
+  isRecommendingCategory: boolean;
   isLoadingCategories: boolean;
   categoryLoadError: string | null;
   showCategoryError: boolean;
@@ -69,6 +70,7 @@ export interface RegisterScreenViewProps {
   onImageButtonClick: () => void;
   onImageUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveImage: (sortOrder: number) => void;
+  onRecommendCategory: () => void;
   onRecommendPrice: () => void;
   onSaveDraft: () => void;
   onDiscardDraft: () => void;
@@ -100,6 +102,7 @@ export default function RegisterScreenView({
   deletingImageIds,
   isSavingDraft,
   isSubmitting,
+  isRecommendingCategory,
   isLoadingCategories,
   categoryLoadError,
   showCategoryError,
@@ -119,6 +122,7 @@ export default function RegisterScreenView({
   onImageButtonClick,
   onImageUpload,
   onRemoveImage,
+  onRecommendCategory,
   onRecommendPrice,
   onSaveDraft,
   onDiscardDraft,
@@ -135,6 +139,8 @@ export default function RegisterScreenView({
     secondaryCategories.find(
       (category) => category.id === selectedSecondaryCategoryId,
     )?.children ?? [];
+  const isCategoryRecommendationDisabled =
+    isLoadingCategories || isRecommendingCategory || !selectedPrimaryCategoryId;
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
@@ -228,11 +234,22 @@ export default function RegisterScreenView({
                 <h3 className="font-bold text-base">카테고리</h3>
                 <button
                   type="button"
-                  disabled
-                  aria-disabled="true"
-                  className="text-[10px] flex items-center text-gray-300 cursor-not-allowed"
+                  onClick={onRecommendCategory}
+                  disabled={isCategoryRecommendationDisabled}
+                  aria-disabled={isCategoryRecommendationDisabled}
+                  className={`text-[10px] flex items-center ${
+                    isCategoryRecommendationDisabled
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "font-bold"
+                  }`}
+                  style={
+                    isCategoryRecommendationDisabled
+                      ? undefined
+                      : { color: themeColor }
+                  }
                 >
-                  <Sparkles size={10} className="mr-1" /> AI 추천
+                  <Sparkles size={10} className="mr-1" />
+                  {isRecommendingCategory ? "추천 중" : "AI 추천"}
                 </button>
               </div>
               <div className="grid grid-cols-1 gap-3">
@@ -295,9 +312,11 @@ export default function RegisterScreenView({
                     카테고리 목록을 불러오는 중입니다.
                   </p>
                 )}
-                {!isLoadingCategories && !categoryLoadError && (
+                {!isLoadingCategories &&
+                  !categoryLoadError &&
+                  !selectedPrimaryCategoryId && (
                   <p className="text-xs text-gray-400">
-                    AI 추천 기능은 준비 중입니다.
+                    AI 추천을 사용하려면 1차 카테고리를 먼저 선택해 주세요.
                   </p>
                 )}
                 {categoryLoadError && (

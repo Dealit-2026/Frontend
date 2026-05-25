@@ -143,11 +143,17 @@ export interface SaveProductDraftResponse {
 export interface RecommendCategoryRequest {
   name: string;
   description: string;
+  topCategoryId: number;
+  imageUrls: string[];
 }
 
 export interface RecommendCategoryResponse {
   categoryId: number;
   categoryName: string;
+  categoryPathIds: number[];
+  categoryNames: string[];
+  confidence?: number | null;
+  reason?: string | null;
 }
 
 // 가격 추천 요청/응답.

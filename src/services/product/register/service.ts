@@ -95,11 +95,16 @@ export function buildSaveRegularProductDraftRequest(
 }
 
 export function buildRecommendRegularProductCategoryRequest(
-  draft: Pick<RegularProductRegisterDraft, "name" | "description">,
+  draft: Pick<
+    RegularProductRegisterDraft,
+    "name" | "description" | "images"
+  > & { topCategoryId: number },
 ): RecommendRegularProductCategoryRequest {
   return {
     name: draft.name.trim(),
     description: draft.description.trim(),
+    topCategoryId: draft.topCategoryId,
+    imageUrls: draft.images.map((image) => image.imageUrl),
   };
 }
 
@@ -137,7 +142,10 @@ export async function saveRegularProductDraft(
 }
 
 export async function recommendRegularProductCategory(
-  draft: Pick<RegularProductRegisterDraft, "name" | "description">,
+  draft: Pick<
+    RegularProductRegisterDraft,
+    "name" | "description" | "images"
+  > & { topCategoryId: number },
 ) {
   return regularProductApi.recommendRegularProductCategory(
     buildRecommendRegularProductCategoryRequest(draft),

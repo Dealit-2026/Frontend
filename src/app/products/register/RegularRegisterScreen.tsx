@@ -6,6 +6,7 @@ import RegisterScreen from "./RegisterScreen";
 import {
   deleteAuctionImage,
   getAuctionCategories,
+  recommendAuctionCategory,
   recommendAuctionPrice,
   registerAuction,
   saveAuctionDraft,
@@ -15,6 +16,7 @@ import {
 import {
   deleteRegularProductImage,
   getRegularProductCategories,
+  recommendRegularProductCategory,
   recommendRegularProductPrice,
   registerRegularProduct,
   saveRegularProductDraft,
@@ -29,7 +31,7 @@ export default function RegularRegisterScreen(
   return (
     <RegisterScreen
       {...props}
-      getCategories={getAuctionCategories}
+      getCategories={getRegularProductCategories}
       mode="regular"
       servicesByType={{
         regular: {
@@ -37,6 +39,7 @@ export default function RegularRegisterScreen(
           uploadImage: uploadRegularProductImage,
           deleteImage: deleteRegularProductImage,
           saveDraft: saveRegularProductDraft,
+          recommendCategory: recommendRegularProductCategory,
           recommendPrice: ({ name, description }) =>
             recommendRegularProductPrice({ name, description }),
           register: registerRegularProduct,
@@ -46,6 +49,7 @@ export default function RegularRegisterScreen(
           uploadImage: uploadAuctionImage,
           deleteImage: deleteAuctionImage,
           saveDraft: saveAuctionDraft,
+          recommendCategory: recommendAuctionCategory,
           recommendPrice: recommendAuctionPrice,
           register: registerAuction,
           update: (draft, initialData) =>
