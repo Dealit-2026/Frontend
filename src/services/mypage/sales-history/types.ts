@@ -12,6 +12,16 @@ export interface SaleItemResponse {
   status: SaleStatus;
   purchasedAt: string; // ISO timestamp
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
+  reviewReceived?: boolean;
 }
 
 export type SalePageResponse = PageResponse<SaleItemResponse>;
@@ -27,6 +37,16 @@ export interface SaleItemViewModel {
   status: SaleStatus;
   purchasedAtDisplay: string;
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
+  reviewReceived?: boolean;
 }
 
 // 상세 조회용 백엔드 응답
@@ -41,6 +61,16 @@ export interface SaleDetailResponse {
   status: SaleStatus;
   purchasedAt: string; // ISO timestamp
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
+  reviewReceived?: boolean;
 }
 
 // 상세 화면용 뷰모델
@@ -52,4 +82,14 @@ export interface SaleDetailViewModel {
   status: SaleStatus;
   purchasedAtDisplay: string;
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
+  reviewReceived?: boolean;
 }

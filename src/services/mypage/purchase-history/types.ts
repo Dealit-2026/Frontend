@@ -12,6 +12,15 @@ export interface PurchaseItemResponse {
   status: PurchaseStatus;
   purchasedAt: string; // ISO timestamp
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
 }
 
 export type PurchasePageResponse = PageResponse<PurchaseItemResponse>;
@@ -27,6 +36,15 @@ export interface PurchaseItemViewModel {
   status: PurchaseStatus;
   purchasedAtDisplay: string; // 예: "2026.05.06 21:30"
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
 }
 
 // 상세 조회용 백엔드 응답
@@ -41,6 +59,15 @@ export interface PurchaseDetailResponse {
   status: PurchaseStatus;
   purchasedAt: string; // ISO timestamp
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
 }
 
 // 상세 화면용 뷰모델
@@ -52,4 +79,13 @@ export interface PurchaseDetailViewModel {
   status: PurchaseStatus;
   purchasedAtDisplay: string;
   chatRoomId: number | null;
+  productType?: string | null;
+  auctionId?: number | null;
+  sellerShipped?: boolean;
+  buyerConfirmed?: boolean;
+  completed?: boolean;
+  shippedAt?: string | null;
+  completedAt?: string | null;
+  reviewWritten?: boolean;
+  reviewAvailable?: boolean;
 }

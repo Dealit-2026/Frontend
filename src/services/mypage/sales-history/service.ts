@@ -39,6 +39,16 @@ function mapItem(item: SaleItemResponse): SaleItemViewModel {
     status: item.status,
     purchasedAtDisplay: formatPurchasedAt(item.purchasedAt),
     chatRoomId: item.chatRoomId ?? null,
+    productType: item.productType ?? null,
+    auctionId: item.auctionId ?? null,
+    sellerShipped: item.sellerShipped,
+    buyerConfirmed: item.buyerConfirmed,
+    completed: item.completed,
+    shippedAt: item.shippedAt ?? null,
+    completedAt: item.completedAt ?? null,
+    reviewWritten: item.reviewWritten,
+    reviewAvailable: item.reviewAvailable,
+    reviewReceived: item.reviewReceived,
   };
 }
 
@@ -64,6 +74,16 @@ function mapDetailItem(item: SaleDetailResponse): SaleDetailViewModel {
     status: item.status,
     purchasedAtDisplay: formatPurchasedAt(item.purchasedAt),
     chatRoomId: item.chatRoomId ?? null,
+    productType: item.productType ?? null,
+    auctionId: item.auctionId ?? null,
+    sellerShipped: item.sellerShipped,
+    buyerConfirmed: item.buyerConfirmed,
+    completed: item.completed,
+    shippedAt: item.shippedAt ?? null,
+    completedAt: item.completedAt ?? null,
+    reviewWritten: item.reviewWritten,
+    reviewAvailable: item.reviewAvailable,
+    reviewReceived: item.reviewReceived,
   };
 }
 
