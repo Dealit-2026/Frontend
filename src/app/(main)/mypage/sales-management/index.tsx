@@ -244,7 +244,7 @@ export default function SalesManagementScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col relative"
+      className="flex min-h-0 flex-1 flex-col relative h-full"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100">
         <button
@@ -277,7 +277,7 @@ export default function SalesManagementScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar p-6 space-y-4">
         {errorMessage && (
           <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
             {errorMessage}

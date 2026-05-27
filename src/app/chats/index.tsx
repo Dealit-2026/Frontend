@@ -58,7 +58,7 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
   });
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex h-full min-h-0 flex-col bg-white">
       <div className="flex flex-col border-b border-gray-50 sticky top-0 bg-white z-10">
         <div className="h-16 flex items-center px-6 justify-between">
           <h1 className="text-xl font-bold">채팅</h1>
@@ -99,7 +99,7 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar">
         {filteredChats.length > 0 ? (
           filteredChats.map((chat) => (
             <div key={chat.id} onClick={() => onChatClick(chat.id)} className="flex items-center px-6 py-4 space-x-4 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50/50">

@@ -102,7 +102,7 @@ export default function WishlistScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col bg-white"
+      className="flex h-full min-h-0 flex-1 flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-50 sticky top-0 bg-white z-10">
         <button
@@ -115,7 +115,7 @@ export default function WishlistScreen({
         <h1 className="flex-1 text-center font-bold text-lg mr-10">찜목록</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
         {errorMessage && (
           <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
             {errorMessage}
