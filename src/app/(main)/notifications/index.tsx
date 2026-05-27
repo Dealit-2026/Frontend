@@ -373,7 +373,7 @@ export default function NotificationScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="h-full flex flex-col bg-white"
+      className="flex h-full min-h-0 flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-100 shrink-0">
         <button
@@ -424,7 +424,7 @@ export default function NotificationScreen({
       )}
 
       <div
-        className="flex-1 overflow-y-auto no-scrollbar"
+        className="min-h-0 flex-1 overflow-y-auto no-scrollbar"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >

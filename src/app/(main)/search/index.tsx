@@ -70,7 +70,7 @@ export default function SearchScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="min-h-full flex flex-col bg-white"
+      className="flex h-full min-h-0 flex-col bg-white"
     >
       {/* Header */}
       <div className="h-16 flex items-center px-4 border-b border-gray-50 justify-between sticky top-0 bg-white z-10">
@@ -91,7 +91,7 @@ export default function SearchScreen({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-6 space-y-6">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-4 py-6 space-y-6">
         {/* Search Bar */}
         <div
           className="h-12 bg-gray-50 rounded-xl flex items-center px-4 space-x-3 cursor-pointer"

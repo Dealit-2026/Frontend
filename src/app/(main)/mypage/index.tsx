@@ -94,7 +94,7 @@ export default function MyPageScreen({
   ];
 
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex h-full min-h-0 flex-col relative">
       <div className="h-16 flex items-center px-6 justify-between">
         <h1 className="text-xl font-bold">마이페이지</h1>
         <button
@@ -106,7 +106,7 @@ export default function MyPageScreen({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-8">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar px-6 py-4 space-y-8">
         {profileErrorMessage && (
           <div className="rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
             {profileErrorMessage}

@@ -150,7 +150,7 @@ export default function SearchDetailScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="h-full flex flex-col bg-white"
+      className="flex h-full min-h-0 flex-col bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-50 space-x-3 sticky top-0 bg-white z-10">
         <button
@@ -190,7 +190,7 @@ export default function SearchDetailScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+      <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-gray-900 flex items-center space-x-1.5">
