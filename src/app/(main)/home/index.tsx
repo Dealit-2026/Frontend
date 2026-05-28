@@ -442,7 +442,7 @@ export default function HomeScreen({
                 {popularErrorMessage}
               </div>
             ) : popularProducts.length > 0 && mode === "regular" ? (
-              <div className="flex space-x-4 pb-2">
+              <div className="flex space-x-4 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                 {popularProducts.slice(0, 4).map((product, index) => {
                   const regularProduct = product as PopularProductItemViewModel;
                   const rank = index + 1;
