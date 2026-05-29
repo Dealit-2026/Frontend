@@ -1,4 +1,5 @@
 import * as recentProductsApi from "@/services/recent-products/api";
+import { getApiTime } from "@/services/dateTime";
 import type {
   RecentProductItemResponse,
   RecentProductItemViewModel,
@@ -13,7 +14,7 @@ function formatPrice(price: number | null | undefined) {
 }
 
 function getViewedAtMs(viewedAt: string) {
-  const viewedAtMs = new Date(viewedAt).getTime();
+  const viewedAtMs = getApiTime(viewedAt);
   return Number.isFinite(viewedAtMs) ? viewedAtMs : Date.now();
 }
 

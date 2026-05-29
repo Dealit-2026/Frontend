@@ -66,6 +66,7 @@ export interface RegisterScreenServices {
 
 const MAX_PRICE_DIGITS = 13;
 const MAX_PRICE_VALUE = 9_999_999_999_999;
+const MAX_PRODUCT_IMAGE_COUNT = 10;
 
 function normalizeInitialImages(initialData: any): ProductImagePayload[] {
   if (!initialData) {
@@ -471,17 +472,45 @@ export default function RegisterScreen({
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
-    if (!file) {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    if (selectedFiles.length === 0) {
       return;
+    }
+
+    const availableSlots = MAX_PRODUCT_IMAGE_COUNT - images.length;
+    if (availableSlots <= 0) {
+      showErrorMessage(`상품 이미지는 최대 ${MAX_PRODUCT_IMAGE_COUNT}장까지 등록할 수 있습니다.`);
+      event.target.value = "";
+      return;
+    }
+
+    const filesToUpload = selectedFiles.slice(0, availableSlots);
+    if (selectedFiles.length > availableSlots) {
+      showErrorMessage(`상품 이미지는 최대 ${MAX_PRODUCT_IMAGE_COUNT}장까지 등록할 수 있습니다.`);
     }
 
     setIsUploadingImage(true);
     try {
-      const uploadedImage = await currentServices.uploadImage(file, images.length + 1);
-      setImages((currentImages) => [...currentImages, uploadedImage]);
+      const uploadedImages: ProductImagePayload[] = [];
+      for (let index = 0; index < filesToUpload.length; index += 1) {
+        const file = filesToUpload[index];
+        const uploadedImage = await currentServices.uploadImage(
+          file,
+          images.length + index + 1,
+        );
+        uploadedImages.push(uploadedImage);
+      }
+
+      setImages((currentImages) => [
+        ...currentImages,
+        ...uploadedImages.map((image, index) => ({
+          ...image,
+          sortOrder: currentImages.length + index + 1,
+        })),
+      ]);
     } catch (error) {
       console.error("Failed to upload image", error);
+      showErrorMessage("이미지 업로드에 실패했습니다. 다시 시도해 주세요.");
     } finally {
       setIsUploadingImage(false);
       event.target.value = "";

@@ -1,4 +1,5 @@
 import * as wishlistApi from "@/services/wishlist/api";
+import { getApiTime } from "@/services/dateTime";
 import type {
   AuctionWishlistItemResponse,
   WishlistItemResponse,
@@ -54,7 +55,7 @@ function sortByLikedAtDesc(
   items: WishlistItemViewModel[],
 ): WishlistItemViewModel[] {
   return [...items].sort(
-    (a, b) => new Date(b.likedAt).getTime() - new Date(a.likedAt).getTime(),
+    (a, b) => getApiTime(b.likedAt) - getApiTime(a.likedAt),
   );
 }
 

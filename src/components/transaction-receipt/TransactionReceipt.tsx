@@ -12,6 +12,7 @@ import {
   getMyReceivedReviews,
   getMyWrittenReviews,
 } from "@/services/review/api";
+import { formatApiDate, parseApiDate } from "@/services/dateTime";
 
 interface Props {
   mode: "purchase" | "sale";
@@ -244,12 +245,15 @@ export default function TransactionReceipt({
 
   const formatDate = (iso?: string | null) => {
     if (!iso) return "-";
-    try {
-      const dt = new Date(iso);
-      return dt.toLocaleString("ko-KR");
-    } catch {
-      return iso;
-    }
+    if (!parseApiDate(iso)) return iso;
+    return formatApiDate(iso, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   };
 
   const isSellerShipped =

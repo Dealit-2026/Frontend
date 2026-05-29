@@ -23,6 +23,7 @@ import {
 import { motion } from "motion/react";
 
 import { getErrorMessage } from "@/services/apiError";
+import { formatApiDate, parseApiDate } from "@/services/dateTime";
 import {
   deleteNotification,
   getNotifications,
@@ -51,8 +52,8 @@ const FILTERS: Array<{ label: string; value: NotificationFilter }> = [
 function toTimeLabel(value: string | null) {
   if (!value) return "";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseApiDate(value);
+  if (!date) return "";
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -65,10 +66,10 @@ function toTimeLabel(value: string | null) {
   if (hour < 24) return `${hour}시간 전`;
   if (day < 7) return `${day}일 전`;
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(value, {
     month: "2-digit",
     day: "2-digit",
-  }).format(date);
+  });
 }
 
 function getNotificationIcon(notification: NotificationResponse) {

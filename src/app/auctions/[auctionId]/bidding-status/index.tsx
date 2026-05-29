@@ -44,6 +44,7 @@ import {
 } from '@/services/auction/detail/service';
 import type { AuctionBidHistoryItem, AuctionBidHistoryResponse, AuctionDetailResponse } from '@/services/auction/detail/types';
 import { useEventStream } from '@/services/events/EventStreamProvider';
+import { formatApiDate, getApiTime } from '@/services/dateTime';
 
 type BidStatusTab = "history" | "ranking";
 
@@ -57,18 +58,13 @@ type BidRankingItem = {
 const EMPTY_BIDS: AuctionBidHistoryItem[] = [];
 
 function formatBidTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(value, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(date);
+  });
 }
 
 export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: { auctionId: number | null; onBack: () => void; themeColor: string; key?: string }) {
@@ -177,7 +173,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col bg-white"
+      className="relative flex h-dvh min-h-0 flex-1 flex-col overflow-hidden bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-50">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -186,7 +182,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
         <h1 className="flex-1 text-center font-bold text-lg mr-10">입찰 현황</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-28 no-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-28 no-scrollbar">
         {/* Summary Header */}
         <div className="p-6 bg-gray-50/50 border-b border-gray-50">
           <div className="flex items-center justify-between mb-4">
@@ -362,7 +358,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
       </div>
 
       {/* Bottom Action */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-gray-50 bg-white p-6">
+      <div className="absolute bottom-0 left-0 right-0 z-20 shrink-0 border-t border-gray-50 bg-white p-6">
         <button 
           onClick={onBack}
           className="w-full h-14 bg-gray-900 text-white font-bold rounded-2xl shadow-[0_8px_18px_rgba(15,23,42,0.18)] hover:bg-black transition-colors"
@@ -416,7 +412,7 @@ function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
         if (b.bidPrice !== a.bidPrice) {
           return b.bidPrice - a.bidPrice;
         }
-        return new Date(b.bidAt).getTime() - new Date(a.bidAt).getTime();
+        return getApiTime(b.bidAt) - getApiTime(a.bidAt);
       });
 
       return {
@@ -431,6 +427,6 @@ function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
       if (b.highestBid.bidPrice !== a.highestBid.bidPrice) {
         return b.highestBid.bidPrice - a.highestBid.bidPrice;
       }
-      return new Date(b.highestBid.bidAt).getTime() - new Date(a.highestBid.bidAt).getTime();
+      return getApiTime(b.highestBid.bidAt) - getApiTime(a.highestBid.bidAt);
     });
 }

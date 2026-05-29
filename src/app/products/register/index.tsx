@@ -148,6 +148,7 @@ export default function RegisterScreenView({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={onImageUpload}
       />

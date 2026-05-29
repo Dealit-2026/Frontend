@@ -6,7 +6,11 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import Toast from "@/components/common/Toast";
 import AuctionDetailScreen from "./index";
-import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import { formatApiDate } from "@/services/dateTime";
+import {
+  createChatRoom,
+  findExistingChatRoomByProductId,
+} from "@/services/chats/service";
 import { fetchAuctionDetail } from "@/services/auction/detail/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 import {
@@ -100,9 +104,11 @@ export default function AuctionDetailPage() {
         return;
       }
 
-      router.push(`/chats/new?productId=${productId}`);
+      const createdRoom = await createChatRoom({ productId });
+      router.push(`/chats/${createdRoom.roomId}`);
     } catch (err) {
       console.error("Failed to open auction chat:", err);
+      showToast("채팅방을 열지 못했습니다.");
     } finally {
       setIsOpeningChat(false);
     }
@@ -238,12 +244,12 @@ export default function AuctionDetailPage() {
                         </p>
                         {reauctionPreview?.reauctionExpiresAt && (
                           <p className="mt-1 text-xs font-bold text-gray-400">
-                            {new Intl.DateTimeFormat("ko-KR", {
+                            {formatApiDate(reauctionPreview.reauctionExpiresAt, {
                               month: "2-digit",
                               day: "2-digit",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }).format(new Date(reauctionPreview.reauctionExpiresAt))}
+                            })}
                             까지 가능
                           </p>
                         )}

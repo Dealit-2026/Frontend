@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createChatRoom } from "@/services/chats/service";
+import { formatApiDate, parseApiDate } from "@/services/dateTime";
 import { motion } from "motion/react";
 
 import { fetchCurrentMember } from "@/services/auth/service";
@@ -112,15 +113,14 @@ export default function ReceiptScreen({
 
   const purchasedAtText = useMemo(() => {
     if (!receipt?.purchasedAt) return "-";
-    const parsed = new Date(receipt.purchasedAt);
-    if (Number.isNaN(parsed.getTime())) return "-";
-    return new Intl.DateTimeFormat("ko-KR", {
+    if (!parseApiDate(receipt.purchasedAt)) return "-";
+    return formatApiDate(receipt.purchasedAt, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-    }).format(parsed);
+    });
   }, [receipt]);
 
   const productTitle = receipt?.productTitle ?? "상품 정보 없음";

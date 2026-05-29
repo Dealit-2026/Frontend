@@ -1,4 +1,5 @@
 import * as walletApi from "@/services/wallet/api";
+import { getApiDateTimeParts, parseApiDate } from "@/services/dateTime";
 import type {
   WalletLedgerResponse,
   WalletLedgerType,
@@ -102,13 +103,12 @@ function formatWalletDate(value: string | null) {
     return "";
   }
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hour = String(date.getHours()).padStart(2, "0");
-  const minute = String(date.getMinutes()).padStart(2, "0");
+  const parts = getApiDateTimeParts(value);
+  if (!parts) {
+    return "";
+  }
 
-  return `${year}.${month}.${day} | ${hour}:${minute}`;
+  return `${parts.year}.${parts.month}.${parts.day} | ${parts.hour}:${parts.minute}`;
 }
 
 function parseWalletDate(value: string | null) {
@@ -116,6 +116,5 @@ function parseWalletDate(value: string | null) {
     return null;
   }
 
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
+  return parseApiDate(value);
 }

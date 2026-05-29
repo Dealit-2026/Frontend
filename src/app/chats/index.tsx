@@ -136,7 +136,7 @@ export default function ChatListScreen({ themeColor, onChatClick }: { themeColor
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
               <MessageCircle size={32} />
             </div>
-            <p className="text-sm font-medium">탐색 결과가 없습니다.</p>
+            <p className="text-sm font-medium">채팅이 존재하지 않습니다.</p>
           </div>
         )}
       </div>
@@ -367,7 +367,7 @@ export default function ChatListScreen({
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center">
               <MessageCircle size={32} />
             </div>
-            <p className="text-sm font-medium">탐색 결과가 없습니다.</p>
+            <p className="text-sm font-medium">채팅이 존재하지 않습니다.</p>
           </div>
         )}
       </div>

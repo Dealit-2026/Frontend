@@ -1,5 +1,6 @@
 import * as reviewApi from "@/services/review/api";
 import { getAuctionDetail } from "@/services/auction/detail/api";
+import { formatApiDate, parseApiDate } from "@/services/dateTime";
 import { getProductDetail } from "@/services/product/productDetail/api";
 import type {
   CreateReviewRequest,
@@ -31,18 +32,15 @@ function resolveProductImageUrl(imageUrl: string | null | undefined) {
 }
 
 function formatDateLabel(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
+  if (!parseApiDate(value)) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(value, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   })
-    .format(date)
     .replace(/\.\s?/g, ".")
     .replace(/\.$/, "");
 }

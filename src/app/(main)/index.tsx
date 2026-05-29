@@ -146,7 +146,11 @@ export default function MainLayout({
 
   return (
     <div className="flex-1 flex flex-col h-full relative overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-hidden relative pb-16">
+      <motion.div
+        animate={{ paddingBottom: activeTab !== 'register' && isBottomNavVisible ? 64 : 0 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        className="flex-1 flex flex-col overflow-hidden relative"
+      >
         {displayTab === 'home' && (
           <HomeScreen 
             onProductClick={onProductClick} 
@@ -209,7 +213,7 @@ export default function MainLayout({
             refreshKey={profileRefreshKey}
           />
         )}
-      </div>
+      </motion.div>
 
       {/* Bottom Tab Bar */}
       {activeTab !== 'register' && (

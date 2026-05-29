@@ -8,6 +8,7 @@ import {
   createFallbackUnreadCountResponse,
 } from "./fallback";
 import { fetchCurrentMember } from "@/services/auth/service";
+import { formatApiDate, parseApiDate } from "@/services/dateTime";
 import type {
   ChatActionButtons,
   ChatMessageType,
@@ -60,8 +61,8 @@ function toProductTypeLabel(type: ChatRoomType): "Deal it!" | "일반 판매" {
 function toTimeLabel(iso: string | null | undefined): string {
   if (!iso) return "";
 
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
+  const date = parseApiDate(iso);
+  if (!date) return "";
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -75,10 +76,10 @@ function toTimeLabel(iso: string | null | undefined): string {
   if (hour < 24) return `${hour}시간 전`;
   if (day < 7) return `${day}일 전`;
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(iso, {
     month: "2-digit",
     day: "2-digit",
-  }).format(date);
+  });
 }
 
 function mapMessageType(type: ChatMessageType): ChatMessageType {

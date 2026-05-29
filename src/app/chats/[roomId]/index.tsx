@@ -28,6 +28,7 @@ import type {
 } from "../../../services/chats/types";
 import { ApiRequestError } from "@/services/apiError";
 import { fetchCurrentMember } from "@/services/auth/service";
+import { formatApiDate, getApiTime } from "@/services/dateTime";
 import {
   markPurchaseReceived,
   markPurchaseShipped,
@@ -263,20 +264,8 @@ export default function ChatRoomScreen({
   }, [chatId, currentMemberId]);
 
   const sortedMessages = useMemo(() => {
-    return [...messages].sort(
-      (a, b) => new Date(a.sentAt).getTime() - new Date(b.sentAt).getTime(),
-    );
+    return [...messages].sort((a, b) => getApiTime(a.sentAt) - getApiTime(b.sentAt));
   }, [messages]);
-
-  const messageTimeFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-    [],
-  );
 
   const handleBack = () => {
     if (onBack) {
@@ -674,7 +663,11 @@ export default function ChatRoomScreen({
                       isMine ? "text-gray-300" : "text-gray-400"
                     }`}
                   >
-                    {messageTimeFormatter.format(new Date(msg.sentAt))}
+                    {formatApiDate(msg.sentAt, {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
                   </p>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import * as auctionListApi from "@/services/auction/list/api";
+import { getApiTime } from "@/services/dateTime";
 import type {
   AuctionListItemResponse,
   AuctionListItemViewModel,
@@ -29,7 +30,7 @@ function formatAuctionStatus(status: AuctionStatus) {
 }
 
 function formatEndAt(endAt: string) {
-  const endTime = new Date(endAt).getTime();
+  const endTime = getApiTime(endAt);
   if (!Number.isFinite(endTime)) {
     return "마감 시간 없음";
   }
