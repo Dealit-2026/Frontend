@@ -62,6 +62,27 @@ function shouldSuppressForegroundNotification(payload: {
   return Boolean(data.roomId && pathname === `/chats/${data.roomId}`);
 }
 
+async function showForegroundNotification(
+  title: string,
+  options: NotificationOptions,
+  payload: { data?: Record<string, string>; fcmOptions?: { link?: string } },
+) {
+  const registration = await navigator.serviceWorker.getRegistration(
+    "/firebase-cloud-messaging-push-scope",
+  );
+
+  if (registration) {
+    await registration.showNotification(title, options);
+    return;
+  }
+
+  const notification = new Notification(title, options);
+  notification.onclick = () => {
+    notification.close();
+    openNotificationTarget(resolvePayloadTargetUrl(payload));
+  };
+}
+
 export function ForegroundNotificationListener() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -117,17 +138,9 @@ export function ForegroundNotificationListener() {
         data: payload.data || {},
       };
 
-      navigator.serviceWorker.ready
-        .then((registration) => {
-          registration.showNotification(title, options);
-        })
-        .catch(() => {
-          const notification = new Notification(title, options);
-          notification.onclick = () => {
-            notification.close();
-            openNotificationTarget(resolvePayloadTargetUrl(payload));
-          };
-        });
+      showForegroundNotification(title, options, payload).catch((error) => {
+        console.warn("foreground notification display failed:", error);
+      });
     })
       .then((nextUnsubscribe) => {
         if (cancelled) {
