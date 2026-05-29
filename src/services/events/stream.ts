@@ -1,8 +1,7 @@
 import type { AppEventStreamEvent } from "./types";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ??
-  "http://localhost:8080";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
 
 export interface EventStreamSubscription {
   close: () => void;
@@ -19,13 +18,18 @@ function getAccessToken(): string | null {
 }
 
 function getEventStreamUrl() {
-  const baseUrl = new URL(API_BASE_URL);
+  const fallbackBaseUrl =
+    typeof window !== "undefined" &&
+    !["localhost", "127.0.0.1"].includes(window.location.hostname)
+      ? "https://api.dealit.site"
+      : "http://localhost:8080";
+  const baseUrl = new URL(API_BASE_URL || fallbackBaseUrl);
   if (
     typeof window !== "undefined" &&
     !["localhost", "127.0.0.1"].includes(window.location.hostname) &&
     ["localhost", "127.0.0.1"].includes(baseUrl.hostname)
   ) {
-    baseUrl.hostname = window.location.hostname;
+    return "https://api.dealit.site/api/v1/events/stream";
   }
   baseUrl.pathname = "/api/v1/events/stream";
   baseUrl.search = "";

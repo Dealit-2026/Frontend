@@ -1,4 +1,5 @@
 import * as buyingAuctionApi from "@/services/buying-auction/api";
+import { getApiTime } from "@/services/dateTime";
 import type {
   BuyingAuctionListViewModel,
   BuyingAuctionStatus,
@@ -15,7 +16,7 @@ function formatTimeLabel(endsAt: string, status: BuyingAuctionStatus) {
     return "종료";
   }
 
-  const endTime = new Date(endsAt).getTime();
+  const endTime = getApiTime(endsAt);
   const diff = endTime - Date.now();
 
   if (!Number.isFinite(endTime) || diff <= 0) {

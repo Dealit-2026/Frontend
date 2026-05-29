@@ -1,4 +1,5 @@
 import * as productSearchApi from "@/services/product/search/api";
+import { getApiTime } from "@/services/dateTime";
 import type { AuctionListItemViewModel } from "@/services/auction/list/types";
 import type {
   PopularSearchKeywordViewModel,
@@ -231,7 +232,7 @@ function formatAuctionStatus(status: AuctionListItemViewModel["auctionStatus"]) 
 }
 
 function formatEndAt(endAt: string) {
-  const endTime = new Date(endAt).getTime();
+  const endTime = getApiTime(endAt);
   if (!Number.isFinite(endTime)) {
     return "마감 시간 없음";
   }

@@ -5,7 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 
 import Toast from "@/components/common/Toast";
 import ProductDetailScreen from "./index";
-import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import {
+  createChatRoom,
+  findExistingChatRoomByProductId,
+} from "@/services/chats/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
@@ -67,10 +70,11 @@ export default function ProductDetailPage() {
         return;
       }
 
-      router.push(`/chats/new?productId=${productId}`);
+      const createdRoom = await createChatRoom({ productId });
+      router.push(`/chats/${createdRoom.roomId}`);
     } catch (err) {
       console.error("Failed to open chat:", err);
-      router.push(`/chats/new?productId=${productId}`);
+      showToast("채팅방을 열지 못했습니다.");
     } finally {
       setIsOpeningChat(false);
     }

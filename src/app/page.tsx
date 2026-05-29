@@ -106,7 +106,10 @@ import {
   signUp,
 } from "@/services/auth/service";
 import { EventStreamProvider } from "@/services/events/EventStreamProvider";
-import { findExistingChatRoomByProductId } from "@/services/chats/service";
+import {
+  createChatRoom,
+  findExistingChatRoomByProductId,
+} from "@/services/chats/service";
 import { fetchAuctionDetail } from "@/services/auction/detail/service";
 import {
   readStoredThemeMode,
@@ -660,9 +663,11 @@ export default function App() {
           ? (await fetchAuctionDetail(selectedProductId)).productId
           : selectedProductId;
       const existingRoom = await findExistingChatRoomByProductId(chatProductId);
+      const roomId =
+        existingRoom?.roomId ?? (await createChatRoom({ productId: chatProductId })).roomId;
 
-      setSelectedChatId(existingRoom?.roomId ?? null);
-      setSelectedChatDraftProductId(existingRoom ? null : chatProductId);
+      setSelectedChatId(roomId);
+      setSelectedChatDraftProductId(null);
       navigateTo("chat_room");
     } catch (error) {
       showToast(getErrorMessage(error, "채팅방을 열지 못했습니다."));
@@ -1167,10 +1172,7 @@ export default function App() {
                   navigateTo("bid_placement_complete");
                 }}
                 onPurchaseClick={() => navigateTo("payment")}
-                onChatClick={() => {
-                  setSelectedChatId(1);
-                  navigateTo("chat_room");
-                }}
+                onChatClick={openProductChat}
                 themeColor={themeColor}
                 mode={themeMode}
                 showToast={showToast}
@@ -1294,6 +1296,7 @@ export default function App() {
               <ChatRoomScreen
                 key="chat_room"
                 chatId={selectedChatId}
+                draftProductId={selectedChatDraftProductId}
                 onBack={() => navigateTo("main")}
                 themeColor={themeColor}
               />

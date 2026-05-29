@@ -44,12 +44,14 @@ import {
 } from '@/services/auction/detail/service';
 import type { AuctionBidHistoryItem, AuctionBidHistoryResponse, AuctionDetailResponse } from '@/services/auction/detail/types';
 import { useEventStream } from '@/services/events/EventStreamProvider';
+import { formatApiDate, getApiTime } from '@/services/dateTime';
 
 type BidStatusTab = "history" | "ranking";
 
 type BidRankingItem = {
   bidderId: number;
   bidderNickname: string;
+  bidderProfileImageUrl: string | null;
   highestBid: AuctionBidHistoryItem;
   bids: AuctionBidHistoryItem[];
 };
@@ -57,18 +59,13 @@ type BidRankingItem = {
 const EMPTY_BIDS: AuctionBidHistoryItem[] = [];
 
 function formatBidTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(value, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(date);
+  });
 }
 
 export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: { auctionId: number | null; onBack: () => void; themeColor: string; key?: string }) {
@@ -177,7 +174,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col bg-white"
+      className="relative flex h-dvh min-h-0 flex-1 flex-col overflow-hidden bg-white"
     >
       <div className="h-16 flex items-center px-4 border-b border-gray-50">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -186,7 +183,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
         <h1 className="flex-1 text-center font-bold text-lg mr-10">입찰 현황</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-28 no-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto pb-28 no-scrollbar">
         {/* Summary Header */}
         <div className="p-6 bg-gray-50/50 border-b border-gray-50">
           <div className="flex items-center justify-between mb-4">
@@ -235,7 +232,15 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                   
                   <div className="flex items-start space-x-4">
                     <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 bg-gray-100 flex items-center justify-center ${bid.highest ? 'ring-2 ring-offset-2' : 'border-gray-100'}`} style={{ '--tw-ring-color': bid.highest ? themeColor : 'transparent', borderColor: bid.highest ? themeColor : '#F3F4F6' } as React.CSSProperties}>
-                      <User size={18} className="text-gray-400" />
+                      {bid.bidderProfileImageUrl ? (
+                        <img
+                          src={bid.bidderProfileImageUrl}
+                          alt={bid.bidderNickname}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User size={18} className="text-gray-400" />
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -262,22 +267,47 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
               ))}
             </div>
           ) : activeTab === "ranking" && bidRankings.length > 0 ? (
-            <div className="space-y-3">
-              {bidRankings.map((ranking, index) => {
+            <motion.div layout className="space-y-3">
+              <AnimatePresence initial={false} mode="popLayout">
+                {bidRankings.map((ranking, index) => {
                 const isExpanded = expandedBidderIds.has(ranking.bidderId);
                 const hasMultipleBids = ranking.bids.length > 1;
 
                 return (
-                  <div
+                  <motion.div
                     key={ranking.bidderId}
-                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                    layout
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{
+                      layout: { type: "spring", stiffness: 430, damping: 34 },
+                      opacity: { duration: 0.14 },
+                      scale: { duration: 0.14 },
+                    }}
+                    className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                      index === 0 ? "border-gray-200 shadow-[0_10px_24px_rgba(15,23,42,0.08)]" : "border-gray-100"
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
-                        style={{ backgroundColor: index === 0 ? themeColor : "#111827" }}
-                      >
-                        {index + 1}
+                      <div className="relative h-9 w-9 shrink-0">
+                        <div className="h-9 w-9 overflow-hidden rounded-full bg-gray-100 flex items-center justify-center">
+                          {ranking.bidderProfileImageUrl ? (
+                            <img
+                              src={ranking.bidderProfileImageUrl}
+                              alt={ranking.bidderNickname}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <User size={16} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span
+                          className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-black text-white"
+                          style={{ backgroundColor: index === 0 ? themeColor : "#111827" }}
+                        >
+                          {index + 1}
+                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -349,10 +379,11 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
+                  </motion.div>
                 );
-              })}
-            </div>
+                })}
+              </AnimatePresence>
+            </motion.div>
           ) : (
             <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
               {activeTab === "history" ? "입찰 기록이 없습니다" : "입찰 순위가 없습니다"}
@@ -362,7 +393,7 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
       </div>
 
       {/* Bottom Action */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 border-t border-gray-50 bg-white p-6">
+      <div className="absolute bottom-0 left-0 right-0 z-20 shrink-0 border-t border-gray-50 bg-white p-6">
         <button 
           onClick={onBack}
           className="w-full h-14 bg-gray-900 text-white font-bold rounded-2xl shadow-[0_8px_18px_rgba(15,23,42,0.18)] hover:bg-black transition-colors"
@@ -416,12 +447,13 @@ function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
         if (b.bidPrice !== a.bidPrice) {
           return b.bidPrice - a.bidPrice;
         }
-        return new Date(b.bidAt).getTime() - new Date(a.bidAt).getTime();
+        return getApiTime(b.bidAt) - getApiTime(a.bidAt);
       });
 
       return {
         bidderId,
         bidderNickname: sortedBids[0]?.bidderNickname ?? `입찰자 #${bidderId}`,
+        bidderProfileImageUrl: sortedBids[0]?.bidderProfileImageUrl ?? null,
         highestBid: sortedBids[0],
         bids: sortedBids,
       };
@@ -431,6 +463,6 @@ function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
       if (b.highestBid.bidPrice !== a.highestBid.bidPrice) {
         return b.highestBid.bidPrice - a.highestBid.bidPrice;
       }
-      return new Date(b.highestBid.bidAt).getTime() - new Date(a.highestBid.bidAt).getTime();
+      return getApiTime(b.highestBid.bidAt) - getApiTime(a.highestBid.bidAt);
     });
 }

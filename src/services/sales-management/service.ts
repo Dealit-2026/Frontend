@@ -1,5 +1,6 @@
 import * as salesManagementApi from "@/services/sales-management/api";
 import * as mypageApi from "@/services/mypage/api";
+import { getApiTime } from "@/services/dateTime";
 import type {
   AuctionSalesManagementItemResponse,
   RegularSalesManagementItemResponse,
@@ -85,7 +86,7 @@ function toAuctionViewModel(
   const auctionStatus =
     item.auctionStatus ??
     item.status ??
-    (item.endAt && new Date(item.endAt).getTime() > Date.now()
+    (item.endAt && getApiTime(item.endAt) > Date.now()
       ? "ONGOING"
       : "ENDED");
 
@@ -150,7 +151,7 @@ export async function fetchSalesManagementProducts(): Promise<
     ),
   ].sort(
     (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      getApiTime(b.createdAt) - getApiTime(a.createdAt),
   );
 }
 

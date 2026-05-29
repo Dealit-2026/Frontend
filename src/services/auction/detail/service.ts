@@ -1,4 +1,5 @@
 import * as auctionDetailApi from "@/services/auction/detail/api";
+import { getApiTime } from "@/services/dateTime";
 import type { AuctionDetailResponse } from "@/services/auction/detail/types";
 
 export async function fetchAuctionDetail(auctionId: number) {
@@ -31,8 +32,7 @@ export function getAuctionRemainingTimeLabel(
     return "남은 시간 확인 중";
   }
 
-  const remainingMs =
-    new Date(endsAt).getTime() - new Date(serverTime).getTime();
+  const remainingMs = getApiTime(endsAt) - getApiTime(serverTime);
 
   if (!Number.isFinite(remainingMs) || remainingMs <= 0) {
     return "경매 종료";

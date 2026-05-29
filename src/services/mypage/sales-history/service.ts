@@ -1,4 +1,5 @@
 import * as api from "./api";
+import { getApiDateTimeParts } from "@/services/dateTime";
 import type {
   SaleItemResponse,
   SalePageResponse,
@@ -11,21 +12,11 @@ function formatAmount(amount: number) {
   return `${Number(amount || 0).toLocaleString()}원`;
 }
 
-function pad(num: number) {
-  return num.toString().padStart(2, "0");
-}
-
 function formatPurchasedAt(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
+  const parts = getApiDateTimeParts(iso);
+  if (!parts) return "";
 
-  const yyyy = date.getFullYear();
-  const mm = pad(date.getMonth() + 1);
-  const dd = pad(date.getDate());
-  const hh = pad(date.getHours());
-  const min = pad(date.getMinutes());
-
-  return `${yyyy}.${mm}.${dd} ${hh}:${min}`;
+  return `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
 function mapItem(item: SaleItemResponse): SaleItemViewModel {

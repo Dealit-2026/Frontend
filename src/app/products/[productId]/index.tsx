@@ -27,6 +27,7 @@ import type { AuctionDetailResponse } from "@/services/auction/detail/types";
 import { fetchCurrentMember } from "@/services/auth/service";
 import { useEventStream } from "@/services/events/EventStreamProvider";
 import type { AuctionEventStreamEvent } from "@/services/events/types";
+import { formatApiDate, getApiTime } from "@/services/dateTime";
 import * as productDetailService from "@/services/product/productDetail/service";
 import type { ProductDetailResponse } from "@/services/product/productDetail/types";
 import {
@@ -119,13 +120,13 @@ function formatScheduleLabel(value?: string) {
     return "시작 시간이 확정되면 안내될 예정이에요.";
   }
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  return formatApiDate(value, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(value));
+  });
 }
 
 function isAuctionEventForProduct(
@@ -181,8 +182,7 @@ export default function ProductDetailScreen({
   const isAuctionScheduled =
     !isRegular && effectiveAuctionStatus === "AUCTION_SCHEDULED";
   const auctionRemainingMs = auctionDetail
-    ? new Date(auctionDetail.endsAt).getTime() -
-      (currentTimeMs + auctionClockOffsetMs)
+    ? getApiTime(auctionDetail.endsAt) - (currentTimeMs + auctionClockOffsetMs)
     : Number.POSITIVE_INFINITY;
   const hasAuctionTimeEnded = !isRegular && auctionRemainingMs <= 0;
   const isAuctionEnded =
@@ -343,9 +343,7 @@ export default function ProductDetailScreen({
         }
 
         setAuctionDetail(data);
-        setAuctionClockOffsetMs(
-          new Date(data.serverTime).getTime() - Date.now(),
-        );
+        setAuctionClockOffsetMs(getApiTime(data.serverTime) - Date.now());
         setCurrentPrice(getAuctionDisplayCurrentPrice(data));
         setBidCount(data.bidCount);
         setInputBidAmount(data.minimumNextBidPrice);
@@ -401,9 +399,7 @@ export default function ProductDetailScreen({
       setCurrentPrice(latestAuctionEvent.currentPrice);
       setBidCount(latestAuctionEvent.bidCount);
       setInputBidAmount(latestAuctionEvent.minimumNextBidPrice);
-      setAuctionClockOffsetMs(
-        new Date(latestAuctionEvent.serverTime).getTime() - Date.now(),
-      );
+      setAuctionClockOffsetMs(getApiTime(latestAuctionEvent.serverTime) - Date.now());
       setAuctionDetail((previous) =>
         previous
           ? {
@@ -478,9 +474,7 @@ export default function ProductDetailScreen({
       const nextAuctionDetail = await fetchAuctionDetail(productId);
 
       setAuctionDetail(nextAuctionDetail);
-      setAuctionClockOffsetMs(
-        new Date(nextAuctionDetail.serverTime).getTime() - Date.now(),
-      );
+      setAuctionClockOffsetMs(getApiTime(nextAuctionDetail.serverTime) - Date.now());
       setCurrentPrice(getAuctionDisplayCurrentPrice(nextAuctionDetail));
       setBidCount(nextAuctionDetail.bidCount);
       setInputBidAmount(nextAuctionDetail.minimumNextBidPrice);
