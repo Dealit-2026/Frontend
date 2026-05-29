@@ -51,6 +51,7 @@ type BidStatusTab = "history" | "ranking";
 type BidRankingItem = {
   bidderId: number;
   bidderNickname: string;
+  bidderProfileImageUrl: string | null;
   highestBid: AuctionBidHistoryItem;
   bids: AuctionBidHistoryItem[];
 };
@@ -231,7 +232,15 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                   
                   <div className="flex items-start space-x-4">
                     <div className={`w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 bg-gray-100 flex items-center justify-center ${bid.highest ? 'ring-2 ring-offset-2' : 'border-gray-100'}`} style={{ '--tw-ring-color': bid.highest ? themeColor : 'transparent', borderColor: bid.highest ? themeColor : '#F3F4F6' } as React.CSSProperties}>
-                      <User size={18} className="text-gray-400" />
+                      {bid.bidderProfileImageUrl ? (
+                        <img
+                          src={bid.bidderProfileImageUrl}
+                          alt={bid.bidderNickname}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <User size={18} className="text-gray-400" />
+                      )}
                     </div>
                     
                     <div className="flex-1 min-w-0 pt-0.5">
@@ -258,22 +267,47 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
               ))}
             </div>
           ) : activeTab === "ranking" && bidRankings.length > 0 ? (
-            <div className="space-y-3">
-              {bidRankings.map((ranking, index) => {
+            <motion.div layout className="space-y-3">
+              <AnimatePresence initial={false} mode="popLayout">
+                {bidRankings.map((ranking, index) => {
                 const isExpanded = expandedBidderIds.has(ranking.bidderId);
                 const hasMultipleBids = ranking.bids.length > 1;
 
                 return (
-                  <div
+                  <motion.div
                     key={ranking.bidderId}
-                    className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+                    layout
+                    initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                    transition={{
+                      layout: { type: "spring", stiffness: 430, damping: 34 },
+                      opacity: { duration: 0.14 },
+                      scale: { duration: 0.14 },
+                    }}
+                    className={`rounded-2xl border bg-white p-4 shadow-sm ${
+                      index === 0 ? "border-gray-200 shadow-[0_10px_24px_rgba(15,23,42,0.08)]" : "border-gray-100"
+                    }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-black text-white"
-                        style={{ backgroundColor: index === 0 ? themeColor : "#111827" }}
-                      >
-                        {index + 1}
+                      <div className="relative h-9 w-9 shrink-0">
+                        <div className="h-9 w-9 overflow-hidden rounded-full bg-gray-100 flex items-center justify-center">
+                          {ranking.bidderProfileImageUrl ? (
+                            <img
+                              src={ranking.bidderProfileImageUrl}
+                              alt={ranking.bidderNickname}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <User size={16} className="text-gray-400" />
+                          )}
+                        </div>
+                        <span
+                          className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-[9px] font-black text-white"
+                          style={{ backgroundColor: index === 0 ? themeColor : "#111827" }}
+                        >
+                          {index + 1}
+                        </span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
@@ -345,10 +379,11 @@ export default function BiddingStatusScreen({ auctionId, onBack, themeColor }: {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
+                  </motion.div>
                 );
-              })}
-            </div>
+                })}
+              </AnimatePresence>
+            </motion.div>
           ) : (
             <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-gray-200 text-sm font-medium text-gray-400">
               {activeTab === "history" ? "입찰 기록이 없습니다" : "입찰 순위가 없습니다"}
@@ -418,6 +453,7 @@ function buildBidRankings(bids: AuctionBidHistoryItem[]): BidRankingItem[] {
       return {
         bidderId,
         bidderNickname: sortedBids[0]?.bidderNickname ?? `입찰자 #${bidderId}`,
+        bidderProfileImageUrl: sortedBids[0]?.bidderProfileImageUrl ?? null,
         highestBid: sortedBids[0],
         bids: sortedBids,
       };
