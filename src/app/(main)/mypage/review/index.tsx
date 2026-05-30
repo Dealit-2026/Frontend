@@ -123,9 +123,9 @@ export default function ReviewScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col bg-white"
+      className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white"
     >
-      <div className="h-16 flex items-center px-4 border-b border-gray-100">
+      <div className="h-16 flex items-center px-4 border-b border-gray-100 shrink-0">
         <button
           type="button"
           onClick={onBack}
@@ -139,7 +139,7 @@ export default function ReviewScreen({
         </h1>
       </div>
 
-      <div className="flex p-4 space-x-2">
+      <div className="flex p-4 space-x-2 shrink-0">
         <button
           type="button"
           onClick={() => setMode("written")}
@@ -165,19 +165,19 @@ export default function ReviewScreen({
       </div>
 
       {reviewList && (
-        <div className="px-4 pb-3 flex items-center justify-between text-xs text-gray-400">
+        <div className="px-4 pb-3 flex items-center justify-between text-xs text-gray-400 shrink-0">
           <span>{reviewList.averageRatingLabel}</span>
           <span>리뷰 {reviewList.reviewCountLabel}</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="mx-4 mb-3 rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500">
+        <div className="mx-4 mb-3 rounded-lg bg-red-50 px-4 py-3 text-xs text-red-500 shrink-0">
           {errorMessage}
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-8 space-y-4">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 pb-8 space-y-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
             <MessageCircle size={48} className="mb-4 opacity-20" />

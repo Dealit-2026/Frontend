@@ -253,7 +253,7 @@ export default function SalesHistoryScreen({
 
   if (selectedItem) {
     return (
-      <div className="flex-1 flex flex-col bg-gray-100 h-full">
+      <div className="flex-1 flex flex-col bg-gray-100 h-full min-h-0">
         <div className="h-14 flex items-center px-4 bg-white border-b border-gray-100 shrink-0">
           <button onClick={() => setSelectedItem(null)} className="p-2 -ml-2">
             <ChevronLeft size={24} />
@@ -261,7 +261,7 @@ export default function SalesHistoryScreen({
           <h1 className="text-lg font-bold ml-2">거래 상세 내역</h1>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center">
+        <div className="flex-1 overflow-y-auto no-scrollbar p-4 flex flex-col items-center">
           <div className="w-full max-w-md bg-white shadow-sm relative overflow-hidden">
             {/* Jagged top edge effect */}
             <div
@@ -368,7 +368,7 @@ export default function SalesHistoryScreen({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50 h-full">
+    <div className="flex-1 flex flex-col bg-gray-50 h-full min-h-0">
       <div className="h-14 flex items-center px-4 bg-white border-b border-gray-100 shrink-0">
         <button onClick={onBack} className="p-2 -ml-2">
           <ChevronLeft size={24} />
@@ -409,7 +409,7 @@ export default function SalesHistoryScreen({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
         {isLoading && (
           <div className="text-center text-sm text-gray-500">
             불러오는 중...
