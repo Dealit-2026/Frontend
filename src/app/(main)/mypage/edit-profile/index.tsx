@@ -249,9 +249,9 @@ export default function ProfileEditScreen({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col"
+      className="flex-1 flex flex-col h-dvh max-h-dvh min-h-0 overflow-hidden bg-white"
     >
-      <div className="h-16 flex items-center px-4 border-b border-gray-100">
+      <div className="h-16 flex items-center px-4 border-b border-gray-100 shrink-0">
         <button
           onClick={onBack}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -264,7 +264,7 @@ export default function ProfileEditScreen({
         </h1>
       </div>
 
-      <div className="flex-1 px-8 py-10 space-y-10">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-8 py-10 space-y-10">
         <div className="flex flex-col items-center space-y-4">
           <button
             type="button"
@@ -405,7 +405,7 @@ export default function ProfileEditScreen({
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 shrink-0">
         <button
           onClick={handleSave}
           disabled={!canSave || isSaving}

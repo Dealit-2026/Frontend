@@ -30,7 +30,7 @@ export default function RouteTabShell({
 
   return (
     <div className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-white">
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
       <div className="h-16 bg-white border-t border-gray-100 flex items-center justify-around px-4 shrink-0">
         <TabButton
           active={activeTab === "home"}

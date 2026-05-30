@@ -140,16 +140,16 @@ export default function NotificationSettingsScreen({ onBack, themeColor }: { onB
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="flex-1 flex flex-col"
+      className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-white"
     >
-      <div className="h-16 flex items-center px-4 border-b border-gray-100">
+      <div className="h-16 flex items-center px-4 border-b border-gray-100 shrink-0">
         <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
           <ChevronLeft size={24} />
         </button>
         <h1 className="flex-1 text-center font-bold text-lg mr-10">알림 설정</h1>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-8">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-6 space-y-8">
         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
           <div className="space-y-1">
             <p className="font-bold">전체 알림</p>
