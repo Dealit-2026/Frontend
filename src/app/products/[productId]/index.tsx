@@ -244,7 +244,9 @@ export default function ProductDetailScreen({
     showToastRef.current = showToast;
   }, [showToast]);
 
-  const displaySellerBio = productData?.seller?.bio ?? "정보없음";
+  const sellerBio = auctionDetail?.seller?.bio ?? productData?.seller?.bio;
+  const displaySellerBio =
+    sellerBio == null || sellerBio.trim() === "" ? "정보없음" : sellerBio;
   const sellerRating =
     auctionDetail?.seller?.rating ?? productData?.seller?.rating;
 
