@@ -225,7 +225,6 @@ export default function ProductDetailScreen({
     auctionDetail?.location ??
     productData?.seller?.location ??
     "지역 정보 없음";
-  const displayStatus = productData?.status ?? "정보 없음";
   const resolvedViewCount = productData
     ? productDetailService.getViewCount(productData)
     : 0;
@@ -399,7 +398,9 @@ export default function ProductDetailScreen({
       setCurrentPrice(latestAuctionEvent.currentPrice);
       setBidCount(latestAuctionEvent.bidCount);
       setInputBidAmount(latestAuctionEvent.minimumNextBidPrice);
-      setAuctionClockOffsetMs(getApiTime(latestAuctionEvent.serverTime) - Date.now());
+      setAuctionClockOffsetMs(
+        getApiTime(latestAuctionEvent.serverTime) - Date.now(),
+      );
       setAuctionDetail((previous) =>
         previous
           ? {
@@ -435,8 +436,10 @@ export default function ProductDetailScreen({
         previous
           ? {
               ...previous,
-              currentPrice: latestAuctionEvent.finalPrice ?? previous.currentPrice,
-              minimumNextBidPrice: latestAuctionEvent.finalPrice ?? previous.minimumNextBidPrice,
+              currentPrice:
+                latestAuctionEvent.finalPrice ?? previous.currentPrice,
+              minimumNextBidPrice:
+                latestAuctionEvent.finalPrice ?? previous.minimumNextBidPrice,
               serverTime: latestAuctionEvent.serverTime,
               status:
                 endedStatus === "SUCCESSFUL_BID" || endedStatus === "NO_BID"
@@ -474,7 +477,9 @@ export default function ProductDetailScreen({
       const nextAuctionDetail = await fetchAuctionDetail(productId);
 
       setAuctionDetail(nextAuctionDetail);
-      setAuctionClockOffsetMs(getApiTime(nextAuctionDetail.serverTime) - Date.now());
+      setAuctionClockOffsetMs(
+        getApiTime(nextAuctionDetail.serverTime) - Date.now(),
+      );
       setCurrentPrice(getAuctionDisplayCurrentPrice(nextAuctionDetail));
       setBidCount(nextAuctionDetail.bidCount);
       setInputBidAmount(nextAuctionDetail.minimumNextBidPrice);
@@ -762,16 +767,8 @@ export default function ProductDetailScreen({
             <h3 className="font-bold">상품 정보</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-400">상태</span>
-                <span>{displayStatus}</span>
-              </div>
-              <div className="flex justify-between">
                 <span className="text-gray-400">거래지역</span>
                 <span>{displayLocation}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">배송비</span>
-                <span>정보 없음</span>
               </div>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed pt-2">
@@ -798,8 +795,11 @@ export default function ProductDetailScreen({
           </button>
         ) : (
           <button
-          onClick={() =>
-              !isAuctionScheduled && !isAuctionEnded && !isAuctionOwner && setShowBidSheet(true)
+            onClick={() =>
+              !isAuctionScheduled &&
+              !isAuctionEnded &&
+              !isAuctionOwner &&
+              setShowBidSheet(true)
             }
             disabled={isAuctionScheduled || isAuctionEnded || isAuctionOwner}
             className={`flex-1 h-14 font-bold rounded-xl transition-colors ${
@@ -819,7 +819,7 @@ export default function ProductDetailScreen({
                 ? "입찰은 시작 후 가능해요"
                 : isAuctionOwner
                   ? "내 경매입니다"
-                : "입찰하기"}
+                  : "입찰하기"}
           </button>
         )}
       </div>
