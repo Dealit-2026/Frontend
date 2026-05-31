@@ -279,6 +279,11 @@ export default function TransactionReceipt({
     mode === "purchase" && isReviewAvailable && !hasWrittenReview;
   const hasReceivedReview =
     data.reviewReceived === true || (mode === "sale" && receivedReviewExists);
+  const counterpartLabel = mode === "purchase" ? "판매자" : "구매자";
+  const counterpartNickname =
+    mode === "purchase"
+      ? data.seller?.nickname ?? data.counterpartNickname ?? "-"
+      : data.buyer?.nickname ?? data.counterpartNickname ?? "-";
 
   return (
     <div
@@ -371,7 +376,7 @@ export default function TransactionReceipt({
                 </div>
               </div>
               <div style={{ marginTop: 10, fontSize: 15 }}>
-                판매자: {data.counterpartNickname ?? "-"}
+                {counterpartLabel}: {counterpartNickname}
               </div>
             </div>
           </div>
