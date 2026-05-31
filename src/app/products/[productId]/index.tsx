@@ -255,15 +255,6 @@ export default function ProductDetailScreen({
       ? "정보없음"
       : `${productData.seller.warningCount}회`;
   const displaySellerAddress = displayLocation;
-  const sellerRecentSales = productData?.seller?.recentSales ?? [];
-
-  function formatSellerRecentSalePrice(price?: number | null) {
-    if (price == null) {
-      return "정보없음";
-    }
-
-    return `${price.toLocaleString()}원`;
-  }
 
   useEffect(() => {
     if (regularPrice != null) {
@@ -948,9 +939,6 @@ export default function ProductDetailScreen({
                 </div>
                 <div>
                   <h3 className="text-xl font-bold">{displaySellerName}</h3>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {displaySellerBio}
-                  </p>
                 </div>
               </div>
 
@@ -979,34 +967,9 @@ export default function ProductDetailScreen({
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-bold text-sm">상대 판매내역 (최근 3건)</h4>
-                <div className="space-y-2">
-                  {sellerRecentSales.length === 0 ? (
-                    <div className="p-3 bg-gray-50 rounded-xl text-sm text-gray-500">
-                      정보없음
-                    </div>
-                  ) : (
-                    sellerRecentSales.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
-                      >
-                        <span className="text-sm font-medium text-gray-800">
-                          {item.title ?? "정보없음"}
-                        </span>
-                        <div className="text-right">
-                          <p className="text-xs font-bold">
-                            {formatSellerRecentSalePrice(item.price)}
-                          </p>
-                          <p
-                            className={`text-[10px] ${item.status === "판매완료" ? "text-gray-400" : "text-blue-500"}`}
-                          >
-                            {item.status ?? "정보없음"}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                <h4 className="font-bold text-sm">소개글</h4>
+                <div className="rounded-xl bg-gray-50 p-4 text-sm leading-relaxed text-gray-600">
+                  {displaySellerBio}
                 </div>
               </div>
 
