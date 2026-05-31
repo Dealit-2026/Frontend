@@ -17,6 +17,7 @@ export interface AuctionDetailSeller {
   memberId: number;
   nickname: string;
   profileImageUrl: string | null;
+  rating?: number | null;
 }
 
 export interface AuctionDetailResponse {

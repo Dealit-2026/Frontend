@@ -245,10 +245,11 @@ export default function ProductDetailScreen({
   }, [showToast]);
 
   const displaySellerBio = productData?.seller?.bio ?? "정보없음";
+  const sellerRating =
+    auctionDetail?.seller?.rating ?? productData?.seller?.rating;
+
   const displaySellerRating =
-    productData?.seller?.rating == null
-      ? "정보없음"
-      : productData.seller.rating.toFixed(1);
+    sellerRating == null ? "정보없음" : sellerRating.toFixed(1);
   const displaySellerWarning =
     productData?.seller?.warningCount == null
       ? "정보없음"
@@ -753,7 +754,7 @@ export default function ProductDetailScreen({
                   <span>
                     {displaySellerRating === "정보없음"
                       ? "정보없음"
-                      : `${displaySellerRating} (거래 ${sellerRecentSales.length}건)`}
+                      : displaySellerRating}
                   </span>
                 </div>
               </div>
