@@ -238,7 +238,7 @@ export default function ProductListItem({
           </p>
 
           <p className="text-[10px] text-gray-400 font-medium truncate">
-            {product?.categoryName ?? "카테고리 없음"} ·{" "}
+            {product?.categoryName ?? "카테고리 없음"} |{" "}
             {product?.location ?? "지역 정보 없음"}
           </p>
 

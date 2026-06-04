@@ -493,7 +493,7 @@ export default function HomeScreen({
                         {regularProduct.priceLabel}
                       </p>
                       <p className="text-[10px] text-gray-400 font-medium truncate">
-                        {regularProduct.categoryName} · {regularProduct.location}
+                        {regularProduct.categoryName} | {regularProduct.location}
                       </p>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-gray-400 font-medium">
                         <div className="flex items-center space-x-1 whitespace-nowrap">
@@ -570,7 +570,7 @@ export default function HomeScreen({
                           : product.priceLabel}
                       </p>
                       <p className="text-[10px] text-gray-400 font-medium truncate">
-                        {product.categoryName} 쨌 {product.location}
+                        {product.categoryName} | {product.location}
                       </p>
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-gray-400 font-medium">
                         <div className="flex items-center space-x-1 whitespace-nowrap">
