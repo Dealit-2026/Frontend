@@ -335,11 +335,8 @@ export default function RegisterScreenView({
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center">
               <h3 className="font-bold text-base">설명</h3>
-              <button className="px-3 py-1.5 border border-gray-100 rounded-lg text-xs font-bold text-gray-600">
-                자주 쓰는 문구
-              </button>
             </div>
             <div className="relative">
               <textarea
